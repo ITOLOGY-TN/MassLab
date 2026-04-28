@@ -6,178 +6,59 @@ info:
     Phase 0 read-only API for MassLab. All endpoints are tenant-scoped to the
     requesting athlete, resolved by the auth middleware. In single-user mode
     (default), every request resolves to the seeded athlete; in multi-user
-    mode, unauthenticated requests are rejected.
+    mode, the middleware validates a Supabase-issued bearer token via
+    `@supabase/supabase-js`'s `auth.getUser` and rejects unauthenticated
+    requests.
+
+    All routes live under `/api/v1/` (Constitution Principle IV). Response
+    bodies are stable JSON envelopes for the v1 lifetime. New fields are
+    additive; renames or removals require `/api/v2/`.
 servers:
   - url: http://localhost:3000/api/v1
+    description: Local development (Express); accessed by the Vite dev server via proxy.
 
-paths:
-  /athlete:
-    get:
-      summary: Get the current athlete profile
-      operationId: getCurrentAthlete
-      responses:
-        '200':
-          description: Current athlete
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AthleteProfile'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /exercises:
-    get:
-      summary: List exercises for the current athlete
-      operationId: listExercises
-      parameters:
-        - in: query
-          name: muscle_group
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Exercise list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Exercise'
-
-  /exercises/{id}:
-    get:
-      summary: Get one exercise by id
-      operationId: getExercise
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-            minimum: 1
-      responses:
-        '200':
-          description: One exercise
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Exercise'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /weekly-plan:
-    get:
-      summary: Get the current athlete's weekly plan with exercises per slot
-      operationId: getWeeklyPlan
-      responses:
-        '200':
-          description: Weekly plan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WeeklyPlan'
-
-  /training-phases:
-    get:
-      summary: List training phases
-      operationId: listTrainingPhases
-      responses:
-        '200':
-          description: Training phases
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TrainingPhase'
-
-  /nutrition/template:
-    get:
-      summary: Get the daily meal template with macro targets
-      operationId: getNutritionTemplate
-      responses:
-        '200':
-          description: Nutrition template
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MealTemplate'
-
-  /supplements:
-    get:
-      summary: List supplements
-      operationId: listSupplements
-      responses:
-        '200':
-          description: Supplements
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Supplement'
-
-  /foods:
-    get:
-      summary: List or search foods
-      operationId: listFoods
-      parameters:
-        - in: query
-          name: q
-          required: false
-          schema:
-            type: string
-        - in: query
-          name: limit
-          required: false
-          schema:
-            type: integer
-            default: 50
-            maximum: 200
-      responses:
-        '200':
-          description: Foods
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Food'
-
-  /quotes/today:
-    get:
-      summary: Get the current rotated quote
-      operationId: getTodayQuote
-      responses:
-        '200':
-          description: Today's quote
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Quote'
+tags:
+  - name: athlete
+    description: The currently-authenticated athlete (or seeded athlete in single-user mode).
+  - name: program
+    description: The athlete's seeded program (training plan, nutrition, supplements).
+  - name: catalog
+    description: Reference catalogs (exercises, foods, quotes).
 
 components:
-  responses:
-    Unauthorized:
-      description: Authentication required (multi-user mode)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    NotFound:
-      description: Resource not found in this tenant
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Supabase-issued JWT. Required only when `SINGLE_USER_MODE=false`.
+        In single-user mode the middleware resolves to the seeded athlete
+        without inspecting this header.
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: |
+        Optional client-supplied request id. If omitted, the server generates
+        one (FR-018). Echoed back as `X-Request-Id` on every response.
+
+  headers:
+    XRequestId:
+      description: Server-generated or client-supplied correlation id.
+      schema:
+        type: string
+        format: uuid
 
   schemas:
     Error:
       type: object
-      required: [error, request_id]
+      required: [error]
       properties:
         error:
           type: object
@@ -185,13 +66,14 @@ components:
           properties:
             code:
               type: string
+              example: UNAUTHENTICATED
             message:
               type: string
-        request_id:
-          type: string
-          format: uuid
+            request_id:
+              type: string
+              format: uuid
 
-    AthleteProfile:
+    Athlete:
       type: object
       required:
         - id
@@ -203,220 +85,321 @@ components:
         - target_weight_kg
         - morphotype
         - goal
-        - sessions_per_week
+        - weekly_session_count
         - program_start_date
       properties:
-        id:
-          type: integer
-        email:
-          type: string
-          format: email
-        display_name:
-          type: string
-          nullable: true
-        age:
-          type: integer
-          minimum: 1
-        biological_sex:
-          type: string
-          enum: [male, female]
-        height_cm:
-          type: number
-        starting_weight_kg:
-          type: number
-        target_weight_kg:
-          type: number
-        morphotype:
-          type: string
-          enum: [ectomorph, mesomorph, endomorph]
-        goal:
-          type: string
-          enum: [bulk, cut, maintain]
-        activity_level:
-          type: string
-        sessions_per_week:
-          type: integer
-          minimum: 1
-          maximum: 7
-        equipment:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        display_name: { type: string, nullable: true }
+        age: { type: integer }
+        biological_sex: { type: string, enum: [male, female] }
+        height_cm: { type: number }
+        starting_weight_kg: { type: number }
+        target_weight_kg: { type: number }
+        morphotype: { type: string, enum: [ectomorph, mesomorph, endomorph] }
+        goal: { type: string, enum: [bulk, cut, maintain] }
+        weekly_session_count: { type: integer, minimum: 1, maximum: 7 }
+        available_equipment:
           type: array
-          items:
-            type: string
+          items: { type: string }
         injuries:
           type: array
-          items:
-            type: string
-        program_start_date:
-          type: string
-          format: date
+          items: { type: string }
+        program_start_date: { type: string, format: date }
 
     Exercise:
       type: object
-      required: [id, name, muscle_group, targeted_muscles, instructions, locale]
+      required: [id, slug, locale, name, targeted_muscles, instructions]
       properties:
-        id:
-          type: integer
-        name:
-          type: string
-        muscle_group:
-          type: string
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string, example: fr-FR }
+        name: { type: string }
         targeted_muscles:
           type: array
-          items:
-            type: string
-        instructions:
-          type: string
+          items: { type: string }
+        instructions: { type: string }
         technique_points:
           type: array
-          items:
-            type: string
-        media_ref:
-          type: string
-          nullable: true
-        locale:
-          type: string
-          examples: [fr-FR]
+          items: { type: string }
+        media_image_url: { type: string, nullable: true }
+        media_video_url: { type: string, nullable: true }
 
-    WeeklyPlan:
+    WeeklyPlanSlot:
       type: object
-      required: [days]
+      required: [id, day_of_week, muscle_group, display_color, display_order, exercises]
       properties:
-        days:
-          type: array
-          items:
-            $ref: '#/components/schemas/WeeklyPlanDay'
-
-    WeeklyPlanDay:
-      type: object
-      required: [day_of_week, muscle_group, exercises]
-      properties:
-        day_of_week:
-          type: integer
-          minimum: 1
-          maximum: 7
-          description: '1 = Monday, 7 = Sunday'
-        muscle_group:
-          type: string
+        id: { type: integer }
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        muscle_group: { type: string }
+        display_color: { type: string }
+        display_order: { type: integer }
         exercises:
           type: array
           items:
-            $ref: '#/components/schemas/Exercise'
+            type: object
+            required: [exercise_id, position, target_sets, target_reps_low, target_reps_high]
+            properties:
+              exercise_id: { type: integer }
+              position: { type: integer }
+              target_sets: { type: integer }
+              target_reps_low: { type: integer }
+              target_reps_high: { type: integer }
 
     TrainingPhase:
       type: object
-      required:
-        - id
-        - name
-        - start_week
-        - end_week
-        - sets_per_exercise
-        - reps_low
-        - reps_high
-        - rest_seconds
-        - target_intensity_pct
-        - locale
+      required: [id, slug, locale, name, description, weeks, rest_seconds, intensity_pct_min, intensity_pct_max, display_order]
       properties:
-        id:
-          type: integer
-        name:
-          type: string
-        start_week:
-          type: integer
-        end_week:
-          type: integer
-        sets_per_exercise:
-          type: integer
-        reps_low:
-          type: integer
-        reps_high:
-          type: integer
-        rest_seconds:
-          type: integer
-        target_intensity_pct:
-          type: integer
-        locale:
-          type: string
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string }
+        name: { type: string }
+        description: { type: string }
+        weeks: { type: integer }
+        rest_seconds: { type: integer }
+        intensity_pct_min: { type: integer }
+        intensity_pct_max: { type: integer }
+        display_order: { type: integer }
 
-    MealTemplate:
+    NutritionTemplateMeal:
       type: object
-      required:
-        - id
-        - slot
-        - target_calories
-        - target_protein_g
-        - target_carbs_g
-        - target_fat_g
-        - display_order
+      required: [id, slot, display_order, target_kcal, target_protein_g, target_carbs_g, target_fat_g]
       properties:
-        id:
-          type: integer
-        slot:
-          type: string
-          enum: [breakfast, lunch, pre_workout, dinner, evening]
-        display_order:
-          type: integer
-        target_calories:
-          type: number
-        target_protein_g:
-          type: number
-        target_carbs_g:
-          type: number
-        target_fat_g:
-          type: number
+        id: { type: integer }
+        slot: { type: string }
+        display_order: { type: integer }
+        target_kcal: { type: integer }
+        target_protein_g: { type: integer }
+        target_carbs_g: { type: integer }
+        target_fat_g: { type: integer }
 
     Supplement:
       type: object
-      required: [id, name, dosage, recommended_time, display_order, locale]
+      required: [id, slug, locale, name, dosage, recommended_time, display_order]
       properties:
-        id:
-          type: integer
-        name:
-          type: string
-        dosage:
-          type: string
-        recommended_time:
-          type: string
-        display_order:
-          type: integer
-        locale:
-          type: string
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string }
+        name: { type: string }
+        dosage: { type: string }
+        recommended_time: { type: string }
+        notes: { type: string, nullable: true }
+        display_order: { type: integer }
 
     Food:
       type: object
-      required:
-        - id
-        - name
-        - protein_g_per_100g
-        - carbs_g_per_100g
-        - fat_g_per_100g
-        - calories_per_100g
-        - locale
+      required: [id, slug, locale, name, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category]
       properties:
-        id:
-          type: integer
-        name:
-          type: string
-        protein_g_per_100g:
-          type: number
-        carbs_g_per_100g:
-          type: number
-        fat_g_per_100g:
-          type: number
-        calories_per_100g:
-          type: number
-        locale:
-          type: string
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string }
+        name: { type: string }
+        kcal_per_100g: { type: number }
+        protein_per_100g: { type: number }
+        carbs_per_100g: { type: number }
+        fat_per_100g: { type: number }
+        category: { type: string }
 
     Quote:
       type: object
-      required: [id, text, locale]
+      required: [id, slug, locale, text]
       properties:
-        id:
-          type: integer
-        text:
-          type: string
-        author:
-          type: string
-          nullable: true
-        locale:
-          type: string
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string }
+        text: { type: string }
+        author: { type: string, nullable: true }
+
+paths:
+  /athlete/me:
+    get:
+      tags: [athlete]
+      summary: Get the requesting athlete's profile
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The athlete profile.
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '401':
+          description: Multi-user mode and the request was unauthenticated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /exercises:
+    get:
+      tags: [catalog]
+      summary: List exercises in the athlete's library
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+      responses:
+        '200':
+          description: Array of exercises.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Exercise' }
+
+  /weekly-plan:
+    get:
+      tags: [program]
+      summary: Get the athlete's weekly plan with exercises per slot
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The weekly plan, ordered by `day_of_week`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/WeeklyPlanSlot' }
+
+  /training-phases:
+    get:
+      tags: [program]
+      summary: List the athlete's training phases
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Phases in `display_order`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TrainingPhase' }
+
+  /nutrition/template:
+    get:
+      tags: [program]
+      summary: Get the athlete's daily nutrition template
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 5 meal slots with macro targets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/NutritionTemplateMeal' }
+
+  /supplements:
+    get:
+      tags: [program]
+      summary: List the athlete's supplement stack
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Supplements in `display_order`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Supplement' }
+
+  /foods:
+    get:
+      tags: [catalog]
+      summary: List foods in the athlete's database
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+        - in: query
+          name: category
+          schema: { type: string }
+      responses:
+        '200':
+          description: Foods, optionally filtered by category.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Food' }
+
+  /quotes:
+    get:
+      tags: [catalog]
+      summary: List quotes (rotation handled client-side in later phases)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+      responses:
+        '200':
+          description: All quotes for the locale.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Quote' }
+
+  /quotes/today:
+    get:
+      tags: [catalog]
+      summary: Get today's rotating quote
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+      responses:
+        '200':
+          description: The quote selected for today (deterministic, athlete-scoped).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Quote' }
+
+security:
+  - SupabaseBearer: []
+  - {}  # empty array == no auth required (single-user mode)

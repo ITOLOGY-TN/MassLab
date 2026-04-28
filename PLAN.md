@@ -2,13 +2,13 @@
 
 ## Executive Summary
 
-MassLab is a local web application for tracking a 5-month muscle-building program. Built with Node.js + Express + SQLite + Vanilla JS. Runs 100% offline at http://localhost:3000. No login required — single user for now.
+MassLab is a local web application for tracking a 5-month muscle-building program. Built with React + Vite + Tailwind CSS on the frontend, Node.js + Express on the backend, and Supabase PostgreSQL for database, auth-ready architecture, and future file storage. Runs locally during development, with `SINGLE_USER_MODE=true` for the current athlete. No AI generation is included in the current roadmap; the app is designed so AI can be added much later without rewriting the core system.
 
 The app currently serves one athlete: 29 years old, 173cm, 58kg, ectomorph, intermediate lifter, 5 sessions/week, goal of +6 to +8kg of muscle in 5 months. Every screen must answer a real question the athlete has before, during, or after a session.
 
 **Design:**  Use the **Frontend Design skill** for all UI work — the result must feel premium and sport-focused, never generic.
 
-**Architecture philosophy — built to scale:** The app is local-first today, but the architecture must be written as if it will go online tomorrow and serve multiple users. This is non-negotiable. The future vision is a SaaS platform where any user can sign up, enter their personal data (age, weight, morphotype, goals, schedule, equipment), and receive a fully generated program (training, nutrition, supplements, recovery) tailored to their profile — exactly like the one built for the current athlete. Every architectural decision made now must support that future without a full rewrite.
+**Architecture philosophy — built to scale:** The app is local-first today, but the architecture must be written as if it will go online tomorrow and serve multiple users. This is non-negotiable. The future vision is a SaaS platform where any user can sign up, enter their personal data (age, weight, morphotype, goals, schedule, equipment), and receive a fully generated program (training, nutrition, supplements, recovery) tailored to their profile — exactly like the one built for the current athlete. Every architectural decision made now must support that future without a full rewrite. AI is a long-term enhancement only: the core product must first be powered by deterministic calculators, rule-based program generation, and clean athlete-owned data.
 
 ---
 
@@ -21,17 +21,23 @@ Set up the full project structure, database schema, and seed all initial data so
 - **Authentication layer stubbed in** — even if no login screen exists yet, the middleware slot must exist and be bypassable via a config flag (`SINGLE_USER_MODE=true` in `.env`). When multi-user is needed, only that flag changes and the middleware activates.
 - **All business logic in controllers/services, never in routes** — routes are thin, just HTTP. This makes the API reusable for a future mobile app or third-party client.
 - **Program generation logic isolated in a `/services/programGenerator.js` module** — takes an athlete profile object as input, returns a complete program (training plan, nutrition targets, supplement stack, recovery guidelines). Currently called once with the hardcoded athlete profile, but designed to be called for any profile. This is the core engine of the future SaaS.
-- **Environment-based config** — database path, port, and feature flags come from `.env`, never hardcoded. Makes the switch from local SQLite to PostgreSQL (for cloud hosting) a configuration change, not a code change.
+- **Environment-based config** — Supabase URL/key, port, CORS origin, storage bucket names, and feature flags come from `.env`, never hardcoded. Local development and future cloud deployment use environment-based configuration.
 - **No hardcoded athlete data anywhere in the codebase** — the current athlete's data lives in the database seed only, injected through the program generator.
 
+**AI boundary — important:**
+- No AI generation in Phase 0–11.
+- The app must generate programs and nutrition using deterministic services first.
+- Future AI must plug into `/services/aiCoach.js` or a separate FastAPI microservice later, but it must not replace calculators or core program rules.
+- Current priority: clean data model, reliable calculators, reproducible program generation, and scalable API design.
+
 **What gets built in this phase:**
-- Node.js + Express server, strict MVC architecture with a service layer (`/routes`, `/controllers`, `/services`, `/models`, `/public`, `/data`)
+- React + Vite frontend, Node.js + Express API, strict MVC/service architecture (`/routes`, `/controllers`, `/services`, `/middleware`, `/config`, `/frontend`)
 - All API routes under `/api/v1/`
-- Complete database schema with `athlete_id` on every relevant table: athlete profiles, exercises, weekly plan, training phases, session journal, sets logged, body weight, measurements, nutrition log, food database, supplements, recovery log, app config, quotes
-- `.env` file with `SINGLE_USER_MODE=true`, `PORT=3000`, `DB_PATH=./data/masslab.db`
-- Single-user bypass middleware (reads `SINGLE_USER_MODE` and auto-injects athlete ID 1 on every request)
+- Complete Supabase PostgreSQL schema with `athlete_id` on every table: athlete profiles, exercises, weekly plan, training phases, session journal, sets logged, body weight, measurements, nutrition log, food database, supplements, recovery log, app config, quotes
+- `.env` file with `SINGLE_USER_MODE=true`, `PORT=3000`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY`, and `CORS_ORIGIN`
+- Single-user bypass middleware (reads `SINGLE_USER_MODE` and auto-injects the seeded athlete ID on every request; ready to switch to Supabase Auth later)
 - `/services/programGenerator.js` — takes athlete profile, returns full program structure. Seeded with the current athlete's program as the first generated plan.
-- Seed data on first launch: full exercise library (18+ exercises with instructions), 5-day weekly plan, 3 training phases with parameters, 5-meal daily nutrition plan, 5 supplements with dosage and timing, 50 common foods with macros, 30 motivational quotes in French
+- Supabase seed script for: full exercise library (18+ exercises with instructions), 5-day weekly plan, 3 training phases with parameters, 5-meal daily nutrition plan, 5 supplements with dosage and timing, 50 common foods with macros, 30 motivational quotes in French
 - `npm install && npm start` must work immediately after this phase
 
 ---
@@ -43,6 +49,8 @@ Set up the full project structure, database schema, and seed all initial data so
 ## Phase 1: Calculators Engine
 
 The scientific backbone of the entire app. These calculators feed directly into the program generator (`/services/programGenerator.js`) and must be implemented as reusable service functions — not just UI widgets. Every result they produce is stored in the athlete profile and used across all other modules (nutrition targets, session parameters, progression thresholds).
+
+**Architecture note:** Phase 1 is the real engine of MassLab. Build the calculators and rule engines before any AI. AI can later explain, summarize, or adapt recommendations, but formulas and core decisions remain deterministic and testable.
 
 **1. BMR — Basal Metabolic Rate**
 - Formula: Mifflin-St Jeor (most accurate for general population)
@@ -105,7 +113,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - Output: complete ready-to-use program (training plan, daily calorie + macro targets, supplement recommendations, recovery guidelines)
 - Called once for the current athlete during seed. In future multi-user mode, called on every new user signup or profile update.
 
-**Implementation requirement:** all calculator logic lives in pure stateless functions inside `/services/calculators.js` — no side effects, fully testable. The UI exposes a "Calculators" section where the athlete can run any calculator manually and see live results. The same functions are called internally by the program generator.
+**Implementation requirement:** all calculator logic lives in pure stateless functions inside `/services/calculators.js` — no side effects, fully testable. Nutrition planning lives in `/services/nutritionGenerator.js`; load decisions live in `/services/progressionEngine.js`; program orchestration lives in `/services/programGenerator.js`. The UI exposes a "Calculators" section where the athlete can run any calculator manually and see live results. The same functions are called internally by the program generator.
 
 ---
 
@@ -242,3 +250,31 @@ Full transformation overview with PDF export.
 - Key metric cards: total weight gained, total volume lifted since start, session completion rate, average weekly calories
 - Tabs: Body (weight + measurements curves), Strength (top 5 exercise progressions, volume per week, muscle group radar), Attendance (GitHub-style contribution heatmap), Nutrition (weekly calorie trends), Recovery (sleep averages, stress vs weight correlation)
 - Monthly PDF report export using jsPDF: summary stats, top 3 load progressions, weight chart screenshot, auto-generated recommendations for next month
+
+---
+
+## Phase 12: Future AI Coaching Layer — Long-Term Only
+
+This phase is intentionally postponed until the core app is stable, tested, and useful without AI. AI must enhance the existing system, not replace it.
+
+**What AI may do later:**
+- Explain why a program, calorie target, or progression decision was generated
+- Generate weekly coaching summaries from logged training, nutrition, and recovery data
+- Suggest exercise substitutions based on equipment, fatigue, soreness, or injury constraints
+- Convert deterministic calculator results into user-friendly coaching language
+- Detect patterns across training, nutrition, sleep, stress, and weight trends
+- Help the athlete understand plateaus and propose safe adjustments
+
+**What AI must not do:**
+- Replace `/services/calculators.js` formulas
+- Invent calories, macros, 1RM estimates, or overload rules without the deterministic engine
+- Directly write to the database without passing through existing services
+- Generate programs that bypass `/services/programGenerator.js`
+
+**Recommended implementation path when ready:**
+- Start with `/services/aiCoach.js` in the existing Node backend
+- Feed AI only structured outputs from calculators, programGenerator, nutritionGenerator, progressionEngine, and recovery logs
+- Store AI outputs as athlete-owned records with `athlete_id`
+- Add a Python FastAPI microservice only if advanced ML, custom prediction models, or heavy data science is required
+
+**Rule:** MassLab must remain fully functional without AI. AI is an optional coaching layer added after the product has strong data, calculators, and user workflows.

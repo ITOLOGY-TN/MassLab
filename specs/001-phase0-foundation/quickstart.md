@@ -2,90 +2,89 @@
 
 **Audience**: An operator (the project's developer self) bringing the application online on a clean machine.
 **Time to running app**: ≤5 minutes (per SC-001).
+**Stack**: Node.js 20.x · Supabase (local CLI stack) · React + Vite + Tailwind CSS · Constitution v1.1.1.
 
 ## Prerequisites
 
-- Node.js 20.x LTS or newer (`node --version` should print `v20.x.x` or `v22.x.x`).
-- npm 10+ (ships with Node 20).
-- Git.
+Install once on a clean machine:
 
-## Steps
+| Tool | Why | How |
+|---|---|---|
+| Node.js 20.x LTS | runs the API and Vite | https://nodejs.org/ |
+| Docker Desktop (or Colima/OrbStack) | hosts the local Supabase services | https://www.docker.com/ |
+| Supabase CLI | runs the local Supabase stack and applies migrations | `brew install supabase/tap/supabase` (macOS) / see https://supabase.com/docs/guides/cli |
+
+Verify:
 
 ```bash
-# 1. Clone
-git clone <repo-url> masslab
-cd masslab
+node -v        # v20.x.x
+docker --version
+supabase --version
+```
 
-# 2. Install dependencies
+## Bring-up sequence
+
+```bash
+# 1. Clone and install workspace dependencies (root + frontend)
+git clone <repo-url> masslab && cd masslab
 npm install
 
-# 3. Set up configuration
+# 2. Boot the local Supabase stack (Postgres + Auth + Storage + Studio)
+supabase start
+# The CLI prints the API URL, the publishable key (sb_publishable_…),
+# and the secret key (sb_secret_…). Copy them into the next step.
+
+# 3. Configure environment
 cp .env.example .env
-# Defaults in .env.example are safe for local use; edit only if you need a different
-# port or DB path.
+# Edit .env and fill in:
+#   SUPABASE_URL=<API URL from step 2>
+#   SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
+#   SUPABASE_SECRET_KEY=sb_secret_…
+# Leave SINGLE_USER_MODE=true, PORT=3000, CORS_ORIGIN=http://localhost:5173.
 
-# 4. Start the app
-npm start
+# 4. Apply migrations and load reference seed
+supabase migration up   # applies supabase/migrations/*.sql
+                        # Supabase also runs supabase/seed.sql automatically
+                        # on `supabase db reset`; for the first run, run:
+npm run seed            # athlete-scoped seed (calls program generator)
+
+# 5. Start the API and the frontend together
+npm start               # boots Express on :3000 and Vite on :5173 concurrently
 ```
 
-That's it. On first launch the application will:
+Open http://localhost:5173. The scaffold page should display the seeded athlete's `display_name` fetched from `GET /api/v1/athlete/me`.
 
-1. Load and validate `.env` via the configuration adapter (zod schema). Missing or invalid values fail fast with a clear error.
-2. Open `./data/masslab.db` (creating it if absent).
-3. Apply any pending migrations from `./migrations/*.sql` in lexical order, each in its own transaction.
-4. Run the seed (idempotent — safe on every re-launch).
-5. Bind the configured port (default `3000`) and serve `/api/v1/*`.
+## What `npm start` runs
 
-Open <http://localhost:3000/api/v1/athlete> — you should see the seeded athlete profile.
-
-## What the seeded environment includes
-
-- 1 athlete (per PLAN.md: 29 yrs, 173 cm, 58 kg, ectomorph, intermediate, 5 sessions/week, +6 to +8 kg goal over 5 months)
-- 18+ exercises with instructions (`fr-FR`)
-- 5-day weekly plan (Mon / Tue / Wed / Fri / Sat) with muscle-group assignments
-- 3 training phases with parameters
-- 5-meal daily nutrition template with macro targets
-- 5 supplements with dosage and timing
-- 50 common foods with macros (`fr-FR`)
-- 30 motivational quotes (`fr-FR`)
-
-## Switching between single-user and multi-user mode
-
-In `.env`:
-
-```ini
-SINGLE_USER_MODE=true   # default; auto-resolves every request to the seeded athlete
-SINGLE_USER_MODE=false  # auth middleware enforces credentials; no login UI in Phase 0
+```text
+concurrently
+  ├─ "node server.js"         → Express on PORT (default 3000), serving /api/v1/*
+  └─ "npm --prefix frontend run dev"   → Vite on 5173 with /api/v1 proxied to Express
 ```
 
-Restart the application after changing the value. Source-code changes are *not* required (per FR-005 and SC-003).
+## Useful scripts
 
-## Configuration keys
+| Script | What it does |
+|---|---|
+| `npm start` | Boot API + Vite together (default workflow). |
+| `npm run dev` | Alias of `npm start`. |
+| `npm run seed` | Re-run the athlete-scoped seed (idempotent; safe on a populated DB). |
+| `npm run db:reset` | `supabase db reset` then re-run `npm run seed`. **Destructive** — wipes the local Supabase DB. |
+| `npm test` | Run all Vitest suites (unit, integration, contract, frontend smoke). |
+| `npm run test:contract` | Just the OpenAPI contract suite (`tests/contract/api.v1.test.js`). |
 
-See `.env.example` for the complete list and defaults. Every key is validated at startup; any missing required key produces an error like:
+## Verifying the principles
 
-```
-[masslab] FATAL: configuration value "DB_PATH" is required but missing.
-         Set it in .env or as an environment variable.
-```
+After bring-up, you can spot-check each non-negotiable principle:
 
-## Troubleshooting
+- **Principle I (multi-tenant ready)** — open Supabase Studio (`supabase status` prints the URL), pick any domain table, confirm `athlete_id` is non-null on every row. `\d+ <table>` should show RLS enabled and two policies attached.
+- **Principle III (config over hardcoding)** — `grep -RIn "sb_publishable_\|sb_secret_\|@supabase" frontend/src` should return zero hits to the secret key. Searching the whole repo for athlete identity (`grep -RIn "Ahmed\|173\|58 kg" --include="*.js"`) should return zero hits in source — only seed JSON.
+- **Mode switch** — flip `SINGLE_USER_MODE=false` in `.env`, restart, hit `GET /api/v1/athlete/me` without an `Authorization` header → expect `401`. Restore `SINGLE_USER_MODE=true`, restart → request succeeds.
+- **Request id** — every response carries `X-Request-Id`. The same id appears in the structured log line for that request.
 
-- **Port already in use**: change `PORT` in `.env` and restart.
-- **Permission denied on `./data/`**: the application creates this directory on first run; ensure the working directory is writable.
-- **Re-seed during development**: the seeder is idempotent. To wipe and re-seed, delete `./data/masslab.db` and start the app again.
+## Common stumbles
 
-## Verifying Phase 0 acceptance
-
-```bash
-npm test
-```
-
-Expected coverage:
-
-- `tests/unit/programGenerator.test.js` — pure-function tests for the program generator (Constitution Principle V).
-- `tests/integration/seed.idempotent.test.js` — verifies SC-005 (re-launch does not duplicate seed rows).
-- `tests/integration/tenant.scoping.test.js` — verifies US2 (a hypothetical second athlete cannot see the first's records).
-- `tests/integration/auth.modeSwitch.test.js` — verifies US3 (mode flip is config-only).
-- `tests/integration/http.requestId.test.js` — verifies SC-010 (every request log line carries `request_id`, including unauthenticated ones).
-- `tests/contract/api.v1.test.js` — exercises every endpoint listed in `specs/001-phase0-foundation/contracts/openapi.yaml`.
+- **`supabase start` fails with "port 54322 in use"**: another local Postgres is listening. Either stop it or run `supabase start --workdir .` after editing `supabase/config.toml` to remap ports.
+- **`npm run seed` complains about missing keys**: you forgot to fill `SUPABASE_SECRET_KEY` in `.env`. The config schema fails fast (FR-010, SC-008) and names the missing key.
+- **Frontend renders blank**: open the browser console; if you see CORS errors, confirm `CORS_ORIGIN=http://localhost:5173` is set in `.env` and that you opened `:5173` (not `:3000`).
+- **"legacy key not allowed" on startup**: you pasted an `anon` or `service_role` key into `.env`. Those are deprecated; use the `sb_publishable_…` and `sb_secret_…` keys printed by `supabase start`.

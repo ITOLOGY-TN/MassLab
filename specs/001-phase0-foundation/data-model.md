@@ -1,291 +1,316 @@
 # Phase 0 Data Model
 
 **Feature**: 001-phase0-foundation
-**Date**: 2026-04-27
+**Date**: 2026-04-28
+**Constitution**: v1.1.1
+**Storage**: Supabase PostgreSQL (Postgres 15.x)
 
-This document is the source of truth for the database schema produced at the end of Phase 0. It is the contract between the migration files in `migrations/` and the model layer.
+This document is the source of truth for the database schema produced at the end of Phase 0. It is the contract between the migration files in `supabase/migrations/` and the data-access modules in `services/dataAccess/`.
 
-Conventions:
+## Conventions
 
 - Every domain table has a non-null `athlete_id` foreign key (Constitution Principle I, FR-002).
-- Every translatable seed table has a non-null `locale` column (FR-020).
-- Foreign keys are enabled at connection open (`PRAGMA foreign_keys = ON`).
-- All times are stored as ISO-8601 strings (SQLite `TEXT`).
-- Soft-delete is out of scope in Phase 0; rows are physically deleted.
-
-## Migration map
-
-| File                               | Tables created                                       |
-|------------------------------------|------------------------------------------------------|
-| `0001_init_athletes.sql`           | `athletes`, `_migrations`                            |
-| `0002_init_exercises.sql`          | `exercises`                                          |
-| `0003_init_weekly_plan.sql`        | `weekly_plan_slots`, `weekly_plan_slot_exercises`    |
-| `0004_init_training_phases.sql`    | `training_phases`                                    |
-| `0005_init_nutrition.sql`          | `nutrition_template_meals`                           |
-| `0006_init_supplements.sql`        | `supplements`, `supplement_intakes`                  |
-| `0007_init_foods.sql`              | `foods`                                              |
-| `0008_init_quotes.sql`             | `quotes`                                             |
-| `0009_init_session_journal.sql`    | `sessions`, `sets`                                   |
-| `0010_init_body_measurements.sql`  | `body_measurements`                                  |
-| `0011_init_athlete_photos.sql`     | `athlete_photos`                                     |
-| `0012_init_recovery_log.sql`       | `recovery_logs`                                      |
-| `0013_init_app_config.sql`         | `app_config`                                         |
+- Every domain table ships **Row-Level Security** policies in the same migration that creates the table — see `research.md` §5 for the canonical policy pair. RLS is enabled but transparently bypassed in single-user mode (the server uses `SUPABASE_SECRET_KEY`, which is exempt from RLS).
+- Surrogate primary keys are `bigint generated always as identity`, except `athletes.id` and `athlete_photos.id` which are `uuid` (athletes are owners and stable; photos are referenced by URL and benefit from non-guessable IDs).
+- Foreign keys default to `ON DELETE RESTRICT`. Exceptions are called out per table.
+- All timestamps are `timestamptz` and default to `now()`.
+- Every translatable seed table carries a non-null `locale text` column (FR-020); the v1 seed populates `fr-FR` rows.
+- Slugs (`text`) are used for stable natural keys on reference data so seed upserts are idempotent.
+- Money / mass / length values are stored as `numeric(p, s)` to avoid float drift.
+- Credential storage is delegated to **Supabase Auth** (`auth.users`); the application stores no `password_hash`. Athletes link to `auth.users(id)` through `athletes.auth_user_id`.
 
 ## Tables
 
-### athletes
+### 1. `athletes`
 
-| Column              | Type    | Notes                                                                      |
-|---------------------|---------|----------------------------------------------------------------------------|
-| id                  | INTEGER | PRIMARY KEY AUTOINCREMENT                                                  |
-| email               | TEXT    | NOT NULL UNIQUE — credential per FR-016                                    |
-| password_hash       | TEXT    | NULL until set; bcrypt format when present                                 |
-| display_name        | TEXT    | NULL                                                                       |
-| age                 | INTEGER | NOT NULL                                                                   |
-| biological_sex      | TEXT    | NOT NULL CHECK (biological_sex IN ('male','female'))                       |
-| height_cm           | REAL    | NOT NULL                                                                   |
-| starting_weight_kg  | REAL    | NOT NULL                                                                   |
-| target_weight_kg    | REAL    | NOT NULL                                                                   |
-| morphotype          | TEXT    | NOT NULL CHECK (morphotype IN ('ectomorph','mesomorph','endomorph'))       |
-| goal                | TEXT    | NOT NULL CHECK (goal IN ('bulk','cut','maintain'))                         |
-| activity_level      | TEXT    | NOT NULL                                                                   |
-| sessions_per_week   | INTEGER | NOT NULL CHECK (sessions_per_week BETWEEN 1 AND 7)                         |
-| equipment_json      | TEXT    | NULL — JSON array of equipment tags                                        |
-| injuries_json       | TEXT    | NULL — JSON array                                                          |
-| program_start_date  | TEXT    | NOT NULL — ISO date                                                        |
-| created_at          | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                                         |
-| updated_at          | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                                         |
+The owner of every other domain row.
 
-### exercises
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `uuid` | NOT NULL | PK; default `gen_random_uuid()` |
+| `auth_user_id` | `uuid` | NULL | UNIQUE; FK → `auth.users(id)` ON DELETE SET NULL. NULL while seeded single-user mode is in use. |
+| `email` | `text` | NOT NULL | UNIQUE; CITEXT-style normalised at write time |
+| `display_name` | `text` | NULL | Optional; shown in UI when present |
+| `age` | `int` | NOT NULL | Years |
+| `biological_sex` | `text` | NOT NULL | `male` / `female` (CHECK) |
+| `height_cm` | `numeric(5,1)` | NOT NULL | |
+| `starting_weight_kg` | `numeric(5,2)` | NOT NULL | |
+| `target_weight_kg` | `numeric(5,2)` | NOT NULL | |
+| `morphotype` | `text` | NOT NULL | `ectomorph` / `mesomorph` / `endomorph` (CHECK) |
+| `goal` | `text` | NOT NULL | `bulk` / `cut` / `maintain` (CHECK) |
+| `weekly_session_count` | `int` | NOT NULL | 1..7 (CHECK) |
+| `available_equipment` | `text[]` | NOT NULL | Array of slugs |
+| `injuries` | `text[]` | NOT NULL | Array of strings; empty array allowed |
+| `program_start_date` | `date` | NOT NULL | |
+| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| `updated_at` | `timestamptz` | NOT NULL | default `now()` |
 
-| Column           | Type    | Notes                                                |
-|------------------|---------|------------------------------------------------------|
-| id               | INTEGER | PK AUTOINCREMENT                                     |
-| athlete_id       | INTEGER | NOT NULL REFERENCES athletes(id)                     |
-| locale           | TEXT    | NOT NULL DEFAULT 'fr-FR'                             |
-| name             | TEXT    | NOT NULL                                             |
-| muscle_group     | TEXT    | NOT NULL                                             |
-| targeted_muscles | TEXT    | NOT NULL — JSON array                                |
-| instructions     | TEXT    | NOT NULL                                             |
-| technique_points | TEXT    | NULL — JSON array                                    |
-| media_ref        | TEXT    | NULL — opaque storage reference                      |
-| created_at       | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                   |
-| **UNIQUE**       |         | `(athlete_id, locale, name)`                         |
+**RLS**: `athletes_self` — `auth_user_id = auth.uid()` for SELECT and ALL.
+**Indexes**: UNIQUE on `email`; UNIQUE on `auth_user_id` (where not null).
 
-Note: exercises are athlete-scoped per Principle I even though the seed library is shared in concept. This lets future tenants edit/extend their library without leaking across tenants.
+### 2. `exercises`
 
-### weekly_plan_slots
+Reusable exercise library; locale-tagged.
 
-| Column        | Type    | Notes                                                    |
-|---------------|---------|----------------------------------------------------------|
-| id            | INTEGER | PK AUTOINCREMENT                                         |
-| athlete_id    | INTEGER | NOT NULL REFERENCES athletes(id)                         |
-| day_of_week   | INTEGER | NOT NULL CHECK (day_of_week BETWEEN 1 AND 7) — 1 = Monday|
-| muscle_group  | TEXT    | NOT NULL                                                 |
-| display_order | INTEGER | NOT NULL                                                 |
-| **UNIQUE**    |         | `(athlete_id, day_of_week)`                              |
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug` | `text` | NOT NULL | natural key for seed upserts |
+| `locale` | `text` | NOT NULL | e.g. `fr-FR` (FR-020) |
+| `name` | `text` | NOT NULL | |
+| `targeted_muscles` | `text[]` | NOT NULL | |
+| `instructions` | `text` | NOT NULL | |
+| `technique_points` | `text[]` | NOT NULL | bullet list |
+| `media_image_url` | `text` | NULL | optional |
+| `media_video_url` | `text` | NULL | YouTube or local |
+| `created_at` | `timestamptz` | NOT NULL | default `now()` |
 
-### weekly_plan_slot_exercises
+**RLS**: standard per-athlete pair (research.md §5).
+**Indexes**: UNIQUE on `(athlete_id, slug, locale)`; INDEX on `(athlete_id)`.
 
-`athlete_id` denormalised to keep tenant-scoping local on every row.
+### 3. `weekly_plan_slots`
 
-| Column                | Type    | Notes                                                                |
-|-----------------------|---------|----------------------------------------------------------------------|
-| id                    | INTEGER | PK AUTOINCREMENT                                                     |
-| athlete_id            | INTEGER | NOT NULL REFERENCES athletes(id)                                     |
-| weekly_plan_slot_id   | INTEGER | NOT NULL REFERENCES weekly_plan_slots(id) ON DELETE CASCADE          |
-| exercise_id           | INTEGER | NOT NULL REFERENCES exercises(id)                                    |
-| order_in_slot         | INTEGER | NOT NULL                                                             |
-| **UNIQUE**            |         | `(weekly_plan_slot_id, order_in_slot)`                               |
+Per-athlete weekly schedule. One row per active training day (US-1 expects 5 rows for the seeded athlete).
 
-### training_phases
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `day_of_week` | `int` | NOT NULL | 1..7 (Mon..Sun); CHECK |
+| `muscle_group` | `text` | NOT NULL | e.g. `chest_triceps` |
+| `display_color` | `text` | NOT NULL | hex; for UI badge |
+| `display_order` | `int` | NOT NULL | within the week |
+| `created_at` | `timestamptz` | NOT NULL | default `now()` |
 
-| Column                | Type    | Notes                                  |
-|-----------------------|---------|----------------------------------------|
-| id                    | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id            | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| locale                | TEXT    | NOT NULL DEFAULT 'fr-FR'               |
-| name                  | TEXT    | NOT NULL                               |
-| start_week            | INTEGER | NOT NULL                               |
-| end_week              | INTEGER | NOT NULL                               |
-| sets_per_exercise     | INTEGER | NOT NULL                               |
-| reps_low              | INTEGER | NOT NULL                               |
-| reps_high             | INTEGER | NOT NULL                               |
-| rest_seconds          | INTEGER | NOT NULL                               |
-| target_intensity_pct  | INTEGER | NOT NULL — % of 1RM                    |
-| **UNIQUE**            |         | `(athlete_id, locale, name)`           |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, day_of_week)`.
 
-### nutrition_template_meals
+### 4. `weekly_plan_exercises`
 
-| Column           | Type    | Notes                                                                          |
-|------------------|---------|--------------------------------------------------------------------------------|
-| id               | INTEGER | PK AUTOINCREMENT                                                               |
-| athlete_id       | INTEGER | NOT NULL REFERENCES athletes(id)                                               |
-| slot             | TEXT    | NOT NULL CHECK (slot IN ('breakfast','lunch','pre_workout','dinner','evening'))|
-| display_order    | INTEGER | NOT NULL                                                                       |
-| target_calories  | REAL    | NOT NULL                                                                       |
-| target_protein_g | REAL    | NOT NULL                                                                       |
-| target_carbs_g   | REAL    | NOT NULL                                                                       |
-| target_fat_g     | REAL    | NOT NULL                                                                       |
-| **UNIQUE**       |         | `(athlete_id, slot)`                                                           |
+Exercises assigned to a plan slot, ordered.
 
-### supplements
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slot_id` | `bigint` | NOT NULL | FK → `weekly_plan_slots(id)` ON DELETE CASCADE |
+| `exercise_id` | `bigint` | NOT NULL | FK → `exercises(id)` |
+| `position` | `int` | NOT NULL | order within slot |
+| `target_sets` | `int` | NOT NULL | |
+| `target_reps_low` | `int` | NOT NULL | |
+| `target_reps_high` | `int` | NOT NULL | |
 
-| Column           | Type    | Notes                                  |
-|------------------|---------|----------------------------------------|
-| id               | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id       | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| locale           | TEXT    | NOT NULL DEFAULT 'fr-FR'               |
-| name             | TEXT    | NOT NULL                               |
-| dosage           | TEXT    | NOT NULL                               |
-| recommended_time | TEXT    | NOT NULL                               |
-| display_order    | INTEGER | NOT NULL                               |
-| **UNIQUE**       |         | `(athlete_id, locale, name)`           |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(slot_id, position)`; INDEX on `(athlete_id)`.
 
-### supplement_intakes
+### 5. `training_phases`
 
-| Column         | Type    | Notes                                  |
-|----------------|---------|----------------------------------------|
-| id             | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id     | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| supplement_id  | INTEGER | NOT NULL REFERENCES supplements(id)    |
-| taken_on       | TEXT    | NOT NULL — ISO date                    |
-| taken          | INTEGER | NOT NULL CHECK (taken IN (0,1))        |
-| created_at     | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP     |
-| **UNIQUE**     |         | `(supplement_id, taken_on)`            |
+Multi-week phases with volume/intensity parameters used by the program generator.
 
-### foods
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug` | `text` | NOT NULL | seed key |
+| `locale` | `text` | NOT NULL | `fr-FR` |
+| `name` | `text` | NOT NULL | |
+| `description` | `text` | NOT NULL | |
+| `weeks` | `int` | NOT NULL | duration |
+| `rest_seconds` | `int` | NOT NULL | default rest between sets |
+| `intensity_pct_min` | `int` | NOT NULL | of 1RM |
+| `intensity_pct_max` | `int` | NOT NULL | of 1RM |
+| `display_order` | `int` | NOT NULL | |
 
-| Column              | Type    | Notes                                  |
-|---------------------|---------|----------------------------------------|
-| id                  | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id          | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| locale              | TEXT    | NOT NULL DEFAULT 'fr-FR'               |
-| name                | TEXT    | NOT NULL                               |
-| protein_g_per_100g  | REAL    | NOT NULL                               |
-| carbs_g_per_100g    | REAL    | NOT NULL                               |
-| fat_g_per_100g      | REAL    | NOT NULL                               |
-| calories_per_100g   | REAL    | NOT NULL                               |
-| **UNIQUE**          |         | `(athlete_id, locale, name)`           |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
 
-### quotes
+### 6. `nutrition_template_meals`
 
-| Column        | Type    | Notes                                  |
-|---------------|---------|----------------------------------------|
-| id            | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id    | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| locale        | TEXT    | NOT NULL DEFAULT 'fr-FR'               |
-| text          | TEXT    | NOT NULL                               |
-| author        | TEXT    | NULL                                   |
-| display_order | INTEGER | NOT NULL                               |
+Per-athlete meal-slot template (5 meals for the seeded athlete).
 
-### sessions
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slot` | `text` | NOT NULL | e.g. `breakfast`, `lunch`, `pre_workout`, `dinner`, `evening_snack` |
+| `display_order` | `int` | NOT NULL | |
+| `target_kcal` | `int` | NOT NULL | |
+| `target_protein_g` | `int` | NOT NULL | |
+| `target_carbs_g` | `int` | NOT NULL | |
+| `target_fat_g` | `int` | NOT NULL | |
 
-| Column            | Type    | Notes                                                |
-|-------------------|---------|------------------------------------------------------|
-| id                | INTEGER | PK AUTOINCREMENT                                     |
-| athlete_id        | INTEGER | NOT NULL REFERENCES athletes(id)                     |
-| started_at        | TEXT    | NOT NULL                                             |
-| ended_at          | TEXT    | NULL                                                 |
-| muscle_group      | TEXT    | NOT NULL                                             |
-| training_phase_id | INTEGER | NULL REFERENCES training_phases(id)                  |
-| energy_rating     | INTEGER | NULL CHECK (energy_rating BETWEEN 1 AND 5)           |
-| note              | TEXT    | NULL                                                 |
-| created_at        | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                   |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, slot)`.
 
-### sets
+### 7. `supplements`
 
-| Column            | Type    | Notes                                                |
-|-------------------|---------|------------------------------------------------------|
-| id                | INTEGER | PK AUTOINCREMENT                                     |
-| athlete_id        | INTEGER | NOT NULL REFERENCES athletes(id)                     |
-| session_id        | INTEGER | NOT NULL REFERENCES sessions(id) ON DELETE CASCADE   |
-| exercise_id       | INTEGER | NOT NULL REFERENCES exercises(id)                    |
-| order_in_session  | INTEGER | NOT NULL                                             |
-| weight_kg         | REAL    | NOT NULL                                             |
-| reps              | INTEGER | NOT NULL                                             |
-| rpe               | INTEGER | NULL CHECK (rpe BETWEEN 1 AND 10)                    |
-| completed         | INTEGER | NOT NULL CHECK (completed IN (0,1))                  |
-| created_at        | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                   |
+Supplement stack with adherence later attached separately.
 
-### body_measurements
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug` | `text` | NOT NULL | |
+| `locale` | `text` | NOT NULL | `fr-FR` |
+| `name` | `text` | NOT NULL | |
+| `dosage` | `text` | NOT NULL | e.g. `5 g` |
+| `recommended_time` | `text` | NOT NULL | e.g. `morning`, `pre_workout` |
+| `notes` | `text` | NULL | |
+| `display_order` | `int` | NOT NULL | |
 
-| Column        | Type    | Notes                                  |
-|---------------|---------|----------------------------------------|
-| id            | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id    | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| measured_on   | TEXT    | NOT NULL — ISO date                    |
-| weight_kg     | REAL    | NOT NULL — plaintext per FR-022        |
-| arm_cm        | REAL    | NULL                                   |
-| chest_cm      | REAL    | NULL                                   |
-| thighs_cm     | REAL    | NULL                                   |
-| shoulders_cm  | REAL    | NULL                                   |
-| waist_cm      | REAL    | NULL                                   |
-| note          | TEXT    | NULL                                   |
-| created_at    | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP     |
-| **UNIQUE**    |         | `(athlete_id, measured_on)`            |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
 
-### athlete_photos
+### 8. `foods`
 
-| Column            | Type    | Notes                                                          |
-|-------------------|---------|----------------------------------------------------------------|
-| id                | INTEGER | PK AUTOINCREMENT                                               |
-| athlete_id        | INTEGER | NOT NULL REFERENCES athletes(id)                               |
-| storage_ref       | TEXT    | NOT NULL — opaque ref via the `photo_storage` adapter (FR-021) |
-| taken_on          | TEXT    | NOT NULL — ISO date                                            |
-| weight_kg_at_time | REAL    | NULL — overlay metadata                                        |
-| created_at        | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP                             |
+Food database; per-100g macros.
 
-### recovery_logs
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug` | `text` | NOT NULL | |
+| `locale` | `text` | NOT NULL | `fr-FR` |
+| `name` | `text` | NOT NULL | |
+| `kcal_per_100g` | `numeric(6,2)` | NOT NULL | |
+| `protein_per_100g` | `numeric(5,2)` | NOT NULL | |
+| `carbs_per_100g` | `numeric(5,2)` | NOT NULL | |
+| `fat_per_100g` | `numeric(5,2)` | NOT NULL | |
+| `category` | `text` | NOT NULL | e.g. `protein`, `carb`, `fat`, `mixed` |
 
-| Column          | Type    | Notes                                                |
-|-----------------|---------|------------------------------------------------------|
-| id              | INTEGER | PK AUTOINCREMENT                                     |
-| athlete_id      | INTEGER | NOT NULL REFERENCES athletes(id)                     |
-| logged_on       | TEXT    | NOT NULL — ISO date                                  |
-| sleep_quality   | INTEGER | NULL CHECK (sleep_quality BETWEEN 1 AND 5)           |
-| sleep_hours     | REAL    | NULL                                                 |
-| stress_level    | INTEGER | NULL CHECK (stress_level BETWEEN 1 AND 5)            |
-| energy_level    | INTEGER | NULL CHECK (energy_level BETWEEN 1 AND 5)            |
-| mood            | TEXT    | NULL                                                 |
-| sore_zones_json | TEXT    | NULL — JSON array of zone tags                       |
-| **UNIQUE**      |         | `(athlete_id, logged_on)`                            |
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, slug, locale)`; INDEX on `(athlete_id, category)`.
 
-### app_config
+### 9. `quotes`
 
-Per-athlete *runtime preferences* (theme, units, timer sounds). Distinct from *deployment* configuration (port, db path, single-user-mode flag), which lives in `.env` and is loaded by the configuration adapter — never persisted to the DB.
+Motivational quotes; rotated daily by the dashboard later.
 
-| Column     | Type    | Notes                                  |
-|------------|---------|----------------------------------------|
-| id         | INTEGER | PK AUTOINCREMENT                       |
-| athlete_id | INTEGER | NOT NULL REFERENCES athletes(id)       |
-| key        | TEXT    | NOT NULL                               |
-| value      | TEXT    | NOT NULL                               |
-| **UNIQUE** |         | `(athlete_id, key)`                    |
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug` | `text` | NOT NULL | |
+| `locale` | `text` | NOT NULL | `fr-FR` |
+| `text` | `text` | NOT NULL | |
+| `author` | `text` | NULL | |
 
-### _migrations
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
 
-| Column     | Type    | Notes                                  |
-|------------|---------|----------------------------------------|
-| filename   | TEXT    | PRIMARY KEY                            |
-| applied_at | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP     |
+### 10. `session_journal_entries`
 
-## Indexes
+One row per logged training session. Empty in Phase 0 (the journal screen ships in Phase 4) — but the table exists so future migrations don't have to add `athlete_id`.
 
-- `idx_exercises_athlete` ON `exercises(athlete_id)`
-- `idx_weekly_plan_athlete_day` ON `weekly_plan_slots(athlete_id, day_of_week)`
-- `idx_supplement_intakes_athlete_date` ON `supplement_intakes(athlete_id, taken_on)`
-- `idx_sessions_athlete_started` ON `sessions(athlete_id, started_at DESC)`
-- `idx_sets_session` ON `sets(session_id)`
-- `idx_sets_athlete_exercise` ON `sets(athlete_id, exercise_id, created_at DESC)`
-- `idx_body_measurements_athlete_date` ON `body_measurements(athlete_id, measured_on DESC)`
-- `idx_athlete_photos_athlete_date` ON `athlete_photos(athlete_id, taken_on DESC)`
-- `idx_recovery_logs_athlete_date` ON `recovery_logs(athlete_id, logged_on DESC)`
-- `idx_foods_athlete_locale_name` ON `foods(athlete_id, locale, name)`
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `started_at` | `timestamptz` | NOT NULL | |
+| `ended_at` | `timestamptz` | NULL | |
+| `total_volume_kg` | `numeric(10,2)` | NULL | computed at session close |
+| `energy_rating` | `int` | NULL | 1..5 |
+| `note` | `text` | NULL | |
+| `created_at` | `timestamptz` | NOT NULL | default `now()` |
 
-## Validation rules
+**RLS**: standard per-athlete pair.
+**Indexes**: INDEX on `(athlete_id, started_at DESC)`.
 
-- Email is validated at the controller boundary via zod (RFC 5322-lite).
-- All `weight_kg` and macro values must be non-negative (enforced in models / zod request schemas).
-- Enums (`morphotype`, `goal`, `slot`, `biological_sex`) enforced via SQL `CHECK` constraints AND zod at the application boundary.
-- `locale` is a BCP-47 tag string; only `fr-FR` is seeded; the BCP-47 grammar is not enforced in SQL (left to the future locale catalog).
+### 11. `session_sets`
+
+Per-set rows attached to a journal entry. Empty in Phase 0.
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `session_id` | `bigint` | NOT NULL | FK → `session_journal_entries(id)` ON DELETE CASCADE |
+| `exercise_id` | `bigint` | NOT NULL | FK → `exercises(id)` |
+| `set_number` | `int` | NOT NULL | |
+| `weight_kg` | `numeric(6,2)` | NOT NULL | |
+| `reps` | `int` | NOT NULL | |
+| `rpe` | `int` | NULL | 1..10 |
+| `completed` | `boolean` | NOT NULL | default `false` |
+
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(session_id, set_number)`; INDEX on `(athlete_id, exercise_id)`.
+
+### 12. `body_measurements`
+
+Plaintext numeric body data (FR-022). Empty in Phase 0.
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `bigint` identity | NOT NULL | PK |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `measured_on` | `date` | NOT NULL | |
+| `weight_kg` | `numeric(5,2)` | NULL | |
+| `arm_cm` | `numeric(5,2)` | NULL | |
+| `chest_cm` | `numeric(5,2)` | NULL | |
+| `thigh_cm` | `numeric(5,2)` | NULL | |
+| `shoulder_cm` | `numeric(5,2)` | NULL | |
+| `waist_cm` | `numeric(5,2)` | NULL | |
+| `note` | `text` | NULL | |
+
+**RLS**: standard per-athlete pair.
+**Indexes**: UNIQUE on `(athlete_id, measured_on)`.
+
+### 13. `athlete_photos`
+
+Photo metadata only; binary lives behind the `photo_storage` adapter (FR-021).
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | `uuid` | NOT NULL | PK; default `gen_random_uuid()` |
+| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `taken_on` | `date` | NOT NULL | |
+| `storage_key` | `text` | NOT NULL | opaque key returned by the adapter |
+| `weight_overlay_kg` | `numeric(5,2)` | NULL | snapshot at the time of the photo |
+| `note` | `text` | NULL | |
+| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+
+**RLS**: standard per-athlete pair.
+**Indexes**: INDEX on `(athlete_id, taken_on DESC)`.
+
+### 14. `app_config`
+
+Per-athlete preferences (theme, units, custom nutrition targets, etc.). Phase 0 seeds defaults; Phase 2 exposes editing.
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `athlete_id` | `uuid` | NOT NULL | PK; FK → `athletes(id)` ON DELETE CASCADE |
+| `theme` | `text` | NOT NULL | `dark` / `light` |
+| `units` | `text` | NOT NULL | `kg` / `lbs` |
+| `rest_timer_sound` | `boolean` | NOT NULL | default `true` |
+| `daily_kcal_override` | `int` | NULL | overrides program target if set |
+| `updated_at` | `timestamptz` | NOT NULL | default `now()` |
+
+**RLS**: `app_config_self` — same indirection through `athletes.auth_user_id`.
+
+## Constraints summary
+
+- **14 tables** total. **All 13 domain tables** carry `athlete_id` (FR-002, SC-002). The 14th table (`athletes`) IS the tenant root.
+- **All 14 tables** carry RLS policies from migration day one (constitution Operational Standards: "a table without an RLS policy MUST NOT reach a multi-user environment").
+- **All 5 translatable reference tables** (`exercises`, `training_phases`, `supplements`, `foods`, `quotes`) carry `locale` from migration day one (FR-020).
+- **No `password_hash` column anywhere**: the application delegates credential storage to Supabase Auth.
+
+## Migration order
+
+Migrations are timestamp-prefixed and applied in lexical order. The proposed order respects FK dependencies:
+
+1. `init_athletes` — also installs the `pgcrypto` extension if not present (for `gen_random_uuid()`).
+2. `init_exercises`
+3. `init_weekly_plan` — both `weekly_plan_slots` and `weekly_plan_exercises` (depends on 2).
+4. `init_training_phases`
+5. `init_nutrition` — `nutrition_template_meals`.
+6. `init_supplements`
+7. `init_foods`
+8. `init_quotes`
+9. `init_session_journal` — `session_journal_entries`.
+10. `init_session_sets` — depends on 9 and 2.
+11. `init_body_measurements`
+12. `init_athlete_photos`
+13. `init_recovery_log` — empty in Phase 0; included so the schema is complete.
+14. `init_app_config`
+
+Each migration creates the table, adds indexes, enables RLS, creates the SELECT policy, creates the modify policy, and (for athlete-scoped tables) sets `ON DELETE CASCADE` from `athletes`.

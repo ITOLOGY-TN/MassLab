@@ -1,98 +1,152 @@
-# Phase 0 Research — Stack Decisions
+# Phase 0 Research — Foundation and Architecture (Supabase stack)
 
 **Feature**: 001-phase0-foundation
-**Date**: 2026-04-27
+**Date**: 2026-04-28
+**Constitution**: v1.1.1
 
-This document records the technology decisions taken to fulfil the spec, with the alternatives evaluated and the reasoning for each pick. Once locked here, these choices are reflected in `package.json`, the source-tree layout, and the Constitution Check gate of this plan.
+This document captures the stack decisions taken for `001-phase0-foundation` after PLAN.md was rewritten and the constitution amended to v1.1.1. Every NEEDS CLARIFICATION from the Technical Context is resolved below.
 
-## SQLite client library
+## 1. Local Supabase development model
 
-- **Decision**: `better-sqlite3` (Node binding, synchronous API).
-- **Rationale**: The app is single-process and single-tenant in Phase 0, and event-loop concurrency is not the bottleneck — every meaningful operation is sub-millisecond on local SQLite. `better-sqlite3` gives us synchronous prepared statements (zero callback hell, tighter migration code, simpler tests), explicit transaction wrappers for the idempotent seed (FR-011), and the best benchmarked single-process throughput on Node. WAL mode is enabled by default.
-- **Alternatives considered**:
-  - `sqlite3` (older callback-based binding) — slower; async API adds ceremony with no payoff for a single-process app.
-  - `node:sqlite` (Node 22.5+ experimental) — too new, behind an experimental flag, not on Node 20 LTS.
-  - Drizzle / Prisma — more abstraction than this phase needs; complicates the migration story (we want plain SQL files reviewable in PRs). Reconsider in a later phase.
+**Decision**: Use the **Supabase CLI** to run a local Supabase stack on the operator's machine (`supabase start`), which boots Postgres + GoTrue (auth) + Storage + Realtime + Studio in containers. The application reads `SUPABASE_URL` and the local keys printed by the CLI on first boot.
 
-## HTTP framework and version
+**Rationale**:
+- Keeps Phase 0 fully offline. No third-party project, no cloud account, no quota surprises during local dev.
+- Mirrors the production topology: same Postgres extensions, same Auth surface, same RLS semantics. Code that passes against the local stack passes against a hosted Supabase project.
+- Migrations apply identically against local and remote (`supabase migration up` vs `supabase db push`).
 
-- **Decision**: Express 4.x.
-- **Rationale**: PLAN.md mandates Express. Pin to 4.x because Express 5 is still settling middleware compatibility and many ecosystem packages still target 4. Upgrade to 5 is a future PR.
-- **Alternatives considered**:
-  - Fastify — faster, schema-first, but PLAN.md says Express. Out of scope to change.
-  - Express 5 — usable but unnecessary risk for Phase 0.
+**Alternatives considered**:
+- Hosted dev Supabase project. Rejected for Phase 0 because it forces every contributor to have a Supabase account and creates a shared-state foot-gun (one operator's destructive migration breaks everyone else).
+- Plain local Postgres without Supabase services. Rejected because we lose Supabase Auth (`auth.users`, `auth.uid()`) which the RLS policies depend on, and we'd have to mock the auth surface for tests.
 
-## Structured logger
+## 2. Migration tooling
 
-- **Decision**: `pino`.
-- **Rationale**: Lowest overhead in the Node ecosystem; JSON-by-default; supports redaction via the `redact` option (used to honour FR-014's secret-tag redaction); supports child loggers (used to bind `request_id` per request without re-emitting it on every log call); production-friendly when shipping to stdout for a future log collector.
-- **Alternatives considered**:
-  - `winston` — more configurable but materially slower and noisier in JSON mode.
-  - Hand-rolled logger — fails the "structured at boundaries" rule too easily; needs reinventing redaction.
+**Decision**: Use Supabase CLI migrations exclusively. Files live in `supabase/migrations/<timestamp>_<name>.sql` and are applied with `supabase migration up` (local) or `supabase db push` (remote). No ad-hoc SQL through Studio without a matching committed migration. Migrations are forward-only.
 
-## Configuration loader and schema validator
+**Rationale**:
+- Constitution v1.1.1 Operational Standards: "Every change to the database schema MUST ship as a versioned Supabase migration ... never an ad-hoc edit to the seed file or the Supabase Studio UI."
+- Forward-only matches a deploy model where rollbacks happen by writing a new migration that undoes the previous change, not by reversing migrations in place.
+- Each migration owns one aggregate (one core table + its RLS policies + any trigger), keeping diffs reviewable.
 
-- **Decision**: `dotenv` for the local adapter; `zod` for schema validation. Secret/non-secret tag carried by a small registry alongside the zod schema. Values are read from `process.env` once at startup, validated, frozen, and exposed via the adapter interface (`Loader#load(): Config`).
-- **Rationale**: `dotenv` is the de-facto standard local loader. `zod` lets us define the config schema once, fail-fast on missing/invalid values (FR-010), and tag secrets for log redaction (FR-014). The adapter interface means swapping `.env` for a hosted secret manager later is replacing one file (FR-006).
-- **Alternatives considered**:
-  - `convict` — older, similar capability, smaller community in 2026.
-  - `joi` — schema validation only; zod's API is cleaner and has better composability.
+**Alternatives considered**:
+- A custom JS migration runner. Rejected — duplicates Supabase CLI's behavior and requires maintaining ordering/transaction logic ourselves.
+- Drizzle / Prisma migrations. Rejected — both are excellent ORMs but neither is needed for Phase 0 (the data-access modules wrap raw `supabase-js` queries) and adopting one now adds a second source of truth for schema.
 
-## Password hashing
+## 3. Single-user middleware design
 
-- **Decision**: `bcrypt` (npm `bcrypt`, native binding), cost factor 12, configurable via env.
-- **Rationale**: Battle-tested and widely audited. The seam itself is not exercised by a UI in Phase 0 (single-user mode bypasses auth), but the `password_hash` storage shape is locked now (FR-016).
-- **Alternatives considered**:
-  - `argon2` — stronger but heavier native dep; revisit when going online if regulators specifically require it.
-  - `scrypt` (node built-in) — possible, but bcrypt's verify story is more familiar to most reviewers.
+**Decision**: A single `auth` middleware sits in the request pipeline immediately after the request-id middleware. Behaviour branches on `SINGLE_USER_MODE`:
+- When `true`: it sets `req.athleteId` to the seeded athlete's `id` (resolved once at boot from the seeded display name or via a config-injected ID) and calls `next()`.
+- When `false`: it expects an `Authorization: Bearer <jwt>` header, validates the JWT with `@supabase/supabase-js`'s `auth.getUser(token)`, looks up `athletes.auth_user_id = user.id`, and sets `req.athleteId`. Missing or invalid token → `401`.
 
-## Migration runner
+**Rationale**:
+- Single switch flips behavior with zero source-code edits (Constitution Principle I, FR-005, US-3).
+- JWT validation through the official Supabase client keeps key rotation and signing-key changes transparent — we do not parse JWTs ourselves.
+- Looking up athletes by `auth_user_id` (not by email-on-each-request) keeps the request hot path one indexed query.
 
-- **Decision**: Custom thin runner — read `migrations/*.sql` in lexical order, execute each inside a transaction, record applied filenames in a `_migrations` table.
-- **Rationale**: Forward-only by spec; no rollback complexity; stays under 100 lines and we own every line. Avoids a heavyweight dep for what is essentially a `for` loop and a `CREATE TABLE _migrations IF NOT EXISTS`.
-- **Alternatives considered**:
-  - `umzug` — flexible, but most of its surface targets ORM-coupled migrations.
-  - `node-pg-migrate` — Postgres-only.
-  - `knex` migrations — pulls in a query builder we do not otherwise use.
+**Alternatives considered**:
+- Two separate middleware files registered conditionally at boot. Rejected — splits the "auth seam" into two artifacts and makes the mode-switch test harder to write (it would have to verify wiring, not behavior).
+- Decoding the JWT manually with `jsonwebtoken`. Rejected — Supabase's signing keys can rotate; using `auth.getUser` is the supported, rotation-safe path.
 
-## Test runner
+## 4. Supabase JS client initialization (server vs client)
 
-- **Decision**: `vitest` (with `supertest` for HTTP).
-- **Rationale**: ESM-native, fast watch mode, Jest-compatible API, no Babel/TS pipeline. Supertest is the conventional HTTP integration helper for Express apps.
-- **Alternatives considered**:
-  - `jest` — slower ESM story, heavier config.
-  - `node:test` — improving, but coverage and watch ergonomics still lag Vitest in early 2026.
+**Decision**: Two distinct Supabase clients, instantiated in different layers:
+- **Server-side** (`/services/dataAccess/supabaseClient.js`): created once with `SUPABASE_URL` + `SUPABASE_SECRET_KEY`. It is the only place in the backend that holds the secret key. RLS is bypassed for this client by Supabase design — that's why Principle I requires the application's own auth middleware as the primary tenant guard, with RLS as defense-in-depth for any direct DB access.
+- **Frontend** (`/frontend/src/lib/supabaseClient.js`, NOT used in Phase 0 but scaffolded): created with `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`. Phase 0 frontend reaches the API only via `/api/v1/`, so this file is wired but its only consumer is a future Supabase Auth login screen.
 
-## Request ID generator
+**Rationale**:
+- Constitution v1.1.1 "Supabase key handling": secret key never reaches the browser; publishable key is the only key that crosses to the frontend.
+- Two separate clients makes the boundary visually obvious in code review.
 
-- **Decision**: `crypto.randomUUID()` from Node core.
-- **Rationale**: No dep needed. UUID v4 is sufficient for correlation; the constitution does not require sortable IDs. Generated once per request in the `requestId` middleware (FR-018).
-- **Alternatives considered**:
-  - `uuid` package — extra dep with no upside on Node 20+.
-  - `nanoid` — slightly shorter strings; readability win is small, dep cost is real.
+**Alternatives considered**:
+- Single shared client module. Rejected — would couple frontend and backend bundles and make it dangerously easy to import the secret-key client into frontend code.
 
-## Photo storage adapter
+## 5. RLS policy pattern
 
-- **Decision**: Local-filesystem adapter writing to `./data/photos/<athlete_id>/<uuid>.<ext>`; the `athlete_photos` table stores the relative path. Adapter interface: `put(athleteId, buffer, ext) → ref`, `get(ref) → ReadableStream`, `delete(ref)`.
-- **Rationale**: Photos are not in PLAN.md's first-launch acceptance flow, but the schema and adapter must exist now (FR-021). The interface mirrors S3 semantics so swapping later is a config change.
-- **Alternatives considered**:
-  - DB blobs — rejected; documented in spec.
-  - Object-storage SDK from day one — overkill for a local-only Phase 0.
+**Decision**: Every domain table gets the following pair of policies in the same migration, gated on `auth.uid()`:
 
-## Project layout (`src/` wrapper or not)
+```sql
+ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
 
-- **Decision**: No `src/` wrapper. Top-level directories per PLAN.md.
-- **Rationale**: PLAN.md explicitly names paths starting at the repo root. Adding `src/` would silently diverge from the architecture contract.
-- **Alternatives considered**:
-  - `src/` wrapper — common in Node 2026, but breaks PLAN.md's directory contract.
+CREATE POLICY "<table>_select_own" ON <table>
+  FOR SELECT USING (
+    athlete_id IN (
+      SELECT id FROM athletes WHERE auth_user_id = auth.uid()
+    )
+  );
 
-## Idempotent seeding strategy
+CREATE POLICY "<table>_modify_own" ON <table>
+  FOR ALL USING (
+    athlete_id IN (
+      SELECT id FROM athletes WHERE auth_user_id = auth.uid()
+    )
+  ) WITH CHECK (
+    athlete_id IN (
+      SELECT id FROM athletes WHERE auth_user_id = auth.uid()
+    )
+  );
+```
 
-- **Decision**: Single transactional seed function `runSeed(db)` that:
-  1. Begins a transaction.
-  2. For each seeded entity, checks for existing rows by a stable natural key (e.g. `email` on athletes, `(athlete_id, locale, name)` on exercises) and inserts only if absent.
-  3. Commits.
-- **Rationale**: Honours FR-011 (idempotent across launches) and the "partial seed failure" edge case (atomic). Stable natural keys avoid duplicates without needing to track "has seeded" state out-of-band.
-- **Alternatives considered**:
-  - "Seeded" sentinel row in `_migrations` — feasible but couples seeding to the migration runner; cleaner to keep them separate concerns.
-  - Truncate-and-reload — destructive; rejected.
+The lookup table `athletes` itself uses a tighter policy (`auth_user_id = auth.uid()`).
+
+**Rationale**:
+- Defence-in-depth for Principle I (FR-002, FR-003): if a future contributor accidentally bypasses the data-access layer and calls Supabase from another module, RLS still scopes the query.
+- Phase 0 runs in single-user mode against the secret-key client, which bypasses RLS — so RLS does not affect the working app today, but the policies are exercised by `tests/integration/rls.policies.test.js` using a per-test JWT.
+
+**Alternatives considered**:
+- Single policy via `FOR ALL`. Rejected — separating SELECT from modify makes future read-only roles trivial.
+- `USING ((SELECT auth.uid()) = athlete_id)` with `auth.uid()` directly equal to `athlete_id`. Rejected — it conflates the `athlete_id` (an internal `bigint` we control) with the Supabase Auth `uid` (a UUID Supabase controls). The indirection through `athletes.auth_user_id` keeps the two namespaces clean and lets one auth user map to many athletes later (e.g. coach + client) without a schema change.
+
+## 6. Frontend build serving
+
+**Decision**:
+- **Dev**: `npm start` runs Express on `PORT` (default 3000) and Vite on its default `5173` concurrently (via `concurrently`). Vite proxies `/api/v1/*` to the Express server. The operator opens `http://localhost:5173`.
+- **Phase 0 prod path is not exercised** (PLAN.md scopes Phase 0 to local). The plan documents the future shape: `npm run build` produces `frontend/dist/`; Express serves it as static under `/` with a SPA-fallback route, while still exposing `/api/v1/`.
+
+**Rationale**:
+- Vite's HMR is a step-function productivity gain over a hand-rolled dev pipeline.
+- The proxy avoids CORS during dev without baking dev-only logic into the API; `CORS_ORIGIN` still gates real cross-origin in production.
+
+**Alternatives considered**:
+- Single-port dev (Express serves Vite via middleware). Rejected — couples the API process to frontend tooling; restarts the API every time Vite restarts.
+- Separate package roots without npm workspaces. Rejected — forces `cd frontend && npm install` as a second operator step, breaking SC-001 ("≤ 5 minutes from clone to running").
+
+## 7. Photo storage adapter
+
+**Decision**: Keep the spec's clarified default — `filesystemAdapter` writes images under `./data/photos/<athlete_id>/<uuid>.<ext>` and returns a stable opaque key (`photos/<athlete_id>/<uuid>.<ext>`). The adapter interface is one file (`photoStorage/index.js`) with `put(key, bytes, mime)` / `get(key)` / `delete(key)` / `url(key)`. A future `supabaseStorageAdapter` can be added under the same interface; the swap is a config change.
+
+**Rationale**:
+- Honors clarification 2026-04-27 (point 5) without forcing a Supabase Storage dependency now.
+- Keeps Phase 0's contract surface minimal — controllers and services only ever see opaque keys.
+
+**Alternatives considered**:
+- Default to Supabase Storage immediately. Rejected — would re-open a clarification that was already resolved, and the local adapter is a better fit for the offline-local Phase 0 workflow.
+- Store images as base64 in a Postgres `bytea` column. Rejected by spec FR-021 ("MUST NOT store image binaries inside the application database").
+
+## 8. Idempotent seed
+
+**Decision**: Two-step seed:
+1. **Static reference seed** (locale-tagged catalogues: exercises, foods, supplements, training phases, quotes) — loaded by `supabase/seed.sql` (Supabase's standard mechanism, runs after migrations). Uses `INSERT ... ON CONFLICT (locale, slug) DO NOTHING`.
+2. **Athlete-scoped seed** (the current athlete profile, their weekly plan, their nutrition template) — loaded by `seed/runSeed.js`, which calls the data-access modules and uses `upsert` keyed on `(athlete_id, slug)` or equivalent stable natural keys. Wrapped in a single transaction.
+
+The Node-side seed runs at boot when `--seed` is passed to `npm start` (or via `npm run seed`); both are idempotent.
+
+**Rationale**:
+- FR-011 (idempotent across launches), edge case "Existing data on launch", edge case "Partial seed failure" (transactional wrapper).
+- Splitting reference vs athlete-scoped seed keeps the migration → seed pipeline canonical (Supabase loads `seed.sql` automatically) while still letting the program-generator output be an in-process Node operation rather than a static SQL file.
+
+**Alternatives considered**:
+- All-SQL seed. Rejected — the program generator is required to produce the seeded plan (FR-008), and it's a Node function. Re-implementing it in PL/pgSQL would violate Principle II (pure stateless service) and Principle V (testable in isolation).
+- Drop-and-recreate seed. Rejected — destroys subsequent-launch data; violates FR-011 and SC-005.
+
+## 9. Constitution alignment summary
+
+All eight decisions above were checked against constitution v1.1.1 before being recorded:
+
+| Principle | Decision touchpoints | Status |
+|---|---|---|
+| I. Multi-Tenant-Ready Data Model | §3 (auth), §5 (RLS), §8 (seed scopes athlete) | ✅ |
+| II. Layered Architecture | §4 (client placement), §6 (API/UI separation), §7 (adapter) | ✅ |
+| III. Configuration over Hardcoding | §1, §3, §4 (env keys, adapter, key separation) | ✅ |
+| IV. Versioned API Contract | §6 (proxy targets `/api/v1`), out-of-band: contracts/openapi.yaml | ✅ |
+| V. Test-First for Domain Logic | §8 (program generator stays Node-side, testable) | ✅ |
+| VI. Athlete-First UX | §6 (Tailwind from day one in scaffold) | ✅ scaffold-only |
