@@ -1,0 +1,422 @@
+openapi: 3.1.0
+info:
+  title: MassLab API
+  version: 1.0.0-phase0
+  description: |
+    Phase 0 read-only API for MassLab. All endpoints are tenant-scoped to the
+    requesting athlete, resolved by the auth middleware. In single-user mode
+    (default), every request resolves to the seeded athlete; in multi-user
+    mode, unauthenticated requests are rejected.
+servers:
+  - url: http://localhost:3000/api/v1
+
+paths:
+  /athlete:
+    get:
+      summary: Get the current athlete profile
+      operationId: getCurrentAthlete
+      responses:
+        '200':
+          description: Current athlete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /exercises:
+    get:
+      summary: List exercises for the current athlete
+      operationId: listExercises
+      parameters:
+        - in: query
+          name: muscle_group
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exercise list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exercise'
+
+  /exercises/{id}:
+    get:
+      summary: Get one exercise by id
+      operationId: getExercise
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: One exercise
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /weekly-plan:
+    get:
+      summary: Get the current athlete's weekly plan with exercises per slot
+      operationId: getWeeklyPlan
+      responses:
+        '200':
+          description: Weekly plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlan'
+
+  /training-phases:
+    get:
+      summary: List training phases
+      operationId: listTrainingPhases
+      responses:
+        '200':
+          description: Training phases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrainingPhase'
+
+  /nutrition/template:
+    get:
+      summary: Get the daily meal template with macro targets
+      operationId: getNutritionTemplate
+      responses:
+        '200':
+          description: Nutrition template
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MealTemplate'
+
+  /supplements:
+    get:
+      summary: List supplements
+      operationId: listSupplements
+      responses:
+        '200':
+          description: Supplements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Supplement'
+
+  /foods:
+    get:
+      summary: List or search foods
+      operationId: listFoods
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        '200':
+          description: Foods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Food'
+
+  /quotes/today:
+    get:
+      summary: Get the current rotated quote
+      operationId: getTodayQuote
+      responses:
+        '200':
+          description: Today's quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+
+components:
+  responses:
+    Unauthorized:
+      description: Authentication required (multi-user mode)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found in this tenant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error, request_id]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+        request_id:
+          type: string
+          format: uuid
+
+    AthleteProfile:
+      type: object
+      required:
+        - id
+        - email
+        - age
+        - biological_sex
+        - height_cm
+        - starting_weight_kg
+        - target_weight_kg
+        - morphotype
+        - goal
+        - sessions_per_week
+        - program_start_date
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+        biological_sex:
+          type: string
+          enum: [male, female]
+        height_cm:
+          type: number
+        starting_weight_kg:
+          type: number
+        target_weight_kg:
+          type: number
+        morphotype:
+          type: string
+          enum: [ectomorph, mesomorph, endomorph]
+        goal:
+          type: string
+          enum: [bulk, cut, maintain]
+        activity_level:
+          type: string
+        sessions_per_week:
+          type: integer
+          minimum: 1
+          maximum: 7
+        equipment:
+          type: array
+          items:
+            type: string
+        injuries:
+          type: array
+          items:
+            type: string
+        program_start_date:
+          type: string
+          format: date
+
+    Exercise:
+      type: object
+      required: [id, name, muscle_group, targeted_muscles, instructions, locale]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        muscle_group:
+          type: string
+        targeted_muscles:
+          type: array
+          items:
+            type: string
+        instructions:
+          type: string
+        technique_points:
+          type: array
+          items:
+            type: string
+        media_ref:
+          type: string
+          nullable: true
+        locale:
+          type: string
+          examples: [fr-FR]
+
+    WeeklyPlan:
+      type: object
+      required: [days]
+      properties:
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyPlanDay'
+
+    WeeklyPlanDay:
+      type: object
+      required: [day_of_week, muscle_group, exercises]
+      properties:
+        day_of_week:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: '1 = Monday, 7 = Sunday'
+        muscle_group:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+
+    TrainingPhase:
+      type: object
+      required:
+        - id
+        - name
+        - start_week
+        - end_week
+        - sets_per_exercise
+        - reps_low
+        - reps_high
+        - rest_seconds
+        - target_intensity_pct
+        - locale
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        start_week:
+          type: integer
+        end_week:
+          type: integer
+        sets_per_exercise:
+          type: integer
+        reps_low:
+          type: integer
+        reps_high:
+          type: integer
+        rest_seconds:
+          type: integer
+        target_intensity_pct:
+          type: integer
+        locale:
+          type: string
+
+    MealTemplate:
+      type: object
+      required:
+        - id
+        - slot
+        - target_calories
+        - target_protein_g
+        - target_carbs_g
+        - target_fat_g
+        - display_order
+      properties:
+        id:
+          type: integer
+        slot:
+          type: string
+          enum: [breakfast, lunch, pre_workout, dinner, evening]
+        display_order:
+          type: integer
+        target_calories:
+          type: number
+        target_protein_g:
+          type: number
+        target_carbs_g:
+          type: number
+        target_fat_g:
+          type: number
+
+    Supplement:
+      type: object
+      required: [id, name, dosage, recommended_time, display_order, locale]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        dosage:
+          type: string
+        recommended_time:
+          type: string
+        display_order:
+          type: integer
+        locale:
+          type: string
+
+    Food:
+      type: object
+      required:
+        - id
+        - name
+        - protein_g_per_100g
+        - carbs_g_per_100g
+        - fat_g_per_100g
+        - calories_per_100g
+        - locale
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        protein_g_per_100g:
+          type: number
+        carbs_g_per_100g:
+          type: number
+        fat_g_per_100g:
+          type: number
+        calories_per_100g:
+          type: number
+        locale:
+          type: string
+
+    Quote:
+      type: object
+      required: [id, text, locale]
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        author:
+          type: string
+          nullable: true
+        locale:
+          type: string
