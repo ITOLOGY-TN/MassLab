@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Color tokens — values are RGB triples consumed via Tailwind's <alpha-value>. */
+    --color-bg: 12 16 24;
+    --color-surface: 22 28 39;
+    --color-text: 232 237 244;
+    --color-muted: 148 161 178;
+    --color-accent: 99 179 237;
+    --color-success: 80 200 120;
+    --color-warn: 240 180 80;
+    --color-danger: 235 95 95;
+
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2.5rem;
+
+    /* Typography */
+    --font-sans: 'Inter', system-ui;
+    --font-mono: 'JetBrains Mono', ui-monospace;
+
+    /* Radius */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 1rem;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+}

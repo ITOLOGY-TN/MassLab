@@ -1,0 +1,10 @@
+-- Phase 0 leaves Supabase's auto-loaded seed.sql intentionally empty.
+--
+-- Per data-model.md, every catalogue (`exercises`, `foods`, `supplements`,
+-- `training_phases`, `quotes`) carries a non-null `athlete_id` foreign key, so
+-- it cannot be populated until the athlete row exists. The Node-side seed
+-- (`seed/runSeed.js`, called by `npm run seed`) creates the athlete and then
+-- upserts every catalogue keyed on `(athlete_id, slug, locale)`.
+--
+-- This file remains as a Supabase-CLI hook for future static reference data
+-- that is genuinely tenant-independent (e.g. locale list, currency table).

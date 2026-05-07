@@ -1,0 +1,9 @@
+{
+  "meals": [
+    { "slot": "breakfast", "display_order": 1, "share": 0.22 },
+    { "slot": "lunch", "display_order": 2, "share": 0.28 },
+    { "slot": "pre_workout", "display_order": 3, "share": 0.12 },
+    { "slot": "dinner", "display_order": 4, "share": 0.26 },
+    { "slot": "evening_snack", "display_order": 5, "share": 0.12 }
+  ]
+}
