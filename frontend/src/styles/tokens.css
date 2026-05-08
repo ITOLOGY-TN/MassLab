@@ -31,9 +31,24 @@
     --radius-lg: 1rem;
   }
 
+  /* Light-theme overrides: applied when <html data-theme="light"> is set
+     by the theme bootstrap in main.jsx + PreferencesSettings. */
+  :root[data-theme='light'] {
+    --color-bg: 250 251 253;
+    --color-surface: 255 255 255;
+    --color-text: 22 28 39;
+    --color-muted: 90 102 120;
+    --color-accent: 24 119 192;
+    --color-success: 38 162 84;
+    --color-warn: 196 134 0;
+    --color-danger: 198 50 50;
+  }
+
   html,
   body,
   #root {
     height: 100%;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
   }
 }

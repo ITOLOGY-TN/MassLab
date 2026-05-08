@@ -141,7 +141,34 @@ export async function runSeed({ config = loadConfig() } = {}) {
     })),
   );
 
-  // 4a. Phase 2 US2 — seed the per-athlete muscle-group catalogue from the
+  // 4a. Phase 2 US2 — prune unreferenced catalogue rows from previous runs so
+  // the seed is self-healing. Referenced rows are kept; rows with at least
+  // one slot pointing at them (or staged by the athlete elsewhere) are
+  // preserved even when archived.
+  {
+    const { data: stale } = await supabase
+      .from('muscle_groups')
+      .select('id')
+      .eq('athlete_id', athleteId);
+    if (stale?.length) {
+      const ids = stale.map((r) => r.id);
+      const { data: refs } = await supabase
+        .from('weekly_plan_slots')
+        .select('muscle_group_id')
+        .in('muscle_group_id', ids);
+      const referenced = new Set((refs ?? []).map((r) => r.muscle_group_id));
+      const toDelete = ids.filter((id) => !referenced.has(id));
+      if (toDelete.length) {
+        const { error: pruneErr } = await supabase
+          .from('muscle_groups')
+          .delete()
+          .in('id', toDelete);
+        if (pruneErr) logger.warn({ err: pruneErr }, 'seed_prune_orphan_muscle_groups_failed');
+      }
+    }
+  }
+
+  // 4b. Phase 2 US2 — seed the per-athlete muscle-group catalogue from the
   // program's slot definitions. Idempotent on (athlete_id, slug).
   const muscleGroupCatalogue = await daos.muscleGroups.upsertMany(
     athleteId,

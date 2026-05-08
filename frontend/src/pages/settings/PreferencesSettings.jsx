@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiGet, apiPatch, apiPut, apiDelete } from '../../lib/api.js';
+import { applyTheme } from '../../lib/theme.js';
 import NumberField from '../../components/NumberField.jsx';
 import SelectField from '../../components/SelectField.jsx';
 
@@ -41,6 +42,7 @@ export default function PreferencesSettings() {
     try {
       const res = await apiPatch('/api/v1/me/preferences', patch);
       setPrefs(res.data);
+      if (patch.theme) applyTheme(patch.theme);
     } catch (err) {
       setError(err.message);
     }

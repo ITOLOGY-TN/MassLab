@@ -87,10 +87,10 @@ export function muscleGroupsDao(supabase) {
     },
 
     async patch(athleteId, id, patch) {
+      // Slug is stable — only changed when the caller passes one explicitly.
+      // Auto-deriving from `name` accumulated orphan rows when reseeds
+      // re-created the canonical slug under a new id.
       const update = { ...patch, updated_at: new Date().toISOString() };
-      // If the caller renames the row, refresh the slug too unless they passed
-      // an explicit slug.
-      if (patch.name && patch.slug == null) update.slug = deriveSlug(patch.name);
       const { data, error } = await supabase
         .from('muscle_groups')
         .update(update)
