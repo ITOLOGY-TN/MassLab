@@ -72,9 +72,15 @@ export const bodyMeasurementSchema = z.object({
   note: z.string().max(500).nullable().optional(),
 });
 
+// Phase 2 (T015) broadens the patch surface to accept the contract-aliased
+// keys used by the Phase 2 OpenAPI (current_weight_kg / sessions_per_week /
+// equipment / program_start_date) alongside the Phase 0 column names.
+// Translation to DB columns happens in the controller.
 export const profilePatchSchema = z
   .object({
+    // engine-name + contract aliases
     weight_kg: weight_kg.optional(),
+    current_weight_kg: weight_kg.optional(),
     height_cm: height_cm.optional(),
     age: age.optional(),
     biological_sex: biological_sex.optional(),
@@ -82,15 +88,19 @@ export const profilePatchSchema = z
     goal: goal.optional(),
     activity_level: activity_level.optional(),
     weekly_session_count: z.number().int().min(1).max(7).optional(),
+    sessions_per_week: z.number().int().min(1).max(7).optional(),
     available_equipment: z.array(z.string()).optional(),
+    equipment: z.array(z.string()).optional(),
     injuries: z.array(z.string()).optional(),
     display_name: z.string().min(1).max(100).optional(),
     target_weight_kg: z.number().min(r.weight_kg.min).max(r.weight_kg.max).optional(),
+    program_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   })
   .strict();
 
 export const PROFILE_OUTPUT_AFFECTING_FIELDS = Object.freeze([
   'weight_kg',
+  'current_weight_kg',
   'height_cm',
   'age',
   'biological_sex',
@@ -98,7 +108,9 @@ export const PROFILE_OUTPUT_AFFECTING_FIELDS = Object.freeze([
   'goal',
   'activity_level',
   'weekly_session_count',
+  'sessions_per_week',
   'available_equipment',
+  'equipment',
   'injuries',
   'target_weight_kg',
 ]);

@@ -71,6 +71,9 @@ export function buildApp({ config, supabase, daos } = {}) {
 
   const v1 = express.Router();
   v1.use('/athlete', athleteRoutes({ daos: resolved }));
+  // Phase 2 contract uses `/api/v1/me` (no `/athlete` prefix). Mount the same
+  // router at the v1 root so both paths resolve to the same controller.
+  v1.use('/', athleteRoutes({ daos: resolved }));
   v1.use('/exercises', exercisesRoutes(resolved.exercises));
   v1.use('/weekly-plan', weeklyPlanRoutes(resolved.weeklyPlan));
   v1.use('/training-phases', trainingPhasesRoutes(resolved.trainingPhases));

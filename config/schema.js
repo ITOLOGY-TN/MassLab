@@ -24,6 +24,11 @@ export const REQUIRED_KEYS = Object.freeze([
   'CORS_ORIGIN',
 ]);
 
+const intFromString = (label) =>
+  z
+    .union([z.number().int(), z.string().regex(/^\d+$/, `${label} must be an integer`)])
+    .transform((v) => (typeof v === 'number' ? v : Number.parseInt(v, 10)));
+
 const booleanFromString = z
   .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
   .transform((v) => v === true || v === 'true' || v === '1');
@@ -56,6 +61,10 @@ export const baseSchema = z.object({
   SUPABASE_SECRET_KEY: secretKey,
   SUPABASE_PUBLISHABLE_KEY: publishableKey,
   CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN is required'),
+  BACKUP_SCHEMA_VERSION: intFromString('BACKUP_SCHEMA_VERSION').default(1),
+  IMPORT_MAX_BYTES: intFromString('IMPORT_MAX_BYTES').default(26214400),
+  CSV_SEPARATOR: z.string().min(1).max(2).default(','),
+  RESET_CONFIRM_TOKEN: z.string().min(1).default('RESET-MASSLAB'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */

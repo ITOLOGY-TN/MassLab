@@ -1,0 +1,770 @@
+openapi: 3.1.0
+info:
+  title: MassLab API — Phase 2 surface (Settings & Data Management)
+  version: 1.2.0-phase2
+  description: |
+    Phase 2 adds the Settings surface (profile, schedule, exercises,
+    preferences, custom nutrition targets) and the Data Management surface
+    (full JSON export, sessions-only CSV export, JSON import with forward
+    migration, selective and full reset). All routes continue to live under
+    /api/v1/ and use the canonical `{ data: ... }` envelope from Phase 0.
+    Authentication is unchanged: single-user mode resolves the seeded athlete;
+    multi-user mode validates a Supabase bearer token.
+
+    Phase 2 introduces only ADDITIVE changes to the v1 contract — no existing
+    endpoint changes its semantics. Newly added fields on existing responses
+    are non-breaking per Principle IV.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local dev (Express); proxied by the Vite dev server.
+
+tags:
+  - name: profile
+    description: Athlete profile read and update.
+  - name: schedule
+    description: Weekly schedule (day → muscle-group mapping) and reorder.
+  - name: muscle-groups
+    description: Per-athlete catalogue (Clarification Q1).
+  - name: exercises
+    description: Exercise library CRUD and soft-delete.
+  - name: preferences
+    description: Theme / units / rest-timer-sound / notification acks.
+  - name: nutrition-targets
+    description: Custom nutrition overrides on engine_overrides.nutrition.*
+  - name: data-management
+    description: Export, import, reset.
+
+components:
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+    IncludeArchived:
+      name: include_archived
+      in: query
+      required: false
+      schema: { type: boolean, default: false }
+
+  headers:
+    XRequestId:
+      description: Server-generated or client-supplied correlation id.
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [VALIDATION_FAILED, NOT_FOUND, CONFLICT, ATOMIC_ROLLBACK,
+                         IMPORT_VERSION_TOO_NEW, IMPORT_MISSING_MIGRATOR,
+                         IMPORT_OWNERSHIP_MISMATCH, IMPORT_TOO_LARGE, RESET_TOKEN_MISMATCH]
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+
+    AthleteProfile:
+      type: object
+      required:
+        [id, display_name, biological_sex, age, height_cm, current_weight_kg,
+         target_weight_kg, program_start_date, morphotype, activity_level,
+         sessions_per_week]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        biological_sex: { type: string, enum: [male, female] }
+        age: { type: integer, minimum: 13, maximum: 100 }
+        height_cm: { type: number, minimum: 100, maximum: 250 }
+        current_weight_kg: { type: number, minimum: 30, maximum: 250 }
+        target_weight_kg: { type: number, minimum: 30, maximum: 300 }
+        program_start_date: { type: string, format: date }
+        morphotype: { type: string, enum: [ectomorph, mesomorph, endomorph] }
+        activity_level:
+          type: string
+          enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+        sessions_per_week: { type: integer, minimum: 1, maximum: 7 }
+        equipment: { type: array, items: { type: string } }
+        injuries: { type: array, items: { type: string } }
+
+    AthleteProfilePatch:
+      description: Partial update; any subset of AthleteProfile fields except `id`.
+      type: object
+      additionalProperties: false
+      properties:
+        display_name: { type: string }
+        biological_sex: { type: string, enum: [male, female] }
+        age: { type: integer, minimum: 13, maximum: 100 }
+        height_cm: { type: number, minimum: 100, maximum: 250 }
+        current_weight_kg: { type: number, minimum: 30, maximum: 250 }
+        target_weight_kg: { type: number, minimum: 30, maximum: 300 }
+        program_start_date: { type: string, format: date }
+        morphotype: { type: string, enum: [ectomorph, mesomorph, endomorph] }
+        activity_level:
+          type: string
+          enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+        sessions_per_week: { type: integer, minimum: 1, maximum: 7 }
+        equipment: { type: array, items: { type: string } }
+        injuries: { type: array, items: { type: string } }
+
+    MuscleGroup:
+      type: object
+      required: [id, slug, name, display_color, is_active, sort_order]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string, maxLength: 40 }
+        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        is_active: { type: boolean }
+        sort_order: { type: integer }
+        archived_at: { type: string, format: date-time, nullable: true }
+
+    MuscleGroupCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 40 }
+        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        sort_order: { type: integer }
+
+    MuscleGroupPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, maxLength: 40 }
+        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        sort_order: { type: integer }
+
+    MuscleGroupMerge:
+      type: object
+      required: [target_id]
+      properties:
+        target_id: { type: integer, description: "id of the catalogue row that absorbs the merged-from" }
+
+    Exercise:
+      type: object
+      required: [id, slug, name, targeted_muscles, instructions, is_active]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        locale: { type: string }
+        name: { type: string }
+        targeted_muscles: { type: array, items: { type: string } }
+        instructions: { type: string }
+        technique_points: { type: array, items: { type: string } }
+        media_image_url: { type: string, format: uri, nullable: true }
+        media_video_url: { type: string, format: uri, nullable: true }
+        is_active: { type: boolean }
+
+    ExerciseCreate:
+      type: object
+      required: [name, targeted_muscles, instructions]
+      properties:
+        name: { type: string }
+        locale: { type: string, default: "fr" }
+        targeted_muscles: { type: array, items: { type: string }, minItems: 1 }
+        instructions: { type: string }
+        technique_points: { type: array, items: { type: string } }
+        media_image_url: { type: string, format: uri }
+        media_video_url: { type: string, format: uri }
+
+    ExercisePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string }
+        targeted_muscles: { type: array, items: { type: string }, minItems: 1 }
+        instructions: { type: string }
+        technique_points: { type: array, items: { type: string } }
+        media_image_url: { type: string, format: uri, nullable: true }
+        media_video_url: { type: string, format: uri, nullable: true }
+
+    WeeklyScheduleSlot:
+      type: object
+      required: [day_of_week, muscle_group_id, display_order]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        muscle_group_id: { type: integer }
+        display_order: { type: integer }
+        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        exercises:
+          type: array
+          items:
+            type: object
+            required: [exercise_id, position, target_sets, target_reps_low, target_reps_high]
+            properties:
+              exercise_id: { type: integer }
+              position: { type: integer }
+              target_sets: { type: integer, minimum: 1 }
+              target_reps_low: { type: integer, minimum: 1 }
+              target_reps_high: { type: integer, minimum: 1 }
+
+    WeeklySchedule:
+      type: object
+      required: [active_days, slots]
+      properties:
+        active_days:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: Number of training days (1–7)
+        slots:
+          type: array
+          items: { $ref: "#/components/schemas/WeeklyScheduleSlot" }
+
+    ReorderRequest:
+      type: object
+      required: [ordered_exercise_ids]
+      properties:
+        ordered_exercise_ids:
+          type: array
+          items: { type: integer }
+          minItems: 1
+
+    Preferences:
+      type: object
+      required: [theme, units, rest_timer_sound, notification_acks]
+      properties:
+        theme: { type: string, enum: [dark, light] }
+        units: { type: string, enum: [kg, lbs] }
+        rest_timer_sound: { type: boolean }
+        notification_acks:
+          type: object
+          additionalProperties: { type: string, format: date-time, nullable: true }
+
+    PreferencesPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        theme: { type: string, enum: [dark, light] }
+        units: { type: string, enum: [kg, lbs] }
+        rest_timer_sound: { type: boolean }
+        notification_acks:
+          type: object
+          additionalProperties: { type: string, format: date-time, nullable: true }
+          description: "Deep-merged with current state; null clears a key."
+
+    NutritionTargets:
+      type: object
+      description: |
+        Effective daily targets after applying engine_overrides.nutrition.* over the
+        engine-computed values. `source` records where each value came from:
+        `engine` (default), `override` (explicit override), `auto-derived` (calorie-only
+        override re-ran macros per FR-017a).
+      required: [daily_kcal, daily_protein_g, daily_carbs_g, daily_fat_g, source]
+      properties:
+        daily_kcal: { type: integer }
+        daily_protein_g: { type: integer }
+        daily_carbs_g: { type: integer }
+        daily_fat_g: { type: integer }
+        source:
+          type: object
+          required: [daily_kcal, daily_protein_g, daily_carbs_g, daily_fat_g]
+          properties:
+            daily_kcal: { type: string, enum: [engine, override] }
+            daily_protein_g: { type: string, enum: [engine, override, auto-derived] }
+            daily_carbs_g: { type: string, enum: [engine, override, auto-derived] }
+            daily_fat_g: { type: string, enum: [engine, override, auto-derived] }
+
+    NutritionTargetsPut:
+      type: object
+      description: |
+        Any subset of the four keys may be present. Set a value to a positive
+        integer to override that target. Send `null` to clear a single override.
+        DELETE on this resource clears all four.
+      additionalProperties: false
+      properties:
+        daily_kcal: { type: integer, nullable: true, minimum: 800, maximum: 6000 }
+        daily_protein_g: { type: integer, nullable: true, minimum: 30, maximum: 400 }
+        daily_carbs_g: { type: integer, nullable: true, minimum: 0, maximum: 800 }
+        daily_fat_g: { type: integer, nullable: true, minimum: 20, maximum: 250 }
+
+    BackupEnvelope:
+      type: object
+      required: [_export, athletes, app_config, exercises, muscle_groups, weekly_plan_slots, weekly_plan_exercises]
+      additionalProperties: true
+      properties:
+        _export:
+          type: object
+          required: [schema_version, engine_version, exported_at, athlete_id]
+          properties:
+            schema_version: { type: integer, minimum: 1 }
+            engine_version: { type: string }
+            exported_at: { type: string, format: date-time }
+            athlete_id: { type: string, format: uuid }
+
+    ImportResult:
+      type: object
+      required: [restored_at, schema_version_original, schema_version_applied, source_filename]
+      properties:
+        restored_at: { type: string, format: date-time }
+        schema_version_original: { type: integer }
+        schema_version_applied: { type: integer }
+        source_filename: { type: string }
+        engine_version_in_backup: { type: string }
+
+    ResetRequest:
+      type: object
+      required: [module, confirm_token]
+      properties:
+        module:
+          type: string
+          enum: [sessions, body_measurements, nutrition_logs, supplements, recovery, calculator_results, preferences, all]
+        confirm_token: { type: string }
+        export_first: { type: boolean, default: false }
+
+    ResetResult:
+      type: object
+      required: [reset_at, module, deleted_counts]
+      properties:
+        reset_at: { type: string, format: date-time }
+        module: { type: string }
+        deleted_counts:
+          type: object
+          additionalProperties: { type: integer }
+        export_url:
+          type: string
+          format: uri
+          description: "Present only when export_first=true was set and succeeded."
+
+security:
+  - SupabaseBearer: []
+
+paths:
+
+  /me:
+    get:
+      tags: [profile]
+      summary: Read the authenticated athlete's profile.
+      responses:
+        "200":
+          description: OK
+          headers: { X-Request-Id: { $ref: "#/components/headers/XRequestId" } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/AthleteProfile" } }
+    patch:
+      tags: [profile]
+      summary: Partial profile update; triggers engine recompute + audit row when calculator inputs change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AthleteProfilePatch" }
+      responses:
+        "200":
+          description: OK; body includes the new profile and a recompute summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [profile]
+                    properties:
+                      profile: { $ref: "#/components/schemas/AthleteProfile" }
+                      recompute:
+                        type: object
+                        properties:
+                          calculation_audit_id: { type: integer }
+                          engine_version: { type: string }
+        "400":
+          description: Validation failed
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /me/schedule:
+    get:
+      tags: [schedule]
+      summary: Read the current weekly schedule.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/WeeklySchedule" } }
+    put:
+      tags: [schedule]
+      summary: Replace the weekly schedule atomically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WeeklySchedule" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/WeeklySchedule" } }
+        "400":
+          description: Schedule validation failed (zero days, duplicate muscle group, etc.)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "409":
+          description: In-progress session conflict; resend with `?force=1` to confirm.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /me/schedule/slots/{slotId}/exercises/reorder:
+    post:
+      tags: [schedule]
+      summary: Reorder the exercises within one schedule slot.
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReorderRequest" }
+      responses:
+        "200":
+          description: OK; returns the slot with reordered exercises.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/WeeklyScheduleSlot" } }
+
+  /muscle-groups:
+    get:
+      tags: [muscle-groups]
+      summary: List the athlete's muscle-group catalogue.
+      parameters:
+        - $ref: "#/components/parameters/IncludeArchived"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MuscleGroup" }
+    post:
+      tags: [muscle-groups]
+      summary: Create a new muscle group.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MuscleGroupCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+
+  /muscle-groups/{id}:
+    patch:
+      tags: [muscle-groups]
+      summary: Rename, recolor, or reorder a muscle group.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MuscleGroupPatch" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+    delete:
+      tags: [muscle-groups]
+      summary: Soft-archive (when referenced) or hard-delete (when not referenced).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Hard-deleted (no references) or soft-archived (had references). }
+
+  /muscle-groups/{id}/merge:
+    post:
+      tags: [muscle-groups]
+      summary: Merge this muscle group into another; archives the source.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MuscleGroupMerge" }
+      responses:
+        "200":
+          description: OK; returns the surviving target row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+
+  /exercises:
+    get:
+      tags: [exercises]
+      summary: List exercises (active by default; pass include_archived to include soft-deleted).
+      parameters:
+        - $ref: "#/components/parameters/IncludeArchived"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Exercise" }
+    post:
+      tags: [exercises]
+      summary: Create a new exercise.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExerciseCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/Exercise" } }
+
+  /exercises/{id}:
+    patch:
+      tags: [exercises]
+      summary: Edit an exercise.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExercisePatch" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/Exercise" } }
+    delete:
+      tags: [exercises]
+      summary: Soft-delete (when referenced by historical sessions) or hard-delete (when not referenced).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Deleted or archived. }
+
+  /me/preferences:
+    get:
+      tags: [preferences]
+      summary: Read theme / units / sound / notification acknowledgements.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/Preferences" } }
+    patch:
+      tags: [preferences]
+      summary: Partial preferences update; deep-merges notification_acks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PreferencesPatch" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/Preferences" } }
+
+  /me/nutrition-targets:
+    get:
+      tags: [nutrition-targets]
+      summary: Effective daily targets (engine ⊕ override ⊕ auto-derived per FR-017a/b).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/NutritionTargets" } }
+    put:
+      tags: [nutrition-targets]
+      summary: Set or clear individual nutrition overrides; emits a calculation_results audit row per save.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NutritionTargetsPut" }
+      responses:
+        "200":
+          description: OK; effective targets after applying the change.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [targets, calculation_audit_id]
+                    properties:
+                      targets: { $ref: "#/components/schemas/NutritionTargets" }
+                      calculation_audit_id: { type: integer }
+                      reason: { type: string, enum: [override_set, override_cleared] }
+    delete:
+      tags: [nutrition-targets]
+      summary: Clear all four nutrition overrides; emits one audit row.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [targets, calculation_audit_id]
+                    properties:
+                      targets: { $ref: "#/components/schemas/NutritionTargets" }
+                      calculation_audit_id: { type: integer }
+                      reason: { type: string, enum: [override_cleared] }
+
+  /data/export/json:
+    post:
+      tags: [data-management]
+      summary: Generate a full JSON backup envelope for the authenticated athlete.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/BackupEnvelope" } }
+
+  /data/export/sessions.csv:
+    get:
+      tags: [data-management]
+      summary: Sessions-only CSV (header row even when zero sessions).
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /data/import:
+    post:
+      tags: [data-management]
+      summary: Restore from a JSON backup; atomic with forward-migration of older schemas.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                source_filename: { type: string }
+      responses:
+        "200":
+          description: Restore complete.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/ImportResult" } }
+        "400":
+          description: |
+            Validation failure. Possible `error.code` values:
+            VALIDATION_FAILED, IMPORT_VERSION_TOO_NEW, IMPORT_MISSING_MIGRATOR,
+            IMPORT_OWNERSHIP_MISMATCH, IMPORT_TOO_LARGE.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "500":
+          description: Mid-write failure; transaction rolled back.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /data/reset:
+    post:
+      tags: [data-management]
+      summary: Selective or full reset; double-confirmed via `confirm_token`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: "#/components/schemas/ResetResult" } }
+        "400":
+          description: |
+            `error.code` is RESET_TOKEN_MISMATCH when the confirmation token does
+            not match the server-side configured value.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

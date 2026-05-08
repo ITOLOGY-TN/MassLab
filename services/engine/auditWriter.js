@@ -18,6 +18,7 @@ export async function writeAudit({
   daos,
   athleteId,
   calculator,
+  reason,
   inputs,
   outputs,
   resolvedConstants,
@@ -27,6 +28,7 @@ export async function writeAudit({
   return daos.calculationResults.insert({
     athlete_id: athleteId,
     calculator,
+    reason: reason ?? null,
     inputs,
     outputs,
     resolved_constants: resolvedConstants,
