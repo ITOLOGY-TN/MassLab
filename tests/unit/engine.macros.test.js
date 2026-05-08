@@ -10,6 +10,40 @@ const baseProfile = {
 };
 
 describe('engine.macros', () => {
+  // Phase 2 US4 (T050) — calorie-only override path (FR-017a) and per-macro
+  // override (FR-017b).
+  it('FR-017a: a calorie override re-runs the macro split on the new total', () => {
+    const out = macros({
+      ...baseProfile,
+      goal: 'bulk',
+      constants: DEFAULTS,
+      override: { daily_kcal: 3500 },
+    });
+    expect(out.daily_kcal).toBe(3500);
+    // Carbs absorb the difference between override total and protein/fat budgets.
+    expect(out.carbs_g).toBeGreaterThan(0);
+    expect(out.source.daily_kcal).toBe('override');
+    expect(out.source.daily_carbs_g).toBe('auto-derived');
+  });
+
+  it('FR-017b: a per-macro override pins that macro and the others auto-derive', () => {
+    const out = macros({
+      ...baseProfile,
+      goal: 'bulk',
+      constants: DEFAULTS,
+      override: { daily_protein_g: 250 },
+    });
+    expect(out.protein_g).toBe(250);
+    expect(out.source.daily_protein_g).toBe('override');
+    expect(out.source.daily_carbs_g).toBe('auto-derived');
+  });
+
+  it('clearing all overrides returns engine values', () => {
+    const out = macros({ ...baseProfile, goal: 'bulk', constants: DEFAULTS, override: {} });
+    expect(out.source.daily_kcal).toBe('engine');
+    expect(out.source.daily_protein_g).toBe('engine');
+  });
+
   it('returns daily_kcal = tdee + bulk_surplus on goal=bulk', () => {
     const out = macros({ ...baseProfile, goal: 'bulk', constants: DEFAULTS });
     expect(out.daily_kcal).toBe(2358 + DEFAULTS.bulk_surplus_kcal);

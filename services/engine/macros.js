@@ -24,21 +24,55 @@ export function macros({
   tdee_kcal,
   lean_body_mass_kg,
   constants = DEFAULTS,
+  override,
 }) {
   const c = constants;
-  const daily_kcal = adjustForGoal(tdee_kcal, goal, c);
+  const engine_kcal = adjustForGoal(tdee_kcal, goal, c);
   const lbm = lean_body_mass_kg ?? leanMassFromMorphotype(weight_kg, morphotype, c);
 
-  const protein_g = Math.round(lbm * c.protein_g_per_kg_lbm);
+  // FR-017a: a calorie override re-runs the macro split on the new total.
+  const daily_kcal = override?.daily_kcal != null ? override.daily_kcal : engine_kcal;
 
-  // Fat floor at 25 % of kcal; morphotype skew nudges it up for endomorphs.
-  const morphFatBoost = morphotype === 'endomorph' ? 1.18 : morphotype === 'ectomorph' ? 0.95 : 1.0;
+  const engine_protein_g = Math.round(lbm * c.protein_g_per_kg_lbm);
+  const morphFatBoost =
+    morphotype === 'endomorph' ? 1.18 : morphotype === 'ectomorph' ? 0.95 : 1.0;
   const fatPct = Math.max(c.fat_floor_pct, c.fat_floor_pct * morphFatBoost);
-  const fat_g = Math.round((daily_kcal * fatPct) / 9);
+  const engine_fat_g = Math.round((daily_kcal * fatPct) / 9);
+  const engine_remaining = daily_kcal - engine_protein_g * 4 - engine_fat_g * 9;
+  const engine_carbs_g = Math.max(0, Math.round(engine_remaining / 4));
 
-  // Carbs absorb the remainder.
+  // FR-017b: each macro override pins independently; the others auto-derive
+  // from the resulting calorie/protein/fat budget.
+  const protein_g = override?.daily_protein_g != null ? override.daily_protein_g : engine_protein_g;
+  const fat_g = override?.daily_fat_g != null ? override.daily_fat_g : engine_fat_g;
   const remainingKcal = daily_kcal - protein_g * 4 - fat_g * 9;
-  const carbs_g = Math.max(0, Math.round(remainingKcal / 4));
+  const carbs_g =
+    override?.daily_carbs_g != null
+      ? override.daily_carbs_g
+      : Math.max(0, Math.round(remainingKcal / 4));
 
-  return { daily_kcal, protein_g, carbs_g, fat_g };
+  // `source` lets the controller surface which path each value came from.
+  const source = {
+    daily_kcal: override?.daily_kcal != null ? 'override' : 'engine',
+    daily_protein_g:
+      override?.daily_protein_g != null
+        ? 'override'
+        : override?.daily_kcal != null
+          ? 'auto-derived'
+          : 'engine',
+    daily_fat_g:
+      override?.daily_fat_g != null
+        ? 'override'
+        : override?.daily_kcal != null
+          ? 'auto-derived'
+          : 'engine',
+    daily_carbs_g:
+      override?.daily_carbs_g != null
+        ? 'override'
+        : override?.daily_kcal != null || override?.daily_protein_g != null || override?.daily_fat_g != null
+          ? 'auto-derived'
+          : 'engine',
+  };
+
+  return { daily_kcal, protein_g, carbs_g, fat_g, source };
 }

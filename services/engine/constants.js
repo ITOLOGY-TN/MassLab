@@ -74,6 +74,28 @@ export const DEFAULTS = Object.freeze({
   }),
 });
 
+/**
+ * Phase 2 US4: documented JSONB shape for `engine_overrides.nutrition`.
+ * Any subset of these four keys may be present. Resolver semantics live in
+ * services/engine/macros.js (FR-017a/b).
+ *
+ * Example payload:
+ *   {
+ *     "nutrition": {
+ *       "daily_kcal": 3500,
+ *       "daily_protein_g": 200,
+ *       "daily_carbs_g": 430,
+ *       "daily_fat_g": 90
+ *     }
+ *   }
+ */
+export const NUTRITION_OVERRIDE_KEYS = Object.freeze([
+  'daily_kcal',
+  'daily_protein_g',
+  'daily_carbs_g',
+  'daily_fat_g',
+]);
+
 /** Keys allowed in `app_config.engine_overrides`. Unknown keys are ignored. */
 export const OVERRIDE_KEYS = Object.freeze([
   'bulk_surplus_kcal',

@@ -20,11 +20,17 @@ import { progressionFlagsDao } from './services/dataAccess/progressionFlags.dao.
 import { bodyCompositionDao } from './services/dataAccess/bodyComposition.dao.js';
 import { bodyMeasurementsDao } from './services/dataAccess/bodyMeasurements.dao.js';
 import { muscleGroupsDao } from './services/dataAccess/muscleGroups.dao.js';
+import { exportersDao } from './services/dataAccess/exporters.dao.js';
+import { importersDao } from './services/dataAccess/importers.dao.js';
+import { resetDao } from './services/dataAccess/reset.dao.js';
 import { getSupabase } from './services/dataAccess/supabaseClient.js';
 import { athleteRoutes } from './routes/athlete.routes.js';
 import { exercisesRoutes } from './routes/exercises.routes.js';
 import { weeklyPlanRoutes, meScheduleRoutes } from './routes/weeklyPlan.routes.js';
 import { muscleGroupsRoutes } from './routes/muscleGroups.routes.js';
+import { preferencesRoutes } from './routes/preferences.routes.js';
+import { nutritionTargetsRoutes } from './routes/nutritionTargets.routes.js';
+import { dataManagementRoutes } from './routes/dataManagement.routes.js';
 import { trainingPhasesRoutes } from './routes/trainingPhases.routes.js';
 import { nutritionRoutes } from './routes/nutrition.routes.js';
 import { supplementsRoutes } from './routes/supplements.routes.js';
@@ -56,6 +62,9 @@ export function buildApp({ config, supabase, daos } = {}) {
     bodyComposition: bodyCompositionDao(sb),
     bodyMeasurements: bodyMeasurementsDao(sb),
     muscleGroups: muscleGroupsDao(sb),
+    exporters: exportersDao(sb),
+    importers: importersDao(sb),
+    reset: resetDao(sb),
   };
 
   const app = express();
@@ -92,6 +101,9 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/body-measurements', bodyMeasurementsRoutes({ daos: resolved }));
   v1.use('/muscle-groups', muscleGroupsRoutes({ daos: resolved }));
   v1.use('/me/schedule', meScheduleRoutes({ daos: resolved }));
+  v1.use('/me/preferences', preferencesRoutes({ daos: resolved }));
+  v1.use('/me/nutrition-targets', nutritionTargetsRoutes({ daos: resolved }));
+  v1.use('/data', dataManagementRoutes({ daos: resolved, config }));
   app.use('/api/v1', v1);
 
   app.use((req, _res, next) => {

@@ -1,10 +1,11 @@
 import { logger } from '../services/logger.js';
 
 export class HttpError extends Error {
-  constructor(status, code, message) {
+  constructor(status, code, message, details) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -17,7 +18,7 @@ export function errorHandler(err, req, res, _next) {
   } else {
     logger.warn({ code, request_id: req.requestId, message }, 'request_failed');
   }
-  res.status(status).json({
-    error: { code, message, request_id: req.requestId },
-  });
+  const body = { error: { code, message, request_id: req.requestId } };
+  if (err.details && status < 500) body.error.details = err.details;
+  res.status(status).json(body);
 }
