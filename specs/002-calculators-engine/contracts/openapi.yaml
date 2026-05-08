@@ -1,0 +1,658 @@
+openapi: 3.1.0
+info:
+  title: MassLab API — Phase 1 surface
+  version: 1.1.0-phase1
+  description: |
+    Phase 1 adds the calculator engine, the program generator, the progression
+    rule engine, and the persistence shape (typed tables + a shared audit log)
+    needed for historical replay. All routes live under /api/v1/ and continue
+    to use the canonical `{ data: ... }` envelope (Constitution Principle IV).
+
+    Authentication is unchanged from Phase 0: in single-user mode the middleware
+    resolves every request to the seeded athlete; in multi-user mode it
+    validates a Supabase-issued bearer token via `auth.getUser`. Every response
+    carries `X-Request-Id` (FR-018 from Phase 0).
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local dev (Express); accessed by the Vite dev server via proxy.
+
+tags:
+  - name: program
+    description: Generated program (active + history) and regeneration trigger.
+  - name: nutrition
+    description: Daily nutrition targets and the meal template (read).
+  - name: calculators
+    description: Ad-hoc calculator runs (US6); never write to persisted state.
+  - name: one-rep-max
+    description: Persisted per-exercise 1RM records.
+  - name: progression
+    description: Active progression flags and explicit re-evaluation trigger.
+  - name: body-composition
+    description: Body-fat % and lean-body-mass history.
+
+components:
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+
+  headers:
+    XRequestId:
+      description: Server-generated or client-supplied correlation id.
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: OUT_OF_RANGE
+            message:
+              type: string
+            request_id:
+              type: string
+              format: uuid
+            field:
+              type: string
+              description: Offending field name when code is OUT_OF_RANGE / VALIDATION.
+
+    Macros:
+      type: object
+      required: [protein_g, carbs_g, fat_g]
+      properties:
+        protein_g: { type: integer }
+        carbs_g: { type: integer }
+        fat_g: { type: integer }
+
+    NutritionTargets:
+      type: object
+      required: [tdee_kcal, daily_kcal, macros]
+      properties:
+        tdee_kcal: { type: integer }
+        daily_kcal: { type: integer }
+        macros: { $ref: '#/components/schemas/Macros' }
+
+    OneRepMaxPercentageRow:
+      type: object
+      required: [pct, load_kg, reps_low, reps_high]
+      properties:
+        pct: { type: integer, enum: [60, 70, 75, 80, 85, 90] }
+        load_kg: { type: number }
+        reps_low: { type: integer }
+        reps_high: { type: integer }
+
+    OneRepMaxRecord:
+      type: object
+      required:
+        - id
+        - exercise_id
+        - source_weight_kg
+        - source_reps
+        - primary_estimate_kg
+        - epley_kg
+        - brzycki_kg
+        - lander_kg
+        - lombardi_kg
+        - percentage_table
+        - reduced_confidence
+        - created_at
+      properties:
+        id: { type: integer }
+        exercise_id: { type: integer }
+        source_weight_kg: { type: number }
+        source_reps: { type: integer }
+        primary_estimate_kg: { type: number }
+        epley_kg: { type: number }
+        brzycki_kg: { type: number }
+        lander_kg: { type: number }
+        lombardi_kg: { type: number }
+        percentage_table:
+          type: array
+          items: { $ref: '#/components/schemas/OneRepMaxPercentageRow' }
+        reduced_confidence: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    ProgressionFlag:
+      type: object
+      required: [id, scope_kind, scope_ref, flag_type, rule, created_at, is_active]
+      properties:
+        id: { type: integer }
+        scope_kind: { type: string, enum: [exercise, muscle_group] }
+        scope_ref: { type: string }
+        flag_type:
+          type: string
+          enum: [add_load, maintain, stagnation, regression, deload_suggested]
+        rule: { type: string }
+        suggested_adjustment:
+          type: object
+          additionalProperties: true
+          nullable: true
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        superseded_at: { type: string, format: date-time, nullable: true }
+
+    BodyCompositionResult:
+      type: object
+      required: [id, method, body_fat_pct, lean_body_mass_kg, created_at]
+      properties:
+        id: { type: integer }
+        method: { type: string, enum: [us_navy, bmi_fallback] }
+        body_fat_pct: { type: number }
+        lean_body_mass_kg: { type: number }
+        created_at: { type: string, format: date-time }
+
+    GeneratedProgram:
+      type: object
+      required: [id, payload, engine_version, generated_at, is_active]
+      properties:
+        id: { type: integer }
+        payload:
+          type: object
+          description: |
+            Composite shape `{ training, nutrition, supplements, recovery }`.
+            `nutrition` matches NutritionTargets; `training` carries weeklyPlan +
+            phases as in services/programGenerator.js output. Stable for v1.
+        engine_version: { type: string }
+        is_active: { type: boolean }
+        generated_at: { type: string, format: date-time }
+        superseded_at: { type: string, format: date-time, nullable: true }
+
+paths:
+
+  # ------------------------------------------------------------------
+  # PROGRAM
+  # ------------------------------------------------------------------
+  /program:
+    get:
+      tags: [program]
+      summary: Get the active program for the requesting athlete
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The single active program row.
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/GeneratedProgram' }
+        '404':
+          description: No active program exists yet (run regenerate or seed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /program/regenerate:
+    post:
+      tags: [program]
+      summary: Regenerate the program from the current profile
+      description: |
+        Reads the athlete profile, runs the calculator + program generator,
+        soft-archives the prior active row (if any), inserts the new active row,
+        and writes a `program_generate` row to the audit log.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The newly active program.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/GeneratedProgram' }
+
+  /program/history:
+    get:
+      tags: [program]
+      summary: List archived programs (most recent first)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Programs ordered by `generated_at desc` including the active row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/GeneratedProgram' }
+
+  # ------------------------------------------------------------------
+  # NUTRITION (read-only, derived from active program)
+  # ------------------------------------------------------------------
+  /nutrition/targets:
+    get:
+      tags: [nutrition]
+      summary: Get the active program's daily nutrition targets
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Calorie + macro targets pulled from the active program.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/NutritionTargets' }
+        '404':
+          description: No active program.
+
+  # ------------------------------------------------------------------
+  # CALCULATORS — ad-hoc, read-only, never write to persisted state
+  # ------------------------------------------------------------------
+  /calculators/bmr:
+    post:
+      tags: [calculators]
+      summary: Compute BMR (Mifflin–St Jeor)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight_kg, height_cm, age, biological_sex]
+              properties:
+                weight_kg: { type: number }
+                height_cm: { type: number }
+                age: { type: integer }
+                biological_sex: { type: string, enum: [male, female] }
+      responses:
+        '200':
+          description: BMR in kcal/day.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [bmr_kcal]
+                    properties:
+                      bmr_kcal: { type: integer }
+        '422':
+          description: Out-of-range input.
+
+  /calculators/tdee:
+    post:
+      tags: [calculators]
+      summary: Compute TDEE from BMR + activity level
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight_kg, height_cm, age, biological_sex, activity_level]
+              properties:
+                weight_kg: { type: number }
+                height_cm: { type: number }
+                age: { type: integer }
+                biological_sex: { type: string, enum: [male, female] }
+                activity_level:
+                  type: string
+                  enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+      responses:
+        '200':
+          description: BMR + TDEE.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [bmr_kcal, tdee_kcal]
+                    properties:
+                      bmr_kcal: { type: integer }
+                      tdee_kcal: { type: integer }
+
+  /calculators/macros:
+    post:
+      tags: [calculators]
+      summary: Compute daily calorie + macro targets
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - weight_kg
+                - height_cm
+                - age
+                - biological_sex
+                - activity_level
+                - morphotype
+                - goal
+              properties:
+                weight_kg: { type: number }
+                height_cm: { type: number }
+                age: { type: integer }
+                biological_sex: { type: string, enum: [male, female] }
+                activity_level:
+                  type: string
+                  enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+                morphotype:
+                  type: string
+                  enum: [ectomorph, mesomorph, endomorph]
+                goal:
+                  type: string
+                  enum: [bulk, cut, maintain]
+                lean_body_mass_kg:
+                  type: number
+                  description: |
+                    Optional. When omitted, the engine assumes lean mass = weight ×
+                    (1 − default_body_fat_pct_for_morphotype) per services/engine/constants.js.
+      responses:
+        '200':
+          description: Targets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/NutritionTargets' }
+
+  /calculators/one-rep-max:
+    post:
+      tags: [calculators]
+      summary: Compute 1RM and percentage table from one (weight, reps) input
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight_kg, reps]
+              properties:
+                weight_kg: { type: number, minimum: 1 }
+                reps: { type: integer, minimum: 1, maximum: 30 }
+      responses:
+        '200':
+          description: 1RM result without persistence.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - primary_estimate_kg
+                      - epley_kg
+                      - brzycki_kg
+                      - lander_kg
+                      - lombardi_kg
+                      - percentage_table
+                      - reduced_confidence
+                    properties:
+                      primary_estimate_kg: { type: number }
+                      epley_kg: { type: number }
+                      brzycki_kg: { type: number }
+                      lander_kg: { type: number }
+                      lombardi_kg: { type: number }
+                      percentage_table:
+                        type: array
+                        items: { $ref: '#/components/schemas/OneRepMaxPercentageRow' }
+                      reduced_confidence: { type: boolean }
+
+  /calculators/body-composition:
+    post:
+      tags: [calculators]
+      summary: Compute body-fat % and lean body mass
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight_kg, height_cm, age, biological_sex]
+              properties:
+                weight_kg: { type: number }
+                height_cm: { type: number }
+                age: { type: integer }
+                biological_sex: { type: string, enum: [male, female] }
+                waist_cm: { type: number, nullable: true }
+                neck_cm: { type: number, nullable: true }
+                hip_cm: { type: number, nullable: true }
+      responses:
+        '200':
+          description: Body-fat % and LBM (multi-measurement when waist+neck present, BMI fallback otherwise).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/BodyCompositionResult' }
+
+  # ------------------------------------------------------------------
+  # ONE-REP-MAX RECORDS — persisted
+  # ------------------------------------------------------------------
+  /one-rep-max-records:
+    get:
+      tags: [one-rep-max]
+      summary: List 1RM records for the athlete
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: exercise_id
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Records ordered by `created_at desc`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/OneRepMaxRecord' }
+
+    post:
+      tags: [one-rep-max]
+      summary: Persist a 1RM record from a (weight, reps) input
+      description: |
+        Runs the same engine as the Calculators surface but writes the result to
+        `one_rep_max_records` and an entry to `calculation_results`.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exercise_id, weight_kg, reps]
+              properties:
+                exercise_id: { type: integer }
+                weight_kg: { type: number, minimum: 1 }
+                reps: { type: integer, minimum: 1, maximum: 30 }
+      responses:
+        '201':
+          description: The persisted record.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/OneRepMaxRecord' }
+
+  /one-rep-max-records/latest:
+    get:
+      tags: [one-rep-max]
+      summary: Get the latest 1RM record per exercise
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: At most one row per exercise the athlete has logged.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/OneRepMaxRecord' }
+
+  # ------------------------------------------------------------------
+  # PROGRESSION FLAGS
+  # ------------------------------------------------------------------
+  /progression-flags:
+    get:
+      tags: [progression]
+      summary: List active progression flags
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Rows where `is_active = true`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProgressionFlag' }
+
+  /progression-flags/history:
+    get:
+      tags: [progression]
+      summary: List flag history (active and superseded)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, minimum: 1, maximum: 1000 }
+      responses:
+        '200':
+          description: All flags, most recent first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProgressionFlag' }
+
+  /progression-flags/evaluate:
+    post:
+      tags: [progression]
+      summary: Trigger an explicit rule re-evaluation
+      description: |
+        Phase 4 will wire automatic re-evaluation on session save. Phase 1 ships
+        this endpoint so tests and the operator can exercise the rule engine
+        manually. Reads the athlete's recent session_journal_entries +
+        session_sets, runs the rules, and writes new active flags (superseding
+        prior active flags per scope).
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The set of active flags after re-evaluation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProgressionFlag' }
+
+  # ------------------------------------------------------------------
+  # BODY COMPOSITION
+  # ------------------------------------------------------------------
+  /body-composition:
+    get:
+      tags: [body-composition]
+      summary: List body-composition results (most recent first)
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Rows ordered by `created_at desc`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/BodyCompositionResult' }
+
+  /body-composition/latest:
+    get:
+      tags: [body-composition]
+      summary: Get the latest body-composition row
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The most recent computation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/BodyCompositionResult' }
+        '404':
+          description: No body-composition row yet.
+
+security:
+  - SupabaseBearer: []
+  - {} # empty array == no auth required (single-user mode)

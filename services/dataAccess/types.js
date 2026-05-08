@@ -48,4 +48,16 @@
 /** @typedef {{ id: number, athlete_id: string, slug: string, locale: string, name: string, kcal_per_100g: number }} FoodRow */
 /** @typedef {{ id: number, athlete_id: string, slug: string, locale: string, text: string, author: string|null }} QuoteRow */
 
+// ---- Phase 1 typed tables -------------------------------------------------
+
+/** @typedef {{ id: number, athlete_id: string, payload: object, engine_version: string, resolved_constants: object, is_active: boolean, generated_at: string, superseded_at: string|null }} GeneratedProgramRow */
+
+/** @typedef {{ id: number, athlete_id: string, scope_kind: 'exercise'|'muscle_group', scope_ref: string, flag_type: 'add_load'|'maintain'|'stagnation'|'regression'|'deload_suggested', rule: string, suggested_adjustment: object|null, engine_version: string, resolved_constants: object, is_active: boolean, created_at: string, superseded_at: string|null }} ProgressionFlagRow */
+
+/** @typedef {{ id: number, athlete_id: string, exercise_id: number, source_weight_kg: number, source_reps: number, primary_estimate_kg: number, epley_kg: number, brzycki_kg: number, lander_kg: number, lombardi_kg: number, percentage_table: object[], reduced_confidence: boolean, engine_version: string, resolved_constants: object, created_at: string }} OneRepMaxRecordRow */
+
+/** @typedef {{ id: number, athlete_id: string, source_measurement_id: number|null, method: 'us_navy'|'bmi_fallback', body_fat_pct: number, lean_body_mass_kg: number, inputs: object, engine_version: string, resolved_constants: object, created_at: string }} BodyCompositionResultRow */
+
+/** @typedef {{ id: number, athlete_id: string, calculator: string, inputs: object, outputs: object, resolved_constants: object, engine_version: string, produced_record_kind: string|null, produced_record_id: string|null, created_at: string }} CalculationResultRow */
+
 export {};

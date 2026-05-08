@@ -1,42 +1,13 @@
 // CONSTITUTION v1.1.1, Principles II + V.
 // PURE FUNCTION — no I/O, no env reads, no Date.now, no Supabase imports.
-// Inputs: athleteProfile. Outputs: complete program (training + nutrition +
-// supplements + recovery). All math is deterministic.
+// Inputs: athleteProfile (+ optional resolved constants). Outputs: complete
+// program (training + nutrition + supplements + recovery) plus engine_version
+// and resolved_constants snapshot for replayability (research.md §10).
 
-const ACTIVITY_MULTIPLIER = {
-  3: 1.55,
-  4: 1.625,
-  5: 1.725,
-  6: 1.8,
-  7: 1.9,
-};
-
-function bmr({ biological_sex, starting_weight_kg, height_cm, age }) {
-  // Mifflin-St Jeor
-  const base = 10 * starting_weight_kg + 6.25 * height_cm - 5 * age;
-  return Math.round(biological_sex === 'female' ? base - 161 : base + 5);
-}
-
-function tdee(profile) {
-  const mult = ACTIVITY_MULTIPLIER[profile.weekly_session_count] ?? 1.55;
-  return Math.round(bmr(profile) * mult);
-}
-
-function dailyKcal(profile, base) {
-  if (profile.goal === 'cut') return base - 400;
-  if (profile.goal === 'maintain') return base;
-  return base + 400; // bulk: middle of the +300..+500 band
-}
-
-function macros(profile, daily_kcal) {
-  const proteinPerKg = profile.experience_level === 'beginner' ? 1.6 : 1.9;
-  const protein_g = Math.round(profile.starting_weight_kg * proteinPerKg);
-  const fatPct = profile.morphotype === 'ectomorph' ? 0.22 : 0.28;
-  const fat_g = Math.round((daily_kcal * fatPct) / 9);
-  const remaining = daily_kcal - protein_g * 4 - fat_g * 9;
-  const carbs_g = Math.max(0, Math.round(remaining / 4));
-  return { protein_g, carbs_g, fat_g };
-}
+import { ENGINE_VERSION, DEFAULTS } from './engine/constants.js';
+import { bmr } from './engine/bmr.js';
+import { tdee } from './engine/tdee.js';
+import { macros } from './engine/macros.js';
 
 const SPLIT_5_DAY = [
   {
@@ -214,12 +185,44 @@ function nutritionTemplate(daily_kcal, m) {
   }));
 }
 
-export function generateProgram(profile) {
+/**
+ * Generate a complete program for the given athlete profile.
+ *
+ * @param {object} profile - athlete profile (Phase 0 columns + activity_level)
+ * @param {object} [options]
+ * @param {object} [options.constants] - resolved engine constants (defaults ⊕ override)
+ * @param {number} [options.lean_body_mass_kg] - optional override; falls back to morphotype default
+ */
+export function generateProgram(profile, { constants = DEFAULTS, lean_body_mass_kg } = {}) {
   if (!profile) throw new Error('athleteProfile is required');
-  const profileWithDefaults = { experience_level: 'intermediate', ...profile };
-  const baseTdee = tdee(profileWithDefaults);
-  const daily_kcal = dailyKcal(profileWithDefaults, baseTdee);
-  const m = macros(profileWithDefaults, daily_kcal);
+  const profileWithDefaults = {
+    experience_level: 'intermediate',
+    activity_level: 'moderately_active',
+    ...profile,
+  };
+
+  const weight_kg = profileWithDefaults.starting_weight_kg ?? profileWithDefaults.weight_kg;
+  if (weight_kg == null) throw new Error('profile.starting_weight_kg is required');
+
+  const bmr_kcal = bmr({
+    weight_kg,
+    height_cm: profileWithDefaults.height_cm,
+    age: profileWithDefaults.age,
+    biological_sex: profileWithDefaults.biological_sex,
+  });
+  const tdee_kcal = tdee({
+    bmr_kcal,
+    activity_level: profileWithDefaults.activity_level,
+    constants,
+  });
+  const macroTargets = macros({
+    weight_kg,
+    morphotype: profileWithDefaults.morphotype,
+    goal: profileWithDefaults.goal,
+    tdee_kcal,
+    lean_body_mass_kg,
+    constants,
+  });
 
   return {
     training: {
@@ -227,10 +230,16 @@ export function generateProgram(profile) {
       phases: TRAINING_PHASES,
     },
     nutrition: {
-      tdee: baseTdee,
-      daily_kcal,
-      macros: m,
-      template: nutritionTemplate(daily_kcal, m),
+      bmr_kcal,
+      tdee_kcal,
+      tdee: tdee_kcal, // back-compat alias for Phase 0 tests
+      daily_kcal: macroTargets.daily_kcal,
+      macros: {
+        protein_g: macroTargets.protein_g,
+        carbs_g: macroTargets.carbs_g,
+        fat_g: macroTargets.fat_g,
+      },
+      template: nutritionTemplate(macroTargets.daily_kcal, macroTargets),
     },
     supplements: SUPPLEMENT_STACK,
     recovery: {
@@ -243,5 +252,7 @@ export function generateProgram(profile) {
         'Stretching post-séance ciblé sur le groupe travaillé.',
       ],
     },
+    engine_version: ENGINE_VERSION,
+    resolved_constants: constants,
   };
 }

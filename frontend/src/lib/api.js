@@ -1,13 +1,31 @@
 const baseUrl = import.meta.env?.VITE_API_BASE ?? '';
 
-export async function apiGet(path) {
+async function request(method, path, body) {
   const url = `${baseUrl}${path}`;
   const res = await fetch(url, {
-    headers: { Accept: 'application/json' },
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body ? { 'content-type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`GET ${path} failed: ${res.status} ${body}`);
+  const text = await res.text();
+  let parsed = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    /* leave as text */
   }
-  return res.json();
+  if (!res.ok) {
+    const message = parsed?.error?.message ?? text ?? res.statusText;
+    const error = new Error(`${method} ${path} failed: ${res.status} ${message}`);
+    error.status = res.status;
+    error.code = parsed?.error?.code;
+    throw error;
+  }
+  return parsed;
 }
+
+export const apiGet = (path) => request('GET', path);
+export const apiPost = (path, body) => request('POST', path, body);

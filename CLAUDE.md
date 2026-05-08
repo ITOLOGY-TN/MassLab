@@ -2,7 +2,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/001-phase0-foundation/plan.md
+- specs/002-calculators-engine/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
@@ -60,3 +60,13 @@ tests/{unit,integration,contract,frontend}/
 ## Constitution
 
 `./.specify/memory/constitution.md` v1.1.1. Non-negotiables: tenant-ready data model, layered architecture (no Supabase imports outside the data-access layer), config over hardcoding, versioned API (`/api/v1/`), test-first for domain logic, athlete-first UX.
+
+## Phase 1 — Calculators Engine (added 2026-05-08)
+
+- **Engine boundary**: every pure calculator lives under `services/engine/`. No `@supabase/supabase-js` imports in this directory or in `services/programGenerator.js` / `services/progressionEngine.js`.
+- **Engine version pinning**: `services/engine/constants.js` exports `ENGINE_VERSION` (semver) and a frozen `DEFAULTS` map. Every persisted calculation row snapshots `engine_version` + `resolved_constants` so replays survive default changes. Bump rules: PATCH = rounding fix, MINOR = new calculator/optional input, MAJOR = behavioural change to an existing calculator.
+- **Per-athlete overrides**: stored on `app_config.engine_overrides` (JSONB, defaults `{}`). The engine reads via `resolveConstants(override)` — defaults ⊕ override, deep-frozen.
+- **Audit log**: `services/engine/auditWriter.js` is the single helper that appends a row to `calculation_results`. Called from every persisted-write path (program regenerate, 1RM record, body composition + measurement save, progression eval). NOT called from `/api/v1/calculators/*` ad-hoc endpoints (FR-029).
+- **Soft-archive shapes**: `generated_programs` and `progression_flags` use `is_active` + `superseded_at`. Partial-unique indexes enforce "at most one active per scope" at the DB level.
+- **Frontend routing**: `react-router-dom@^6` is wired in `frontend/src/App.jsx`. `/`, `/nutrition`, `/calculators`, and `/calculators/<slug>` are the Phase 1 routes. Phase 4's journal screen extends this.
+- **Body measurement extension**: Phase 0's `body_measurements` table didn't include `neck_cm` / `hip_cm`. Phase 1 added migration `20260507000008_extend_body_measurements_neck_hip.sql` to support the U.S. Navy multi-measurement body-fat formula.

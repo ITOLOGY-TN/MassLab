@@ -11,6 +11,7 @@ export const seededAthlete = {
   morphotype: 'ectomorph',
   goal: 'bulk',
   weekly_session_count: 5,
+  activity_level: 'moderately_active',
   available_equipment: ['barbell', 'dumbbells', 'rack', 'bench', 'pulley'],
   injuries: [],
   program_start_date: '2026-05-01',

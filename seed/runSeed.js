@@ -14,8 +14,13 @@ import { nutritionDao } from '../services/dataAccess/nutrition.dao.js';
 import { supplementsDao } from '../services/dataAccess/supplements.dao.js';
 import { foodsDao } from '../services/dataAccess/foods.dao.js';
 import { quotesDao } from '../services/dataAccess/quotes.dao.js';
+import { generatedProgramsDao } from '../services/dataAccess/generatedPrograms.dao.js';
+import { calculationResultsDao } from '../services/dataAccess/calculationResults.dao.js';
+import { appConfigDao } from '../services/dataAccess/appConfig.dao.js';
 import { logger } from '../services/logger.js';
 import { generateProgram } from '../services/programGenerator.js';
+import { resolveConstants } from '../services/engine/resolveConstants.js';
+import { writeAudit } from '../services/engine/auditWriter.js';
 import { seededAthlete } from './athlete.seed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +41,9 @@ export async function runSeed({ config = loadConfig() } = {}) {
     supplements: supplementsDao(supabase),
     foods: foodsDao(supabase),
     quotes: quotesDao(supabase),
+    generatedPrograms: generatedProgramsDao(supabase),
+    calculationResults: calculationResultsDao(supabase),
+    appConfig: appConfigDao(supabase),
   };
 
   // 1. Athlete
@@ -45,8 +53,10 @@ export async function runSeed({ config = loadConfig() } = {}) {
   logger.info({ athlete_id: athlete.id }, 'seed_athlete_upserted');
   const athleteId = athlete.id;
 
-  // 2. Generate program for this athlete
-  const program = generateProgram({ ...seededAthlete });
+  // 2. Generate program for this athlete using engine constants (defaults)
+  const overrides = await daos.appConfig.getOverridesFor(athleteId);
+  const constants = resolveConstants(overrides);
+  const program = generateProgram({ ...seededAthlete }, { constants });
 
   // 3. Catalogues (locale fr-FR)
   const exercises = await loadJson('exercises.seed.json');
@@ -158,8 +168,29 @@ export async function runSeed({ config = loadConfig() } = {}) {
     });
   }
 
+  // 6. Persist the active program (soft-archive any prior row) + audit log entry.
+  const activeProgram = await daos.generatedPrograms.archiveAndInsert(athleteId, {
+    payload: program,
+    engine_version: program.engine_version,
+    resolved_constants: program.resolved_constants,
+  });
+  await writeAudit({
+    daos,
+    athleteId,
+    calculator: 'program_generate',
+    inputs: { profile: seededAthlete },
+    outputs: { program_id: activeProgram.id, daily_kcal: program.nutrition.daily_kcal },
+    resolvedConstants: program.resolved_constants,
+    engineVersion: program.engine_version,
+    producedRecord: { kind: 'generated_programs', id: activeProgram.id },
+  });
+  logger.info(
+    { athlete_id: athleteId, program_id: activeProgram.id },
+    'seed_active_program_written',
+  );
+
   logger.info({ athlete_id: athleteId }, 'seed_complete');
-  return { athleteId };
+  return { athleteId, programId: activeProgram.id };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
