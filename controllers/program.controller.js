@@ -4,7 +4,14 @@ import { resolveConstants } from '../services/engine/resolveConstants.js';
 import { writeAudit } from '../services/engine/auditWriter.js';
 
 export function programController({ daos }) {
-  async function regenerateForAthlete(athleteId) {
+  /**
+   * Regenerate the active program for `athleteId`. Phase 2 (T017) added the
+   * optional `reason` tag — when provided, it is forwarded to the audit
+   * writer so callers (e.g. PATCH /me with reason='profile_save') can be
+   * traced through `calculation_results.reason`. Defaults to null to keep the
+   * Phase 1 behaviour unchanged for existing callers.
+   */
+  async function regenerateForAthlete(athleteId, { reason } = {}) {
     const profile = await daos.athletes.findById(athleteId);
     if (!profile) throw new HttpError(404, 'NOT_FOUND', 'Athlete not found');
     const overrides = await daos.appConfig.getOverridesFor(athleteId);
@@ -23,17 +30,18 @@ export function programController({ daos }) {
       engine_version: program.engine_version,
       resolved_constants: program.resolved_constants,
     });
-    await writeAudit({
+    const auditRow = await writeAudit({
       daos,
       athleteId,
       calculator: 'program_generate',
+      reason: reason ?? null,
       inputs: { profile_id: profile.id },
       outputs: { program_id: row.id, daily_kcal: program.nutrition.daily_kcal },
       resolvedConstants: program.resolved_constants,
       engineVersion: program.engine_version,
       producedRecord: { kind: 'generated_programs', id: row.id },
     });
-    return row;
+    return { ...row, calculation_audit_id: auditRow?.id ?? null };
   }
 
   return {

@@ -39,5 +39,20 @@ export function athletesDao(supabase) {
       if (error) throw new HttpError(500, 'DB_ERROR', error.message);
       return data;
     },
+
+    /**
+     * Phase 2 (T014): partial profile update by id. Validation lives upstream
+     * (zod in the controller); this DAO just writes and returns the row.
+     */
+    async updateProfile(id, patch) {
+      const { data, error } = await supabase
+        .from('athletes')
+        .update(patch)
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+      return data;
+    },
   };
 }
