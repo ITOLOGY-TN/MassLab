@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from 'react-router-dom';
+import { apiGet } from './lib/api.js';
+import { applyTheme } from './lib/theme.js';
 import ScaffoldHome from './pages/ScaffoldHome.jsx';
 import NutritionHome from './pages/NutritionHome.jsx';
 import CalculatorsHome from './pages/calculators/CalculatorsHome.jsx';
@@ -29,6 +32,16 @@ function Shell() {
 }
 
 export default function App() {
+  // Sync the chosen theme from server prefs after first paint. The bootstrap
+  // already applied the locally-cached value in main.jsx so there's no flash.
+  useEffect(() => {
+    apiGet('/api/v1/me/preferences')
+      .then((res) => res?.data?.theme && applyTheme(res.data.theme))
+      .catch(() => {
+        /* offline / unauth — keep the bootstrapped theme */
+      });
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

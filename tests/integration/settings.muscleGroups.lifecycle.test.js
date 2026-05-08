@@ -76,10 +76,10 @@ describe('US2 — muscle-groups lifecycle', () => {
     expect(found).toBeDefined();
     expect(found.is_active).toBe(false);
 
-    // Restore so subsequent runs don't see the row archived.
-    await request(app)
-      .patch(`/api/v1/muscle-groups/${referenced.id}`)
-      .send({ name: referenced.name });
+    // Restore so subsequent runs don't see the row archived. We poke the DB
+    // directly rather than going through PATCH /muscle-groups/:id — that
+    // re-derives the slug from `name`, which over many test runs accumulates
+    // orphan rows when the seed re-creates the canonical slug.
     await supabase
       .from('muscle_groups')
       .update({ is_active: true, archived_at: null })

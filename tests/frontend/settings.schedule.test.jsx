@@ -1,6 +1,5 @@
 // Phase 2 US2 (T039): smoke test for the schedule settings screen.
-// Verifies it loads /me/schedule + /muscle-groups, renders a row per slot,
-// and that the save button stays disabled until the draft is dirty.
+// Verifies the all-7-days layout, rest-day toggle, and the PUT shape on save.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import ScheduleSettings from '../../frontend/src/pages/settings/ScheduleSettings.jsx';
@@ -73,32 +72,35 @@ beforeEach(() => {
 });
 
 describe('ScheduleSettings (US2 smoke)', () => {
-  it('loads the schedule + catalogue and renders a row per slot', async () => {
+  it('renders all 7 weekdays as fixed rows with select boxes', async () => {
     render(<ScheduleSettings />);
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /Planning hebdomadaire/i })).toBeInTheDocument(),
     );
-    // 3 slots → 3 row-level select elements.
     const selects = await screen.findAllByRole('combobox');
-    expect(selects).toHaveLength(3);
+    expect(selects).toHaveLength(7);
+    expect(screen.getByText('Lundi')).toBeInTheDocument();
+    expect(screen.getByText('Dimanche')).toBeInTheDocument();
   });
 
-  it('keeps Save disabled until a change is made', async () => {
+  it('Save is disabled until a day is changed', async () => {
     render(<ScheduleSettings />);
     await waitFor(() => screen.getByRole('button', { name: /Enregistrer/i }));
-    const save = screen.getByRole('button', { name: /Enregistrer/i });
-    expect(save).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Enregistrer/i })).toBeDisabled();
   });
 
-  it('"+ Ajouter un jour" enables Save and PUTs a 4-day payload', async () => {
+  it('switching a training day to "Repos" enables Save and PUTs only the remaining days', async () => {
     render(<ScheduleSettings />);
-    await waitFor(() => screen.getByRole('button', { name: /Ajouter un jour/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un jour/i }));
+    await waitFor(() => screen.getAllByRole('combobox'));
+    const selects = screen.getAllByRole('combobox');
+    // Day 1 (Mon) is currently muscle_group 6 — switch it to rest.
+    fireEvent.change(selects[0], { target: { value: '__rest__' } });
     const save = screen.getByRole('button', { name: /Enregistrer/i });
     expect(save).toBeEnabled();
     fireEvent.click(save);
     await waitFor(() => expect(lastPutBody).not.toBeNull());
-    expect(lastPutBody.slots).toHaveLength(4);
-    expect(lastPutBody.slots.map((s) => s.day_of_week)).toEqual([1, 2, 3, 4]);
+    // Mon is gone; Tue + Wed remain.
+    expect(lastPutBody.slots.map((s) => s.day_of_week)).toEqual([2, 3]);
+    expect(lastPutBody.active_days).toBe(2);
   });
 });
