@@ -89,32 +89,32 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Migrations (run in order; foundational for US2 only)
 
-- [ ] T020 [US2] Author `supabase/migrations/20260508000001_init_muscle_groups.sql` — creates the `muscle_groups` table per `data-model.md`, including the `unique (athlete_id, slug)` constraint, the two CHECK constraints (name length, hex color), the two indexes, and the `_select_own` + `_modify_own` RLS policies.
-- [ ] T021 [US2] Author `supabase/migrations/20260508000002_extend_weekly_plan_slots_muscle_group_fk.sql` — adds nullable `muscle_group_id BIGINT` FK on `weekly_plan_slots` plus the index.
-- [ ] T022 [US2] Author `supabase/migrations/20260508000003_backfill_weekly_plan_slots_muscle_group_id.sql` — pure SQL data migration per `data-model.md` (insert distinct catalogue rows per `(athlete_id, muscle_group)`, then update each slot). Idempotent and a no-op on a fresh DB.
-- [ ] T023 [US2] Author `supabase/migrations/20260508000004_finalize_weekly_plan_slots_muscle_group_fk.sql` — `alter ... set not null` on `muscle_group_id` and `drop column muscle_group`.
-- [ ] T024 [US2] Extend `seed/runSeed.js` to insert the seeded muscle-group catalogue on first run (Chest+Triceps, Back+Biceps, Legs-Quads, Shoulders+Traps, Legs-Hams+Glutes) with the Phase 0 palette colors. Idempotent (`on conflict do nothing` on `(athlete_id, slug)`).
+- [X] T020 [US2] Author `supabase/migrations/20260508000001_init_muscle_groups.sql` — creates the `muscle_groups` table per `data-model.md`, including the `unique (athlete_id, slug)` constraint, the two CHECK constraints (name length, hex color), the two indexes, and the `_select_own` + `_modify_own` RLS policies.
+- [X] T021 [US2] Author `supabase/migrations/20260508000002_extend_weekly_plan_slots_muscle_group_fk.sql` — adds nullable `muscle_group_id BIGINT` FK on `weekly_plan_slots` plus the index.
+- [X] T022 [US2] Author `supabase/migrations/20260508000003_backfill_weekly_plan_slots_muscle_group_id.sql` — pure SQL data migration per `data-model.md` (insert distinct catalogue rows per `(athlete_id, muscle_group)`, then update each slot). Idempotent and a no-op on a fresh DB.
+- [X] T023 [US2] Author `supabase/migrations/20260508000004_finalize_weekly_plan_slots_muscle_group_fk.sql` — `alter ... set not null` on `muscle_group_id` and `drop column muscle_group`.
+- [X] T024 [US2] Extend `seed/runSeed.js` to insert the seeded muscle-group catalogue on first run (Chest+Triceps, Back+Biceps, Legs-Quads, Shoulders+Traps, Legs-Hams+Glutes) with the Phase 0 palette colors. Idempotent (`on conflict do nothing` on `(athlete_id, slug)`).
 
 ### Tests for User Story 2 (TDD)
 
-- [ ] T025 [P] [US2] Unit tests in `tests/unit/scheduleValidator.test.js` covering FR-008: zero active days rejects, duplicate `muscle_group_id` in same week rejects, name length > 40 rejects, day_of_week out of [1,7] rejects, valid inputs pass through. Tests fail until T030 lands.
-- [ ] T026 [P] [US2] Contract tests in `tests/contract/api.v1.test.js` for the new paths: `GET/PUT /me/schedule`, `POST /me/schedule/slots/:id/exercises/reorder`, `GET/POST/PATCH/DELETE /muscle-groups`, `POST /muscle-groups/:id/merge`.
-- [ ] T027 [P] [US2] Integration test `tests/integration/settings.schedule.replace.test.js` — full PUT replaces atomically (failure mid-write leaves prior schedule intact), `unique (athlete_id, day_of_week)` enforced, in-progress-session conflict returns 409 unless `?force=1`.
-- [ ] T028 [P] [US2] Integration test `tests/integration/settings.muscleGroups.lifecycle.test.js` — create → rename (slot rows unchanged) → merge into another (slot rows repointed, source archived) → soft-archive when referenced → hard-delete when not referenced.
-- [ ] T029 [P] [US2] Integration test `tests/integration/settings.muscleGroups.rls.test.js` — using a per-test JWT against the publishable-key client per the existing pattern in Phase 0's `rls.policies.test.js`, confirm cross-athlete reads/writes are blocked.
+- [X] T025 [P] [US2] Unit tests in `tests/unit/scheduleValidator.test.js` covering FR-008: zero active days rejects, duplicate `muscle_group_id` in same week rejects, name length > 40 rejects, day_of_week out of [1,7] rejects, valid inputs pass through. Tests fail until T030 lands.
+- [X] T026 [P] [US2] Contract tests in `tests/contract/api.v1.test.js` for the new paths: `GET/PUT /me/schedule`, `POST /me/schedule/slots/:id/exercises/reorder`, `GET/POST/PATCH/DELETE /muscle-groups`, `POST /muscle-groups/:id/merge`.
+- [X] T027 [P] [US2] Integration test `tests/integration/settings.schedule.replace.test.js` — full PUT replaces atomically (failure mid-write leaves prior schedule intact), `unique (athlete_id, day_of_week)` enforced, in-progress-session conflict returns 409 unless `?force=1`.
+- [X] T028 [P] [US2] Integration test `tests/integration/settings.muscleGroups.lifecycle.test.js` — create → rename (slot rows unchanged) → merge into another (slot rows repointed, source archived) → soft-archive when referenced → hard-delete when not referenced.
+- [X] T029 [P] [US2] Integration test `tests/integration/settings.muscleGroups.rls.test.js` — using a per-test JWT against the publishable-key client per the existing pattern in Phase 0's `rls.policies.test.js`, confirm cross-athlete reads/writes are blocked.
 
 ### Implementation for User Story 2
 
-- [ ] T030 [P] [US2] Create `services/scheduleValidator.js` — pure module exporting `validateSchedule(payload)` returning `{ ok: true } | { ok: false, errors: [...] }`. No I/O. Used by both backend and frontend (the frontend imports from a shared spot — Phase 2 keeps the duplication minimal by re-exporting from `frontend/src/lib/`; alternative: dynamic import. Pick the lighter path during implementation.).
-- [ ] T031 [P] [US2] Create `services/dataAccess/muscleGroups.dao.js` — methods: `listForAthlete(athleteId, { includeArchived })`, `create`, `patch`, `softArchive`, `hardDelete`, `merge(sourceId, targetId, athleteId)` (single Supabase RPC or transaction repointing slot references then archiving the source).
-- [ ] T032 [US2] Create `controllers/muscleGroups.controller.js` — orchestrates the DAO; enforces ownership scope from `req.athleteId`; rejects merges when source and target are the same.
-- [ ] T033 [US2] Create `routes/muscleGroups.routes.js` — mount the five paths from the OpenAPI under `/api/v1/muscle-groups/*`. Register in `app.js`.
-- [ ] T034 [US2] Extend `services/dataAccess/weeklyPlan.dao.js` with `replaceSchedule(athleteId, payload)` — runs inside a single Supabase transaction (or staged buffer + swap if necessary): clear existing slots + exercises for the athlete, insert the new payload, return the resolved schedule. Validate via `scheduleValidator.validateSchedule` before any write.
-- [ ] T035 [US2] Extend `controllers/weeklyPlan.controller.js` with the `getSchedule` and `replaceSchedule` handlers. The replace handler checks for an in-progress session on a deactivated day and returns 409 unless `req.query.force === '1'`.
-- [ ] T036 [US2] Extend `routes/weeklyPlan.routes.js` to expose `GET /me/schedule`, `PUT /me/schedule`, and `POST /me/schedule/slots/:slotId/exercises/reorder`.
-- [ ] T037 [US2] Add the reorder DAO method to `weeklyPlan.dao.js` — `reorderSlotExercises(slotId, athleteId, orderedExerciseIds)` updating `position` in one transaction.
-- [ ] T038 [US2] Build `frontend/src/pages/settings/ScheduleSettings.jsx` — drag-and-drop day cards using `SortableList`, muscle-group picker pulling from `/muscle-groups`, inline catalogue editor (rename / merge / archive). Save button calls `apiPut('/me/schedule', body)`; conflict 409 surfaces a confirmation dialog.
-- [ ] T039 [P] [US2] Frontend smoke test `tests/frontend/settings.schedule.test.jsx` — renders the screen, dispatches a reorder, hits Save, asserts the optimistic UI matches the GET response after success.
+- [X] T030 [P] [US2] Create `services/scheduleValidator.js` — pure module exporting `validateSchedule(payload)` returning `{ ok: true } | { ok: false, errors: [...] }`. No I/O. Used by both backend and frontend (the frontend imports from a shared spot — Phase 2 keeps the duplication minimal by re-exporting from `frontend/src/lib/`; alternative: dynamic import. Pick the lighter path during implementation.).
+- [X] T031 [P] [US2] Create `services/dataAccess/muscleGroups.dao.js` — methods: `listForAthlete(athleteId, { includeArchived })`, `create`, `patch`, `softArchive`, `hardDelete`, `merge(sourceId, targetId, athleteId)` (single Supabase RPC or transaction repointing slot references then archiving the source).
+- [X] T032 [US2] Create `controllers/muscleGroups.controller.js` — orchestrates the DAO; enforces ownership scope from `req.athleteId`; rejects merges when source and target are the same.
+- [X] T033 [US2] Create `routes/muscleGroups.routes.js` — mount the five paths from the OpenAPI under `/api/v1/muscle-groups/*`. Register in `app.js`.
+- [X] T034 [US2] Extend `services/dataAccess/weeklyPlan.dao.js` with `replaceSchedule(athleteId, payload)` — runs inside a single Supabase transaction (or staged buffer + swap if necessary): clear existing slots + exercises for the athlete, insert the new payload, return the resolved schedule. Validate via `scheduleValidator.validateSchedule` before any write.
+- [X] T035 [US2] Extend `controllers/weeklyPlan.controller.js` with the `getSchedule` and `replaceSchedule` handlers. The replace handler checks for an in-progress session on a deactivated day and returns 409 unless `req.query.force === '1'`.
+- [X] T036 [US2] Extend `routes/weeklyPlan.routes.js` to expose `GET /me/schedule`, `PUT /me/schedule`, and `POST /me/schedule/slots/:slotId/exercises/reorder`.
+- [X] T037 [US2] Add the reorder DAO method to `weeklyPlan.dao.js` — `reorderSlotExercises(slotId, athleteId, orderedExerciseIds)` updating `position` in one transaction.
+- [X] T038 [US2] Build `frontend/src/pages/settings/ScheduleSettings.jsx` — drag-and-drop day cards using `SortableList`, muscle-group picker pulling from `/muscle-groups`, inline catalogue editor (rename / merge / archive). Save button calls `apiPut('/me/schedule', body)`; conflict 409 surfaces a confirmation dialog.
+- [X] T039 [P] [US2] Frontend smoke test `tests/frontend/settings.schedule.test.jsx` — renders the screen, dispatches a reorder, hits Save, asserts the optimistic UI matches the GET response after success.
 
 **Checkpoint**: US2 fully functional. Schedule edits propagate through the system without rewriting historical session attribution.
 

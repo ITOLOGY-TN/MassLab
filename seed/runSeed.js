@@ -17,6 +17,7 @@ import { quotesDao } from '../services/dataAccess/quotes.dao.js';
 import { generatedProgramsDao } from '../services/dataAccess/generatedPrograms.dao.js';
 import { calculationResultsDao } from '../services/dataAccess/calculationResults.dao.js';
 import { appConfigDao } from '../services/dataAccess/appConfig.dao.js';
+import { muscleGroupsDao } from '../services/dataAccess/muscleGroups.dao.js';
 import { logger } from '../services/logger.js';
 import { generateProgram } from '../services/programGenerator.js';
 import { resolveConstants } from '../services/engine/resolveConstants.js';
@@ -24,6 +25,18 @@ import { writeAudit } from '../services/engine/auditWriter.js';
 import { seededAthlete } from './athlete.seed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+const MUSCLE_GROUP_NAMES = Object.freeze({
+  chest_triceps: 'Pectoraux + Triceps',
+  back_biceps: 'Dos + Biceps',
+  legs: 'Jambes',
+  shoulders_traps: 'Épaules + Trapèzes',
+  arms_core: 'Bras + Tronc',
+});
+
+function muscleGroupDisplayName(slug) {
+  return MUSCLE_GROUP_NAMES[slug] ?? slug.replace(/_/g, ' ');
+}
 
 async function loadJson(rel) {
   const buf = await readFile(path.join(here, rel), 'utf8');
@@ -44,6 +57,7 @@ export async function runSeed({ config = loadConfig() } = {}) {
     generatedPrograms: generatedProgramsDao(supabase),
     calculationResults: calculationResultsDao(supabase),
     appConfig: appConfigDao(supabase),
+    muscleGroups: muscleGroupsDao(supabase),
   };
 
   // 1. Athlete
@@ -127,13 +141,32 @@ export async function runSeed({ config = loadConfig() } = {}) {
     })),
   );
 
-  // 4. Weekly plan (slots + exercises) from the program
+  // 4a. Phase 2 US2 — seed the per-athlete muscle-group catalogue from the
+  // program's slot definitions. Idempotent on (athlete_id, slug).
+  const muscleGroupCatalogue = await daos.muscleGroups.upsertMany(
+    athleteId,
+    program.training.weeklyPlan.map((s) => ({
+      slug: s.muscle_group,
+      name: muscleGroupDisplayName(s.muscle_group),
+      display_color: s.display_color,
+      sort_order: s.display_order,
+    })),
+  );
+  const muscleGroupIdBySlug = new Map(muscleGroupCatalogue.map((mg) => [mg.slug, mg.id]));
+
+  // 4b. Weekly plan (slots + exercises) from the program — slots now reference
+  // muscle_group_id (Phase 2 schema reshape).
   const slugToExerciseId = new Map(upsertedEx.map((e) => [e.slug, e.id]));
   for (const slot of program.training.weeklyPlan) {
+    const muscleGroupId = muscleGroupIdBySlug.get(slot.muscle_group);
+    if (!muscleGroupId) {
+      logger.warn({ slug: slot.muscle_group }, 'seed_missing_muscle_group_id');
+      continue;
+    }
     const upsertedSlot = await daos.weeklyPlan.upsertSlot({
       athlete_id: athleteId,
       day_of_week: slot.day_of_week,
-      muscle_group: slot.muscle_group,
+      muscle_group_id: muscleGroupId,
       display_color: slot.display_color,
       display_order: slot.display_order,
     });

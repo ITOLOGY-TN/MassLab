@@ -19,10 +19,12 @@ import { oneRepMaxRecordsDao } from './services/dataAccess/oneRepMaxRecords.dao.
 import { progressionFlagsDao } from './services/dataAccess/progressionFlags.dao.js';
 import { bodyCompositionDao } from './services/dataAccess/bodyComposition.dao.js';
 import { bodyMeasurementsDao } from './services/dataAccess/bodyMeasurements.dao.js';
+import { muscleGroupsDao } from './services/dataAccess/muscleGroups.dao.js';
 import { getSupabase } from './services/dataAccess/supabaseClient.js';
 import { athleteRoutes } from './routes/athlete.routes.js';
 import { exercisesRoutes } from './routes/exercises.routes.js';
-import { weeklyPlanRoutes } from './routes/weeklyPlan.routes.js';
+import { weeklyPlanRoutes, meScheduleRoutes } from './routes/weeklyPlan.routes.js';
+import { muscleGroupsRoutes } from './routes/muscleGroups.routes.js';
 import { trainingPhasesRoutes } from './routes/trainingPhases.routes.js';
 import { nutritionRoutes } from './routes/nutrition.routes.js';
 import { supplementsRoutes } from './routes/supplements.routes.js';
@@ -53,6 +55,7 @@ export function buildApp({ config, supabase, daos } = {}) {
     progressionFlags: progressionFlagsDao(sb),
     bodyComposition: bodyCompositionDao(sb),
     bodyMeasurements: bodyMeasurementsDao(sb),
+    muscleGroups: muscleGroupsDao(sb),
   };
 
   const app = express();
@@ -87,6 +90,8 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));
   v1.use('/body-measurements', bodyMeasurementsRoutes({ daos: resolved }));
+  v1.use('/muscle-groups', muscleGroupsRoutes({ daos: resolved }));
+  v1.use('/me/schedule', meScheduleRoutes({ daos: resolved }));
   app.use('/api/v1', v1);
 
   app.use((req, _res, next) => {
