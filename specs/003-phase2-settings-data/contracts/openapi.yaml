@@ -96,8 +96,8 @@ components:
           type: string
           enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
         sessions_per_week: { type: integer, minimum: 1, maximum: 7 }
-        equipment: { type: array, items: { type: string } }
-        injuries: { type: array, items: { type: string } }
+        equipment: { type: array, items: { type: string }, maxItems: 50 }
+        injuries: { type: array, items: { type: string }, maxItems: 20 }
 
     AthleteProfilePatch:
       description: Partial update; any subset of AthleteProfile fields except `id`.
@@ -116,8 +116,8 @@ components:
           type: string
           enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
         sessions_per_week: { type: integer, minimum: 1, maximum: 7 }
-        equipment: { type: array, items: { type: string } }
-        injuries: { type: array, items: { type: string } }
+        equipment: { type: array, items: { type: string }, maxItems: 50 }
+        injuries: { type: array, items: { type: string }, maxItems: 20 }
 
     MuscleGroup:
       type: object

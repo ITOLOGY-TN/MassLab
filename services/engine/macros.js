@@ -52,14 +52,13 @@ export function macros({
       : Math.max(0, Math.round(remainingKcal / 4));
 
   // `source` lets the controller surface which path each value came from.
+  // A value is `auto-derived` ONLY when the override path actually moved it
+  // away from its engine baseline. Protein is independent of `daily_kcal`
+  // (protein_g_per_kg_lbm × LBM), so a calorie-only override leaves it at
+  // its engine value — the label was misleading users (Pass 3 H-1).
   const source = {
     daily_kcal: override?.daily_kcal != null ? 'override' : 'engine',
-    daily_protein_g:
-      override?.daily_protein_g != null
-        ? 'override'
-        : override?.daily_kcal != null
-          ? 'auto-derived'
-          : 'engine',
+    daily_protein_g: override?.daily_protein_g != null ? 'override' : 'engine',
     daily_fat_g:
       override?.daily_fat_g != null
         ? 'override'
@@ -69,7 +68,9 @@ export function macros({
     daily_carbs_g:
       override?.daily_carbs_g != null
         ? 'override'
-        : override?.daily_kcal != null || override?.daily_protein_g != null || override?.daily_fat_g != null
+        : override?.daily_kcal != null ||
+            override?.daily_protein_g != null ||
+            override?.daily_fat_g != null
           ? 'auto-derived'
           : 'engine',
   };

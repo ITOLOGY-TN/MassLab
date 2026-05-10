@@ -75,8 +75,9 @@ export function exercisesDao(supabase) {
     },
 
     async patch(athleteId, id, patch) {
+      // Slug is stable — only changed when the caller passes one explicitly.
+      // Auto-deriving from `name` causes orphan rows on rename.
       const update = { ...patch };
-      if (patch.name && patch.slug == null) update.slug = deriveSlug(patch.name);
       const { data, error } = await supabase
         .from('exercises')
         .update(update)

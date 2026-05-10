@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiPost, apiUpload } from '../../lib/api.js';
+import { apiPost, apiUpload, apiGetBlob } from '../../lib/api.js';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 
 const RESET_TOKEN = 'RESET-MASSLAB';
@@ -61,10 +61,8 @@ export default function DataSettings() {
     setError(null);
     setStatus(null);
     try {
-      const res = await fetch('/api/v1/data/export/sessions.csv');
-      if (!res.ok) throw new Error(`CSV export failed: ${res.status}`);
-      const text = await res.text();
-      downloadBlob(text, `masslab-sessions-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+      const blob = await apiGetBlob('/api/v1/data/export/sessions.csv', 'text/csv');
+      downloadBlob(blob, `masslab-sessions-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
       setStatus('Sessions CSV téléchargées.');
     } catch (err) {
       setError(err.message);
