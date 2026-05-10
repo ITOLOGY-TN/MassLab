@@ -26,6 +26,22 @@ describe('engine.macros', () => {
     expect(out.source.daily_carbs_g).toBe('auto-derived');
   });
 
+  // Pass 3 H-1: protein is independent of daily_kcal (protein_g_per_kg_lbm × LBM),
+  // so a calorie-only override must leave the protein source labelled `engine`.
+  // Fat does depend on daily_kcal and is correctly tagged `auto-derived`.
+  it('source.daily_protein_g stays "engine" under a calorie-only override', () => {
+    const baseline = macros({ ...baseProfile, goal: 'bulk', constants: DEFAULTS });
+    const overridden = macros({
+      ...baseProfile,
+      goal: 'bulk',
+      constants: DEFAULTS,
+      override: { daily_kcal: 3500 },
+    });
+    expect(overridden.protein_g).toBe(baseline.protein_g);
+    expect(overridden.source.daily_protein_g).toBe('engine');
+    expect(overridden.source.daily_fat_g).toBe('auto-derived');
+  });
+
   it('FR-017b: a per-macro override pins that macro and the others auto-derive', () => {
     const out = macros({
       ...baseProfile,

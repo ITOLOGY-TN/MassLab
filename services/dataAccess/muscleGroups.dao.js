@@ -138,6 +138,41 @@ export function muscleGroupsDao(supabase) {
     },
 
     /**
+     * Delete athlete-owned muscle-group rows that are BOTH archived
+     * (`is_active = false`) AND have no `weekly_plan_slot` reference. Used by
+     * the seed to self-heal after slug churn — narrow scope so user-created
+     * active rows that haven't yet been attached to a slot are preserved
+     * (Pass 2 H-1). Returns the number of rows pruned.
+     */
+    async pruneUnreferencedForAthlete(athleteId) {
+      const { data: stale, error: listErr } = await supabase
+        .from('muscle_groups')
+        .select('id')
+        .eq('athlete_id', athleteId)
+        .eq('is_active', false);
+      if (listErr) throw new HttpError(500, 'DB_ERROR', listErr.message);
+      if (!stale?.length) return 0;
+
+      const ids = stale.map((r) => r.id);
+      const { data: refs, error: refsErr } = await supabase
+        .from('weekly_plan_slots')
+        .select('muscle_group_id')
+        .in('muscle_group_id', ids);
+      if (refsErr) throw new HttpError(500, 'DB_ERROR', refsErr.message);
+
+      const referenced = new Set((refs ?? []).map((r) => r.muscle_group_id));
+      const toDelete = ids.filter((id) => !referenced.has(id));
+      if (!toDelete.length) return 0;
+
+      const { error: pruneErr } = await supabase
+        .from('muscle_groups')
+        .delete()
+        .in('id', toDelete);
+      if (pruneErr) throw new HttpError(500, 'DB_ERROR', pruneErr.message);
+      return toDelete.length;
+    },
+
+    /**
      * Repoint every slot reference from `sourceId` to `targetId`, then
      * soft-archive the source. Both rows must belong to the same athlete.
      * The repoint and the archive are issued back-to-back; if the second
