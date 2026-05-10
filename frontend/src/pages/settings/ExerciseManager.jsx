@@ -171,6 +171,7 @@ export default function ExerciseManager() {
 
       {editing ? (
         <ExerciseEditor
+          key={editing.kind === 'new' ? 'new' : `edit:${editing.id}`}
           editing={editing}
           busy={busy}
           onCancel={() => setEditing(null)}
