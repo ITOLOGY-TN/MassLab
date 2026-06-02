@@ -3,13 +3,21 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import ProgramDay from '../../frontend/src/pages/program/ProgramDay.jsx';
 
-function mockDay(status, body) {
+function json(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// `weekDays` optionally seeds the week view that ProgramDay consults after a
+// day-level 404 to decide rest-vs-error.
+function mockDay(status, body, weekDays = null) {
   globalThis.fetch = vi.fn(async (url) => {
-    if (String(url).includes('/api/v1/program/day/')) {
-      return new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const u = String(url);
+    if (u.includes('/api/v1/program/day/')) return json(status, body);
+    if (u.endsWith('/api/v1/program/week')) {
+      return json(200, { data: { days: weekDays ?? [], training_day_count: 0, empty: false } });
     }
     return new Response('not found', { status: 404 });
   });
@@ -85,10 +93,22 @@ describe('ProgramDay (US2)', () => {
     );
   });
 
-  it('shows a rest-day message on 404 (FR: rest day)', async () => {
-    mockDay(404, { error: { code: 'NOT_FOUND', message: 'rest' } });
+  it('shows a rest-day message when the week confirms the day is rest', async () => {
+    mockDay(404, { error: { code: 'NOT_FOUND', message: 'rest' } }, [
+      { day_of_week: 2, kind: 'rest' },
+    ]);
     renderAt('/program/day/2');
     await waitFor(() => expect(screen.getByText(/jour de repos/i)).toBeTruthy());
+  });
+
+  it('shows an error (not "rest day") when the week says the day IS training', async () => {
+    // e.g. a stale/unreachable API 404s the day even though the week has it as training.
+    mockDay(404, { error: { code: 'NOT_FOUND', message: 'no route' } }, [
+      { day_of_week: 1, kind: 'training' },
+    ]);
+    renderAt('/program/day/1');
+    await waitFor(() => expect(screen.getByText(/Impossible de charger/i)).toBeTruthy());
+    expect(screen.queryByText(/jour de repos/i)).toBeNull();
   });
 
   it('shows the empty-exercises state (FR-012)', async () => {

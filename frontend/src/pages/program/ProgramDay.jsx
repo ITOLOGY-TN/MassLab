@@ -2,7 +2,7 @@
 // and a progression indicator. Rows open the exercise detail. FR-007..FR-012.
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchProgramDay } from '../../lib/programApi.js';
+import { fetchProgramDay, fetchProgramWeek } from '../../lib/programApi.js';
 import ProgressionBadge from '../../components/ProgressionBadge.jsx';
 import StateBlock from '../../components/StateBlock.jsx';
 
@@ -47,10 +47,23 @@ export default function ProgramDay() {
     setState({ status: 'loading', day: null });
     fetchProgramDay(dayOfWeek)
       .then((day) => active && setState({ status: 'ready', day }))
-      .catch(
-        (err) =>
-          active && setState({ status: err?.status === 404 ? 'notfound' : 'error', day: null }),
-      );
+      .catch(async (err) => {
+        if (!active) return;
+        // A 404 only means "rest day" if the week view agrees it's a rest day.
+        // Otherwise it's a real failure (e.g. a stale/unreachable API) and must
+        // not masquerade as a rest day.
+        if (err?.status === 404) {
+          try {
+            const week = await fetchProgramWeek();
+            const d = week.days?.find((x) => x.day_of_week === Number(dayOfWeek));
+            if (active) setState({ status: d && d.kind === 'rest' ? 'rest' : 'error', day: null });
+            return;
+          } catch {
+            /* fall through to error */
+          }
+        }
+        if (active) setState({ status: 'error', day: null });
+      });
     return () => {
       active = false;
     };
@@ -66,7 +79,7 @@ export default function ProgramDay() {
 
       {state.status === 'loading' && <StateBlock kind="loading" />}
 
-      {state.status === 'notfound' && (
+      {state.status === 'rest' && (
         <StateBlock
           kind="empty"
           title={`${label} est un jour de repos`}
