@@ -103,13 +103,13 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 **Independent Test**: Open a day with an ordered list → exercises in `position` order with target sets/reps; with seeded session history the row shows the heaviest completed set as last weight and the indicator matching the active flag; with no history both show neutral empty states; archived exercise shows a marker; empty day shows "no exercises".
 
-- [ ] T023 [P] [US2] Write FAILING unit test `tests/unit/trainingProgram.dayView.test.js`: ordering by `position`; `last_weight_kg` via `exerciseHistory`; progression mapping (`add_load`→ready, `regression`→regressing, else stable — D-4); `is_active=false` marker; `empty_exercises=true`. (FR-007…FR-012)
-- [ ] T024 [US2] Implement `services/trainingProgram/dayView.js` (pure: compose weekly-plan exercises + `lastWeightUsed` + active-flag mapping) to make T023 green.
-- [ ] T025 [US2] Implement `getDay` in `controllers/trainingProgram.controller.js` (validate `dayOfWeek` 1–7 → 404 otherwise; read slot/exercises/sessions/flags DAOs; call `dayView`). Wire `GET /program/day/:dayOfWeek`.
-- [ ] T026 [P] [US2] Contract test `tests/contract/program.day.contract.test.js` against `DayView` (incl. rest/empty day returns 200, out-of-range → 404).
-- [ ] T027 [P] [US2] Integration test `tests/integration/program.day.history.test.js`: seed a session + sets → `last_weight_kg` = heaviest completed set; warm-up/incomplete excluded; no-history path → null + stable.
-- [ ] T028 [P] [US2] Build `frontend/src/pages/program/ProgramDay.jsx` + `frontend/src/components/ProgressionBadge.jsx` (ordered rows, target sets/reps, last weight, indicator, archived marker, empty states; rows link to exercise detail).
-- [ ] T029 [P] [US2] Frontend smoke test `tests/frontend/program.day.test.jsx`: ordered rows from stub, empty-history neutral state, empty-day state, row tap navigates.
+- [X] T023 [P] [US2] Write FAILING unit test `tests/unit/trainingProgram.dayView.test.js`: ordering by `position`; `last_weight_kg` via `exerciseHistory`; progression mapping (`add_load`→ready, `regression`→regressing, else stable — D-4); `is_active=false` marker; `empty_exercises=true`. (FR-007…FR-012)
+- [X] T024 [US2] Implement `services/trainingProgram/dayView.js` (pure: compose weekly-plan exercises + `lastWeightUsed` + active-flag mapping) to make T023 green.
+- [X] T025 [US2] Implement `getDay` in `controllers/trainingProgram.controller.js` (validate `dayOfWeek` 1–7 → 404 otherwise; read slot/exercises/sessions/flags DAOs; call `dayView`). Wire `GET /program/day/:dayOfWeek`.
+- [X] T026 [P] [US2] Contract test `tests/contract/program.day.contract.test.js` against `DayView` (incl. rest/empty day returns 200, out-of-range → 404).
+- [X] T027 [P] [US2] Integration test `tests/integration/program.day.history.test.js`: seed a session + sets → `last_weight_kg` = heaviest completed set; warm-up/incomplete excluded; no-history path → null + stable.
+- [X] T028 [P] [US2] Build `frontend/src/pages/program/ProgramDay.jsx` + `frontend/src/components/ProgressionBadge.jsx` (ordered rows, target sets/reps, last weight, indicator, archived marker, empty states; rows link to exercise detail).
+- [X] T029 [P] [US2] Frontend smoke test `tests/frontend/program.day.test.jsx`: ordered rows from stub, empty-history neutral state, empty-day state, row tap navigates.
 
 **Checkpoint**: US1 + US2 both independently functional.
 

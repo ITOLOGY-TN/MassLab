@@ -13,5 +13,6 @@ export function trainingProgramRoutes({ daos }) {
   const r = Router();
   const c = trainingProgramController({ daos });
   r.get('/week', c.getWeek);
+  r.get('/day/:dayOfWeek', c.getDay);
   return r;
 }
