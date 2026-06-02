@@ -2,6 +2,7 @@ import { evaluateForAthlete } from '../services/progressionEngine.js';
 import { resolveConstants } from '../services/engine/resolveConstants.js';
 import { writeAudit } from '../services/engine/auditWriter.js';
 import { ENGINE_VERSION } from '../services/engine/constants.js';
+import { bodySegmentFor } from '../services/engine/bodySegment.js';
 
 export function progressionFlagsController({ daos }) {
   return {
@@ -33,19 +34,13 @@ export function progressionFlagsController({ daos }) {
         const exercises = await daos.exercises.listForAthlete({ athleteId: req.athleteId });
         const exercisesById = {};
         for (const e of exercises) {
-          // Body segment is derived from the muscle_group slug; the seeded
-          // exercises don't carry it explicitly, so we infer from prefix.
-          const lowerKeywords = ['legs', 'lower'];
-          const segment = lowerKeywords.some(
-            (k) => e.slug.includes(k) || (e.targeted_muscles || []).some((m) => k.includes(m)),
-          )
-            ? 'lower'
-            : 'upper';
+          // Body segment derivation is shared with Phase 4 session finish + the
+          // suggested-target load recommendation (research D-6).
           exercisesById[e.id] = {
             id: e.id,
             slug: e.slug,
             muscle_group: null,
-            body_segment: segment,
+            body_segment: bodySegmentFor(e),
           };
         }
 

@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/006-training-program-library/plan.md
+- specs/007-session-journal/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
@@ -82,3 +82,12 @@ tests/{unit,integration,contract,frontend}/
 - **Alternatives**: one new table `exercise_alternatives` (migration `20260602000001`), one-directional, `CHECK` no-self + unique no-dup, FK `ON DELETE CASCADE`, RLS in-file. DAO maps `23505`→409 CONFLICT.
 - **Exercise media**: reuses `exercises.media_image_url` / `media_video_url`. Uploads go through the `photoStorage` adapter (root `PHOTO_STORAGE_ROOT`), served unauthenticated at `/static/*` so `<img>`/`<video>` can load them. YouTube videos are stored as URLs and normalized to `YOUTUBE_EMBED_HOST` by `mediaClassifier.normalizeYoutubeUrl` (shared by read + write paths). Size/type bounded by `EXERCISE_MEDIA_MAX_BYTES` / `EXERCISE_MEDIA_IMAGE_TYPES` / `EXERCISE_MEDIA_VIDEO_TYPES`.
 - **Frontend**: `/program`, `/program/day/:dayOfWeek`, `/program/exercises/:id` in `App.jsx`. Live Supabase-backed contract/integration tests for the alternatives surface **probe for the `exercise_alternatives` table and skip until the migration is applied**.
+
+## Phase 4 — Session Journal (added 2026-06-02)
+
+- **Sole owner of the session WRITE path**: `controllers/sessions.controller.js` + `routes/sessions.routes.js` mounted at `/api/v1/sessions` (registered before `/one-rep-max-records`; `/active` is declared before `/:id`). Phase 3 stays read-only over what this phase writes. The write methods live on the existing `services/dataAccess/sessions.dao.js` (Phase 3 shipped its read side); `daos.sessions` was already wired in `app.js`.
+- **Pure boundary**: composed view models + helpers live under `services/sessionJournal/` (`calendar.js` = `isoDayOfWeek`/`isSameAppDay`, `currentPhase.js` = `currentTrainingPhase`, `sessionView.js`, `summaryView.js`) — pure, no `@supabase/supabase-js`. New pure engine helpers: `services/engine/{sessionTotals,personalRecords,bodySegment}.js`. `bodySegment.js` is **extracted** from the old inline derivation in `progressionFlags.controller.js` and now shared by both (research D-6).
+- **Today detection** = ISO calendar weekday (`isoDayOfWeek`, Mon=1…Sun=7) matched to `weekly_plan_slots.day_of_week`, NOT a `program_start_date` offset (D-1). **Current phase** = derived from `program_start_date` + cumulative phase `weeks` (D-8); its `rest_seconds` drives the rest timer — no `is_current` column.
+- **Finish is the sole engine trigger** (D-6): `POST /sessions/:id/finish` discards incomplete sets (D-7), finalizes `ended_at`/`total_volume_kg`, then runs the Phase 1 engine exactly once — `evaluateForAthlete` → `progressionFlags.supersedeAndInsert`, `oneRepMax` → `oneRepMaxRecords.insert`, and `writeAudit` (one `one_rep_max` row per record + one `progression_eval`, both `reason:'session_finish'`). A **finish-once guard** (409 `SESSION_ALREADY_FINISHED`) + idempotent supersede make this safe without DB transactions. Auto-save (`PUT /sessions/:id/sets`) **never** runs the engine (D-5).
+- **Schema**: two forward-only migrations on existing tables, **no new table** — `20260602000002` adds `session_journal_entries.day_of_week` (nullable 1–7) + a partial active-session index; `20260602000003` changes `session_sets` uniqueness to `(session_id, exercise_id, set_number)` for per-exercise numbering + extra/ad-hoc sets (D-3/D-4). RLS unchanged (existing `*_own` policies key on `athlete_id`). **Live contract/integration tests probe for the `day_of_week` column and skip until the migration is applied.**
+- **Frontend**: `/journal` route + "Séance" nav in `App.jsx`. State machine in `lib/useSessionJournal.js` (idle/prompt/active/summary). One-handed `QuickStepper` (±2.5 kg / ±1 rep), `SessionTimer` (anchored to server `started_at`, D-12), `RestTimer` (Web Audio beeps via `lib/restTimerAudio.js`, silent fallback). Auto-save cadence is a **frontend Vite var** `VITE_SESSION_AUTOSAVE_INTERVAL_MS` (default 30000 in `frontend/src/lib/sessionConfig.js`) — no backend config key.

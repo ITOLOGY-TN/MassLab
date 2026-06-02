@@ -123,3 +123,20 @@ in the phases that touch those modules.
 - T005 (apply `exercise_alternatives` migration to the cloud project) is OUTSTANDING — needs Supabase access-token/DB-password not available to the agent. US3/US4 alternatives contract+integration tests probe-skip until applied.
 - **Localization seam** (Operational Standard): new frontend copy is hardcoded French, consistent with the pre-existing Phases 1–2 pattern — project-wide deviation, tracked, not introduced by Phase 3.
 - Pre-existing frontend test failures (`scaffold.test.jsx`, `nutritionView.test.jsx`) predate Phase 3 (files untouched); flagged for a separate fix.
+
+---
+
+## Phase 4 — Session Journal (2026-06-02)
+
+**Audit method**: `/speckit-implement` (US1–US4), tests-first for every number-producing function; full backend suite (281) + Phase 4 frontend smoke (6) green.
+
+- **I. Tenant-ready data model** — PASS. No new table; the added `session_journal_entries.day_of_week` column inherits the existing `session_journal_*_own` RLS; the `session_sets` uniqueness change does not touch RLS. Every new DAO write method is parameterised by `req.athleteId`; no endpoint trusts a body-supplied tenant id. `rls.policies.test.js` extended (T055) to assert session-table read + write isolation.
+- **II. Layered architecture** — PASS. Only the new write methods in `services/dataAccess/sessions.dao.js` import Supabase; `services/sessionJournal/*` + `services/engine/{sessionTotals,personalRecords,bodySegment}.js` are pure. The `bodySegment` derivation was extracted from `progressionFlags.controller.js` so both share one source (no duplication).
+- **III. Config over hardcoding** — PASS. The one tunable (auto-save cadence) is a frontend Vite var `VITE_SESSION_AUTOSAVE_INTERVAL_MS` (default 30000 in `sessionConfig.js`); no backend key. Rest intervals come from `training_phases.rest_seconds`; load increments from `resolveConstants`.
+- **IV. Versioned API** — PASS. All paths under `/api/v1/sessions`; additive `{ data }` / canonical-error envelopes; 201 create, 204 delete, 409 named conflicts (`ACTIVE_SESSION_EXISTS`, `SESSION_ALREADY_FINISHED`).
+- **V. Test-first for domain logic** — PASS. `sessionTotals`, `personalRecords`, `bodySegment`, `calendar`, `currentPhase`, and the `sessionView`/`summaryView` presenters are unit-tested (27 new unit tests). Finish-time engine side effects covered by gated integration tests. UI ships smoke tests (steppers, timers, audio cues, resume/stale).
+- **VI. Athlete-first UX** — PASS. This is the phase Principle VI targets: one-handed logging (±2.5 / ±1 QuickStepper), auto-save ≥30 s + on-completion, live session timer + rest timer with audio cues (silent fallback), designed empty/resume/summary states via Tailwind tokens.
+
+**Findings / follow-ups**:
+- T004 (apply migrations `20260602000002`/`20260602000003` to the cloud project) is OUTSTANDING — applying DDL to the production Supabase project requires explicit user authorization (the auto-mode classifier correctly blocked `supabase db push`). Session contract/integration tests probe-skip on the `day_of_week` column until applied; T053 (quickstart validation) is blocked on the same.
+- **Localization seam**: new frontend copy is hardcoded French, consistent with Phases 1–3 — project-wide deviation, tracked, not introduced here.
