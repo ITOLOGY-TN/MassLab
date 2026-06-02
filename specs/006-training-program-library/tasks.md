@@ -39,9 +39,9 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 **Purpose**: Config + route scaffolding that later phases build on. No business logic.
 
-- [ ] T001 [P] Add Phase 3 config keys to `config/schema.js` with documented defaults: `EXERCISE_MEDIA_MAX_BYTES` (default 26214400), `EXERCISE_MEDIA_IMAGE_TYPES` (default `image/jpeg,image/png,image/webp`), `EXERCISE_MEDIA_VIDEO_TYPES` (default `video/mp4,video/webm`), `YOUTUBE_EMBED_HOST` (default `https://www.youtube-nocookie.com`). Mirror them (no real values) in `.env.example`. (research D-8, Constitution III)
-- [ ] T002 [P] Extend `tests/unit/config.schema.test.js` to assert the four new keys parse from strings, apply defaults when absent, and reject malformed `EXERCISE_MEDIA_MAX_BYTES`.
-- [ ] T003 [P] Add the `/program` route tree to `frontend/src/App.jsx` (routes `/program`, `/program/day/:dayOfWeek`, `/program/exercises/:id` with placeholder components) and add a "Program" link to the `Shell` nav. Keep placeholders until US views land.
+- [X] T001 [P] Add Phase 3 config keys to `config/schema.js` with documented defaults: `EXERCISE_MEDIA_MAX_BYTES` (default 26214400), `EXERCISE_MEDIA_IMAGE_TYPES` (default `image/jpeg,image/png,image/webp`), `EXERCISE_MEDIA_VIDEO_TYPES` (default `video/mp4,video/webm`), `YOUTUBE_EMBED_HOST` (default `https://www.youtube-nocookie.com`). Mirror them (no real values) in `.env.example`. (research D-8, Constitution III)
+- [X] T002 [P] Extend `tests/unit/config.schema.test.js` to assert the four new keys parse from strings, apply defaults when absent, and reject malformed `EXERCISE_MEDIA_MAX_BYTES`.
+- [X] T003 [P] Add the `/program` route tree to `frontend/src/App.jsx` (routes `/program`, `/program/day/:dayOfWeek`, `/program/exercises/:id` with placeholder components) and add a "Program" link to the `Shell` nav. Keep placeholders until US views land.
 
 ---
 
@@ -53,28 +53,28 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 ### Database
 
-- [ ] T004 Create migration `supabase/migrations/<timestamp>_init_exercise_alternatives.sql`: table per data-model.md (`athlete_id`, `exercise_id`, `alternative_exercise_id`, `display_order`, `created_at`), `CHECK (exercise_id <> alternative_exercise_id)`, `UNIQUE (athlete_id, exercise_id, alternative_exercise_id)`, both FKs `ON DELETE CASCADE`, index `(athlete_id, exercise_id, display_order)`, and `exercise_alternatives_select_own` + `exercise_alternatives_modify_own` RLS in the same file. (research D-6, D-7; Constitution I)
+- [X] T004 Create migration `supabase/migrations/<timestamp>_init_exercise_alternatives.sql`: table per data-model.md (`athlete_id`, `exercise_id`, `alternative_exercise_id`, `display_order`, `created_at`), `CHECK (exercise_id <> alternative_exercise_id)`, `UNIQUE (athlete_id, exercise_id, alternative_exercise_id)`, both FKs `ON DELETE CASCADE`, index `(athlete_id, exercise_id, display_order)`, and `exercise_alternatives_select_own` + `exercise_alternatives_modify_own` RLS in the same file. (research D-6, D-7; Constitution I)
 - [ ] T005 Apply T004 to the dev Supabase project and verify table + both RLS policies exist (per quickstart.md §1). Forward-only, replayable from empty.
 
 ### Data-access (only Supabase-importing layer — Constitution II)
 
-- [ ] T006 [P] Create `services/dataAccess/sessions.dao.js` — READ-ONLY: `recentSessionsForExercise(athleteId, exerciseId, { limit = 5 })` (join `session_journal_entries` + `session_sets`, order `started_at DESC`) and `latestSessionWithSets(athleteId, exerciseId)`. No write methods. (research D-5; FR-026)
-- [ ] T007 [P] Create `services/dataAccess/exerciseAlternatives.dao.js` — `listForSource(athleteId, exerciseId)` (join `exercises` for name/slug/is_active, order `display_order`), `add(athleteId, exerciseId, altId, displayOrder)` (map `23505` → `409 CONFLICT`), `remove(athleteId, exerciseId, altId)`. (research D-6)
-- [ ] T008 [P] Extend `services/dataAccess/exercises.dao.js` with `getByIdForAthlete(athleteId, id)` and media helpers `setImage`/`clearImage`/`setVideo`/`clearVideo` (write `media_image_url` / `media_video_url`). No slug rederivation. (research D-8)
-- [ ] T009 Wire `sessions` and `exerciseAlternatives` DAOs into the resolved `daos` map in `app.js` so controllers receive them via `{ daos }`.
+- [X] T006 [P] Create `services/dataAccess/sessions.dao.js` — READ-ONLY: `recentSessionsForExercise(athleteId, exerciseId, { limit = 5 })` (join `session_journal_entries` + `session_sets`, order `started_at DESC`) and `latestSessionWithSets(athleteId, exerciseId)`. No write methods. (research D-5; FR-026)
+- [X] T007 [P] Create `services/dataAccess/exerciseAlternatives.dao.js` — `listForSource(athleteId, exerciseId)` (join `exercises` for name/slug/is_active, order `display_order`), `add(athleteId, exerciseId, altId, displayOrder)` (map `23505` → `409 CONFLICT`), `remove(athleteId, exerciseId, altId)`. (research D-6)
+- [X] T008 [P] Extend `services/dataAccess/exercises.dao.js` with `getByIdForAthlete(athleteId, id)` and media helpers `setImage`/`clearImage`/`setVideo`/`clearVideo` (write `media_image_url` / `media_video_url`). No slug rederivation. (research D-8)
+- [X] T009 Wire `sessions` and `exerciseAlternatives` DAOs into the resolved `daos` map in `app.js` so controllers receive them via `{ daos }`.
 
 ### Engine (pure, TEST-FIRST — write the test, see it fail, then implement)
 
-- [ ] T010 [P] Write FAILING unit tests `tests/unit/engine.exerciseHistory.test.js`: `heaviestCompletedSet` (ignores `completed=false` and non-positive weight/reps, tie-break = first), `lastWeightUsed` (heaviest completed set in most-recent session only; null when none), `recentSessions` (≤5, most-recent-first). (FR-009, FR-016, FR-027; D-2)
-- [ ] T011 [P] Implement `services/engine/exerciseHistory.js` (pure: explicit inputs, no clock/IO) to make T010 green.
-- [ ] T012 [P] Write FAILING unit tests `tests/unit/engine.loadRecommendation.test.js`: `add_load` flag → `lastWeightKg + load_increment` (upper vs lower by body segment); any other/none flag → hold `lastWeightKg`; `null` when no history. Constants via `resolveConstants`. (FR-018; D-3)
-- [ ] T013 [P] Implement `services/engine/loadRecommendation.js` (pure) to make T012 green.
-- [ ] T014 [P] Add unit test `tests/unit/engine.oneRepMax.detailFeed.test.js` pinning that the detail-page 1RM equals `oneRepMax({ weight, reps }).primary_estimate_kg` fed by `heaviestCompletedSet` (no Epley-only path, no records read). (FR-017; D-1)
+- [X] T010 [P] Write FAILING unit tests `tests/unit/engine.exerciseHistory.test.js`: `heaviestCompletedSet` (ignores `completed=false` and non-positive weight/reps, tie-break = first), `lastWeightUsed` (heaviest completed set in most-recent session only; null when none), `recentSessions` (≤5, most-recent-first). (FR-009, FR-016, FR-027; D-2)
+- [X] T011 [P] Implement `services/engine/exerciseHistory.js` (pure: explicit inputs, no clock/IO) to make T010 green.
+- [X] T012 [P] Write FAILING unit tests `tests/unit/engine.loadRecommendation.test.js`: `add_load` flag → `lastWeightKg + load_increment` (upper vs lower by body segment); any other/none flag → hold `lastWeightKg`; `null` when no history. Constants via `resolveConstants`. (FR-018; D-3)
+- [X] T013 [P] Implement `services/engine/loadRecommendation.js` (pure) to make T012 green.
+- [X] T014 [P] Add unit test `tests/unit/engine.oneRepMax.detailFeed.test.js` pinning that the detail-page 1RM equals `oneRepMax({ weight, reps }).primary_estimate_kg` fed by `heaviestCompletedSet` (no Epley-only path, no records read). (FR-017; D-1)
 
 ### Backend + frontend scaffold (shared by all read stories)
 
-- [ ] T015 Create `routes/trainingProgram.routes.js` + `controllers/trainingProgram.controller.js` with three stubbed read handlers (`getWeek`, `getDay`, `getExercise`) and mount the router at `/api/v1/program` in `app.js`. (research D-9; Constitution IV)
-- [ ] T016 [P] Create `frontend/src/lib/programApi.js` (typed fetch wrappers for the three `/program/*` GETs reusing the existing `apiGet`) and a shared `frontend/src/components/StateBlock.jsx` for loading / empty / error states reused by all three views.
+- [X] T015 Create `routes/trainingProgram.routes.js` + `controllers/trainingProgram.controller.js` with three stubbed read handlers (`getWeek`, `getDay`, `getExercise`) and mount the router at `/api/v1/program` in `app.js`. (research D-9; Constitution IV)
+- [X] T016 [P] Create `frontend/src/lib/programApi.js` (typed fetch wrappers for the three `/program/*` GETs reusing the existing `apiGet`) and a shared `frontend/src/components/StateBlock.jsx` for loading / empty / error states reused by all three views.
 
 **Checkpoint**: Foundation ready — US1–US4 can proceed (US1 needs only T015/T016; US2/US3 also need T006/T009/T010-T014; US4 also needs T004/T007/T008).
 
@@ -86,12 +86,12 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 **Independent Test**: With the default 5-day split, `/program` shows 5 cards + 2 rest separators in week order with correct counts; changing the schedule in Settings and reloading reflects it; zero training days → empty-week state.
 
-- [ ] T017 [P] [US1] Write FAILING unit test `tests/unit/trainingProgram.weekView.test.js`: 7 ordered entries, `kind` training/rest derivation, `exercise_count` (incl. 0), `empty=true` on zero training days, muscle-group ref resolution. (FR-001…FR-006)
-- [ ] T018 [US1] Implement `services/trainingProgram/weekView.js` (pure: assemble `WeekView` from slots + per-slot exercise counts + muscle-groups) to make T017 green.
-- [ ] T019 [US1] Implement `getWeek` in `controllers/trainingProgram.controller.js` (read `weeklyPlan` + `muscleGroups` DAOs, call `weekView`, return `{ data }`). Wire `GET /program/week` in `routes/trainingProgram.routes.js`.
-- [ ] T020 [P] [US1] Contract test `tests/contract/program.week.contract.test.js` validating the response against `contracts/openapi.yaml` `WeekView` (7 entries, envelope, empty flag). PLUS an integration assertion in `tests/integration/program.week.reflect.test.js`: after a `PUT /me/schedule` change, `GET /program/week` reflects the new day/muscle-group/count on the next read with no stale labels (automates **SC-002**). (remediation G1)
-- [ ] T021 [P] [US1] Build `frontend/src/pages/program/ProgramWeek.jsx` + `frontend/src/components/DayCard.jsx` + `frontend/src/components/RestSeparator.jsx` (Frontend Design skill; Tailwind tokens; large tap targets; empty-week CTA to Settings). Replace the Phase-1 placeholder route.
-- [ ] T022 [P] [US1] Frontend smoke test `tests/frontend/program.week.test.jsx`: renders cards + separators from a stub week, renders empty-week state, card tap navigates to `/program/day/:d`.
+- [X] T017 [P] [US1] Write FAILING unit test `tests/unit/trainingProgram.weekView.test.js`: 7 ordered entries, `kind` training/rest derivation, `exercise_count` (incl. 0), `empty=true` on zero training days, muscle-group ref resolution. (FR-001…FR-006)
+- [X] T018 [US1] Implement `services/trainingProgram/weekView.js` (pure: assemble `WeekView` from slots + per-slot exercise counts + muscle-groups) to make T017 green.
+- [X] T019 [US1] Implement `getWeek` in `controllers/trainingProgram.controller.js` (read `weeklyPlan` + `muscleGroups` DAOs, call `weekView`, return `{ data }`). Wire `GET /program/week` in `routes/trainingProgram.routes.js`.
+- [X] T020 [P] [US1] Contract test `tests/contract/program.week.contract.test.js` validating the response against `contracts/openapi.yaml` `WeekView` (7 entries, envelope, empty flag). PLUS an integration assertion in `tests/integration/program.week.reflect.test.js`: after a `PUT /me/schedule` change, `GET /program/week` reflects the new day/muscle-group/count on the next read with no stale labels (automates **SC-002**). (remediation G1)
+- [X] T021 [P] [US1] Build `frontend/src/pages/program/ProgramWeek.jsx` + `frontend/src/components/DayCard.jsx` + `frontend/src/components/RestSeparator.jsx` (Frontend Design skill; Tailwind tokens; large tap targets; empty-week CTA to Settings). Replace the Phase-1 placeholder route.
+- [X] T022 [P] [US1] Frontend smoke test `tests/frontend/program.week.test.jsx`: renders cards + separators from a stub week, renders empty-week state, card tap navigates to `/program/day/:d`.
 
 **Checkpoint**: US1 fully functional and demoable as MVP independent of US2–US4.
 

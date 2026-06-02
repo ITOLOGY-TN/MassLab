@@ -20,6 +20,8 @@ import { progressionFlagsDao } from './services/dataAccess/progressionFlags.dao.
 import { bodyCompositionDao } from './services/dataAccess/bodyComposition.dao.js';
 import { bodyMeasurementsDao } from './services/dataAccess/bodyMeasurements.dao.js';
 import { muscleGroupsDao } from './services/dataAccess/muscleGroups.dao.js';
+import { sessionsDao } from './services/dataAccess/sessions.dao.js';
+import { exerciseAlternativesDao } from './services/dataAccess/exerciseAlternatives.dao.js';
 import { exportersDao } from './services/dataAccess/exporters.dao.js';
 import { importersDao } from './services/dataAccess/importers.dao.js';
 import { resetDao } from './services/dataAccess/reset.dao.js';
@@ -42,6 +44,7 @@ import { oneRepMaxRecordsRoutes } from './routes/oneRepMaxRecords.routes.js';
 import { progressionFlagsRoutes } from './routes/progressionFlags.routes.js';
 import { bodyCompositionRoutes } from './routes/bodyComposition.routes.js';
 import { bodyMeasurementsRoutes } from './routes/bodyMeasurements.routes.js';
+import { trainingProgramRoutes } from './routes/trainingProgram.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -62,6 +65,8 @@ export function buildApp({ config, supabase, daos } = {}) {
     bodyComposition: bodyCompositionDao(sb),
     bodyMeasurements: bodyMeasurementsDao(sb),
     muscleGroups: muscleGroupsDao(sb),
+    sessions: sessionsDao(sb),
+    exerciseAlternatives: exerciseAlternativesDao(sb),
     exporters: exportersDao(sb),
     importers: importersDao(sb),
     reset: resetDao(sb),
@@ -95,6 +100,8 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/quotes', quotesRoutes(resolved.quotes));
   v1.use('/calculators', calculatorsRoutes({ daos: resolved }));
   v1.use('/program', programRoutes({ daos: resolved }));
+  // Phase 3 read-only views share the /program base; disjoint paths fall through.
+  v1.use('/program', trainingProgramRoutes({ daos: resolved }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));

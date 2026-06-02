@@ -33,6 +33,14 @@ const booleanFromString = z
   .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
   .transform((v) => v === true || v === 'true' || v === '1');
 
+// Comma-separated string → trimmed, de-duped, non-empty array. Also accepts an
+// already-parsed array (e.g. when config is built programmatically in tests).
+const csvList = z
+  .union([z.string(), z.array(z.string())])
+  .transform((v) => (Array.isArray(v) ? v : v.split(',')))
+  .transform((arr) => [...new Set(arr.map((s) => s.trim()).filter(Boolean))])
+  .refine((arr) => arr.length > 0, 'must list at least one value');
+
 const portFromString = z
   .union([z.number().int(), z.string().regex(/^\d+$/, 'PORT must be an integer')])
   .transform((v) => (typeof v === 'number' ? v : Number.parseInt(v, 10)))
@@ -65,6 +73,13 @@ export const baseSchema = z.object({
   IMPORT_MAX_BYTES: intFromString('IMPORT_MAX_BYTES').default(26214400),
   CSV_SEPARATOR: z.string().min(1).max(2).default(','),
   RESET_CONFIRM_TOKEN: z.string().min(1).default('RESET-MASSLAB'),
+  // Phase 3 (exercise media). Size cap mirrors the import limit (25 MiB).
+  EXERCISE_MEDIA_MAX_BYTES: intFromString('EXERCISE_MEDIA_MAX_BYTES').default(26214400),
+  // Comma-separated MIME allowlists; parsed to a trimmed, non-empty array.
+  EXERCISE_MEDIA_IMAGE_TYPES: csvList.default('image/jpeg,image/png,image/webp'),
+  EXERCISE_MEDIA_VIDEO_TYPES: csvList.default('video/mp4,video/webm'),
+  // Privacy-enhanced YouTube embed host (no SDK, no cookies, no key).
+  YOUTUBE_EMBED_HOST: z.string().url().default('https://www.youtube-nocookie.com'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */
