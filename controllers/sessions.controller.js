@@ -164,9 +164,18 @@ export function sessionsController({ daos }) {
     },
 
     // DELETE /api/v1/sessions/:id — discard (e.g. a stale prior-day session).
+    // A finished session is immutable: discarding it would orphan the engine
+    // records (1RM / audit) it produced, so reject it.
     async discard(req, res, next) {
       try {
         const session = await loadOwnedSession(req.athleteId, req.params.id);
+        if (session.ended_at) {
+          throw new HttpError(
+            409,
+            'SESSION_ALREADY_FINISHED',
+            'A finished session cannot be discarded.',
+          );
+        }
         await daos.sessions.discardSession(req.athleteId, session.id);
         res.status(204).end();
       } catch (err) {
@@ -267,6 +276,9 @@ export function sessionsController({ daos }) {
     async deleteSet(req, res, next) {
       try {
         const session = await loadOwnedSession(req.athleteId, req.params.id);
+        if (session.ended_at) {
+          throw new HttpError(409, 'SESSION_ALREADY_FINISHED', 'This session is already finished.');
+        }
         const setId = Number(req.params.setId);
         if (!Number.isInteger(setId))
           throw new HttpError(404, 'NOT_FOUND', 'Set id must be an integer.');
@@ -303,10 +315,11 @@ export function sessionsController({ daos }) {
         const personalRecords = [];
         for (const exId of performedExerciseIds) {
           const sessionCompletedSets = completedSets.filter((s) => s.exercise_id === exId);
-          const priorSessions = (
-            await daos.sessions.recentSessionsForExercise(req.athleteId, exId, { limit: 100 })
-          ).filter((s) => s.id !== session.id);
-          const priorHeaviest = heaviestCompletedSet(priorSessions.flatMap((s) => s.sets ?? []));
+          // True all-time heaviest prior set (no session window) so we never
+          // emit a false lifetime PR by missing an older heavier set (D-10).
+          const priorHeaviest = await daos.sessions.heaviestPriorCompletedSet(req.athleteId, exId, {
+            excludeSessionId: session.id,
+          });
           const priorRecords = await daos.oneRepMaxRecords.listForAthlete({
             athleteId: req.athleteId,
             exerciseId: exId,

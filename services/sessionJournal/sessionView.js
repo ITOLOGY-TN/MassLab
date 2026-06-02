@@ -54,7 +54,9 @@ export function buildSessionView({
     const segment = bodySegmentFor({
       slug: meta.slug,
       targeted_muscles: meta.targeted_muscles,
-      muscle_group: muscleGroup?.name,
+      // The day's muscle group applies to planned rows only; an ad-hoc exercise
+      // (no `planned`) must fall back to its own slug/muscles, not inherit the day.
+      muscle_group: planned ? muscleGroup?.name : null,
     });
     return {
       exercise_id,

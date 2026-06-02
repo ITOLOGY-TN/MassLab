@@ -5,7 +5,9 @@ import { apiGet, apiPost, apiPut, apiDelete } from './api.js';
 export const fetchActiveSession = () => apiGet('/api/v1/sessions/active').then((r) => r.data);
 
 export const startSession = (dayOfWeek) =>
-  apiPost('/api/v1/sessions', dayOfWeek ? { day_of_week: dayOfWeek } : {}).then((r) => r.data);
+  apiPost('/api/v1/sessions', dayOfWeek == null ? {} : { day_of_week: dayOfWeek }).then(
+    (r) => r.data,
+  );
 
 export const fetchSession = (id) => apiGet(`/api/v1/sessions/${id}`).then((r) => r.data);
 

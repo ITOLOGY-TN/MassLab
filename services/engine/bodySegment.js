@@ -12,7 +12,9 @@ const LOWER_KEYWORDS = ['legs', 'lower'];
 export function bodySegmentFor(exercise = {}) {
   const slug = exercise.slug || '';
   const muscles = exercise.targeted_muscles || [];
-  const bySlug = LOWER_KEYWORDS.some((k) => slug.includes(k) || muscles.some((m) => k.includes(m)));
+  const bySlug = LOWER_KEYWORDS.some(
+    (k) => slug.includes(k) || muscles.some((m) => String(m).toLowerCase().includes(k)),
+  );
   const group = exercise.muscle_group;
   const byGroup = typeof group === 'string' && group.toLowerCase().includes('legs');
   return bySlug || byGroup ? 'lower' : 'upper';

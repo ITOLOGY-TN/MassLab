@@ -148,7 +148,12 @@ const sessionSetSchema = z
   });
 
 export const setInputSchema = sessionSetSchema;
-export const upsertSetsSchema = z.object({ sets: z.array(sessionSetSchema) });
+// Bound the bulk auto-save payload — a session never has hundreds of sets, so
+// the cap rejects oversized/abusive writes (mirrored as maxItems in the contract).
+export const SESSION_SETS_MAX = 200;
+export const upsertSetsSchema = z.object({
+  sets: z.array(sessionSetSchema).max(SESSION_SETS_MAX),
+});
 export const sessionStartSchema = z.object({
   day_of_week: z.number().int().min(1).max(7).optional(),
 });

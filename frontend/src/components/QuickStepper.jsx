@@ -16,8 +16,15 @@ export default function QuickStepper({
   disabled = false,
 }) {
   const v = Number(value ?? 0);
-  const dec = () => onChange(round2(Math.max(min, v - step)));
-  const inc = () => onChange(round2(max != null ? Math.min(max, v + step) : v + step));
+  const clamp = (n) => {
+    let x = Math.max(min, n);
+    if (max != null) x = Math.min(max, x);
+    return round2(x);
+  };
+  const dec = () => onChange(clamp(v - step));
+  const inc = () => onChange(clamp(v + step));
+  // Typed input is normalized the same way as the buttons (empty → min/0, clamp, round).
+  const onType = (raw) => onChange(raw === '' ? clamp(0) : clamp(Number(raw) || 0));
   const btn =
     'min-h-[44px] min-w-[44px] rounded-md bg-muted/15 text-text text-lg font-semibold ' +
     'hover:bg-muted/30 active:bg-muted/40 disabled:opacity-40';
@@ -41,7 +48,7 @@ export default function QuickStepper({
           value={value ?? ''}
           data-testid={testid}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+          onChange={(e) => onType(e.target.value)}
           className="w-20 bg-bg border border-muted/30 text-text text-center rounded-md px-sm py-sm min-h-[44px] focus:outline-none focus:border-accent"
         />
         <button

@@ -18,11 +18,12 @@ function getCtx() {
 }
 
 /** Play a short sine beep. Returns true if it played, false if audio was unavailable. */
-export function beep({ frequency = 880, durationMs = 150, volume = 0.08 } = {}) {
+export async function beep({ frequency = 880, durationMs = 150, volume = 0.08 } = {}) {
   const c = getCtx();
   if (!c) return false;
   try {
-    if (c.state === 'suspended') c.resume?.();
+    // Resume a suspended context BEFORE scheduling so the tone actually plays.
+    if (c.state === 'suspended') await c.resume?.();
     const osc = c.createOscillator();
     const gain = c.createGain();
     osc.type = 'sine';

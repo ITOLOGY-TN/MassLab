@@ -42,12 +42,19 @@ export function detectPersonalRecords({
     });
   }
 
-  // 1RM PR — estimate from the same feed set beats the prior best estimate.
-  const estimate = oneRepMax({
-    weight_kg: Number(best.weight_kg),
-    reps: Number(best.reps),
-    constants,
-  }).primary_estimate_kg;
+  // 1RM PR — the BEST estimate across every completed set this session (a
+  // lighter high-rep set can out-estimate the heaviest set), vs the prior best.
+  let estimate = 0;
+  for (const s of sessionCompletedSets) {
+    if (s.completed !== true) continue;
+    if (!(Number(s.weight_kg) > 0) || !(Number(s.reps) > 0)) continue;
+    const e = oneRepMax({
+      weight_kg: Number(s.weight_kg),
+      reps: Number(s.reps),
+      constants,
+    }).primary_estimate_kg;
+    if (e > estimate) estimate = e;
+  }
   const priorEstimate = priorBestEstimate1rmKg != null ? Number(priorBestEstimate1rmKg) : null;
   if (priorEstimate == null || estimate > priorEstimate) {
     records.push({

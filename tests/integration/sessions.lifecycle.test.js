@@ -31,7 +31,13 @@ beforeAll(async () => {
     console.warn('[sessions.lifecycle] skipped — Supabase unreachable or migration unapplied');
     return;
   }
-  const { data: athlete } = await supabase.from('athletes').select('id').limit(1).single();
+  // The app's SINGLE_USER auth resolves the OLDEST (seeded) athlete, so match it.
+  const { data: athlete } = await supabase
+    .from('athletes')
+    .select('id')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single();
   athleteId = athlete?.id;
   const { data: exs } = await supabase
     .from('exercises')
@@ -43,7 +49,7 @@ beforeAll(async () => {
     console.warn('[sessions.lifecycle] skipped — insufficient seed data');
     return;
   }
-  app = buildApp({ config });
+  app = buildApp({ config, supabase });
   live = true;
 });
 
@@ -78,6 +84,22 @@ describe('integration: session lifecycle', () => {
       expect(put.status).toBe(200);
       // Volume counts completed only: 60*8 + 40*10 = 880.
       expect(put.body.data.total_volume_kg).toBe(880);
+
+      // Auto-save must NOT run the engine (D-5): no session_finish audit row is
+      // appended by a PUT /sets, and the session stays in-progress.
+      const audit = await supabase
+        .from('calculation_results')
+        .select('id', { head: true, count: 'exact' })
+        .eq('athlete_id', athleteId)
+        .eq('reason', 'session_finish')
+        .gte('created_at', start.body.data.started_at);
+      expect(audit.count ?? 0).toBe(0);
+      const { data: stillOpen } = await supabase
+        .from('session_journal_entries')
+        .select('ended_at')
+        .eq('id', sid)
+        .single();
+      expect(stillOpen.ended_at).toBeNull();
 
       // Resume returns the logged sets intact.
       const got = await request(app).get(`/api/v1/sessions/${sid}`);

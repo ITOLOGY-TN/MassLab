@@ -88,9 +88,9 @@ Phase 4 is the **write path** for training sessions. Phase 3 already built the r
 
 ## D-6 — Finish triggers the engine via the existing persisted-write pattern
 
-**Decision**: `POST /sessions/:id/finish` runs, in order: (1) discard incomplete sets (D-7); (2) compute `total_volume_kg` from completed sets and set `ended_at = now`, `note`, `energy_rating`; (3) run the deterministic engine exactly as the existing controllers do —
+**Decision**: `POST /sessions/:id/finish` runs, in order: (1) atomically finalize the session (`UPDATE … WHERE ended_at IS NULL`) — the finish-once guard — then discard incomplete sets (D-7); (2) `total_volume_kg` is computed from completed sets and stored with `ended_at = now`, `note`, `energy_rating`; (3) run the deterministic engine exactly as the existing controllers do —
 
-```
+```javascript
 const constants = resolveConstants(await daos.appConfig.getOverridesFor(athleteId));
 const candidates = evaluateForAthlete({ sessions, sets, weeklyPlan, exercisesById, constants, now });
 for (const c of candidates) await daos.progressionFlags.supersedeAndInsert({ athleteId, scopeKind: c.scope_kind, scopeRef: c.scope_ref }, c.flag);

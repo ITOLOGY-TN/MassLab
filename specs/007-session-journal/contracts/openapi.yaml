@@ -63,6 +63,7 @@ components:
               type: string
               examples:
                 [
+                  OUT_OF_RANGE,
                   VALIDATION_FAILED,
                   NOT_FOUND,
                   CONFLICT,
@@ -78,23 +79,34 @@ components:
       required: [name, color]
       properties:
         name: { type: string }
-        color: { type: string, description: "Hex color, e.g. #E54D2E" }
+        color: { type: string, description: 'Hex color, e.g. #E54D2E' }
 
     LoggedSet:
       type: object
       required: [set_id, set_number, weight_kg, reps, completed]
       properties:
         set_id: { type: integer }
-        set_number: { type: integer, minimum: 1, description: "Per-exercise index within the session (D-4)." }
+        set_number:
+          { type: integer, minimum: 1, description: 'Per-exercise index within the session (D-4).' }
         weight_kg: { type: number }
         reps: { type: integer }
-        rpe: { type: [integer, "null"], minimum: 1, maximum: 10 }
+        rpe: { type: [integer, 'null'], minimum: 1, maximum: 10 }
         completed: { type: boolean }
 
     SessionExercise:
       type: object
       required:
-        [exercise_id, slug, name, position, is_active, target_sets, target_reps_low, target_reps_high, sets]
+        [
+          exercise_id,
+          slug,
+          name,
+          position,
+          is_active,
+          target_sets,
+          target_reps_low,
+          target_reps_high,
+          sets,
+        ]
       properties:
         exercise_id: { type: integer }
         slug: { type: string }
@@ -107,15 +119,15 @@ components:
         target_reps_low: { type: integer, minimum: 1 }
         target_reps_high: { type: integer, minimum: 1 }
         previous_weight_kg:
-          type: [number, "null"]
+          type: [number, 'null']
           description: Heaviest completed set in the most recent session (D-9); null when no history.
         suggested_target_kg:
-          type: [number, "null"]
+          type: [number, 'null']
           description: Phase 3 progression-based load recommendation (D-9); null when no history.
         sets:
           type: array
           description: Sets already logged for THIS session (empty on a fresh start).
-          items: { $ref: "#/components/schemas/LoggedSet" }
+          items: { $ref: '#/components/schemas/LoggedSet' }
 
     SessionView:
       type: object
@@ -123,7 +135,7 @@ components:
       properties:
         session_id: { type: integer }
         day_of_week:
-          type: [integer, "null"]
+          type: [integer, 'null']
           minimum: 1
           maximum: 7
           description: Targeted training day; null for an ad-hoc/unplanned session (D-3).
@@ -140,11 +152,11 @@ components:
           description: Current training phase's rest interval; rest-timer default (D-8).
         muscle_group:
           oneOf:
-            - $ref: "#/components/schemas/MuscleGroupRef"
-            - type: "null"
+            - $ref: '#/components/schemas/MuscleGroupRef'
+            - type: 'null'
         exercises:
           type: array
-          items: { $ref: "#/components/schemas/SessionExercise" }
+          items: { $ref: '#/components/schemas/SessionExercise' }
 
     StartSessionRequest:
       type: object
@@ -164,15 +176,15 @@ components:
         exercise_id:
           type: integer
           description: Any exercise — including one not on the day's plan (ad-hoc, FR-011a).
-        set_number: { type: integer, minimum: 1, description: "Per-exercise index (D-4)." }
+        set_number: { type: integer, minimum: 1, description: 'Per-exercise index (D-4).' }
         weight_kg: { type: number, minimum: 0 }
         reps: { type: integer, minimum: 0 }
-        rpe: { type: [integer, "null"], minimum: 1, maximum: 10 }
+        rpe: { type: [integer, 'null'], minimum: 1, maximum: 10 }
         completed:
           type: boolean
           description: >-
             A set may only be completed=true when weight_kg > 0 and reps > 0
-            (FR-009); otherwise 422 VALIDATION_FAILED.
+            (FR-009); otherwise 422 OUT_OF_RANGE.
 
     UpsertSetsRequest:
       type: object
@@ -180,12 +192,13 @@ components:
       properties:
         sets:
           type: array
+          maxItems: 200
           description: >-
-            The session's full current set list. The server converges stored
-            sets to this list (upsert by (exercise_id, set_number); delete
-            missing). Idempotent — resending is a no-op (D-5). This is the
-            ~30 s auto-save payload.
-          items: { $ref: "#/components/schemas/SetInput" }
+            The session's full current set list (bounded; a session never has
+            hundreds of sets). The server converges stored sets to this list
+            (upsert by (exercise_id, set_number); delete missing). Idempotent —
+            resending is a no-op (D-5). This is the ~30 s auto-save payload.
+          items: { $ref: '#/components/schemas/SetInput' }
 
     UpsertSetsResponse:
       type: object
@@ -193,7 +206,7 @@ components:
       properties:
         sets:
           type: array
-          items: { $ref: "#/components/schemas/LoggedSet" }
+          items: { $ref: '#/components/schemas/LoggedSet' }
         total_volume_kg:
           type: number
           description: Running volume over completed sets after this save.
@@ -201,9 +214,9 @@ components:
     FinishSessionRequest:
       type: object
       properties:
-        note: { type: [string, "null"] }
+        note: { type: [string, 'null'] }
         energy_rating:
-          type: [integer, "null"]
+          type: [integer, 'null']
           minimum: 1
           maximum: 5
           description: Athlete's post-session energy rating (FR-024).
@@ -223,13 +236,19 @@ components:
       properties:
         exercise_id: { type: integer }
         name: { type: string }
-        kind: { type: string, enum: [weight, estimated_1rm], description: "Heaviest-set PR or new-best estimated 1RM (D-10)." }
+        kind:
+          {
+            type: string,
+            enum: [weight, estimated_1rm],
+            description: 'Heaviest-set PR or new-best estimated 1RM (D-10).',
+          }
         value_kg: { type: number }
-        previous_kg: { type: [number, "null"] }
+        previous_kg: { type: [number, 'null'] }
 
     PostSessionSummary:
       type: object
-      required: [session_id, duration_seconds, total_volume_kg, top_performance, personal_records, engine]
+      required:
+        [session_id, duration_seconds, total_volume_kg, top_performance, personal_records, engine]
       properties:
         session_id: { type: integer }
         duration_seconds: { type: integer, minimum: 0 }
@@ -238,14 +257,14 @@ components:
           description: Σ(weight × reps) over completed sets only (D-11, FR-028).
         top_performance:
           oneOf:
-            - $ref: "#/components/schemas/TopPerformance"
-            - type: "null"
+            - $ref: '#/components/schemas/TopPerformance'
+            - type: 'null'
           description: Heaviest completed set, ties broken by reps (D-11, Q3); null if no completed sets.
         personal_records:
           type: array
-          items: { $ref: "#/components/schemas/PersonalRecord" }
-        energy_rating: { type: [integer, "null"], minimum: 1, maximum: 5 }
-        note: { type: [string, "null"] }
+          items: { $ref: '#/components/schemas/PersonalRecord' }
+        energy_rating: { type: [integer, 'null'], minimum: 1, maximum: 5 }
+        note: { type: [string, 'null'] }
         engine:
           type: object
           required: [progression_flags_updated, one_rep_max_records_created]
@@ -257,13 +276,13 @@ components:
   responses:
     NotFound:
       description: Resource not found or not owned by the athlete.
-      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     Unprocessable:
       description: Validation failed.
-      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     Conflict:
       description: State conflict (active session exists, or session already finished).
-      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 
 security:
   - SupabaseBearer: []
@@ -279,9 +298,9 @@ paths:
         before today, `stale` is true and the client prompts resume-or-discard
         (D-2, FR-019/FR-019a).
       operationId: getActiveSession
-      parameters: [ { $ref: "#/components/parameters/RequestId" } ]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
       responses:
-        "200":
+        '200':
           description: The active session view, or null.
           content:
             application/json:
@@ -291,8 +310,8 @@ paths:
                 properties:
                   data:
                     oneOf:
-                      - $ref: "#/components/schemas/SessionView"
-                      - type: "null"
+                      - $ref: '#/components/schemas/SessionView'
+                      - type: 'null'
 
   /sessions:
     post:
@@ -304,14 +323,14 @@ paths:
         suggested target (D-9). If an in-progress session already exists, returns
         409 ACTIVE_SESSION_EXISTS so the client resumes or discards it first.
       operationId: startSession
-      parameters: [ { $ref: "#/components/parameters/RequestId" } ]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
       requestBody:
         required: false
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/StartSessionRequest" }
+            schema: { $ref: '#/components/schemas/StartSessionRequest' }
       responses:
-        "201":
+        '201':
           description: Session started.
           content:
             application/json:
@@ -319,11 +338,11 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/SessionView" }
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/Unprocessable"
+                  data: { $ref: '#/components/schemas/SessionView' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
 
   /sessions/{id}:
     get:
@@ -331,10 +350,10 @@ paths:
       summary: Get a session (with its sets) for resume.
       operationId: getSession
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
       responses:
-        "200":
+        '200':
           description: Composed SessionView for the session.
           content:
             application/json:
@@ -342,18 +361,18 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/SessionView" }
-        "404": { $ref: "#/components/responses/NotFound" }
+                  data: { $ref: '#/components/schemas/SessionView' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [sessions]
       summary: Discard a session (e.g. a stale prior-day one) and its sets.
       operationId: discardSession
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
       responses:
-        "204": { description: Session discarded (no body). }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '204': { description: Session discarded (no body). }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /sessions/{id}/sets:
     put:
@@ -366,15 +385,15 @@ paths:
         same payload is a no-op.
       operationId: upsertSessionSets
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/UpsertSetsRequest" }
+            schema: { $ref: '#/components/schemas/UpsertSetsRequest' }
       responses:
-        "200":
+        '200':
           description: Stored set list after the save.
           content:
             application/json:
@@ -382,26 +401,26 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/UpsertSetsResponse" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          $ref: "#/components/responses/Conflict"
+                  data: { $ref: '#/components/schemas/UpsertSetsResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
           description: The session is already finished (SESSION_ALREADY_FINISHED).
-        "422": { $ref: "#/components/responses/Unprocessable" }
+        '422': { $ref: '#/components/responses/Unprocessable' }
     post:
       tags: [sessions]
       summary: Log a single set (granular convenience for responsive edits).
       operationId: addSessionSet
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SetInput" }
+            schema: { $ref: '#/components/schemas/SetInput' }
       responses:
-        "201":
+        '201':
           description: Set created.
           content:
             application/json:
@@ -409,10 +428,10 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/LoggedSet" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/Unprocessable" }
+                  data: { $ref: '#/components/schemas/LoggedSet' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
 
   /sessions/{id}/sets/{setId}:
     patch:
@@ -420,16 +439,16 @@ paths:
       summary: Edit a single logged set in the current session.
       operationId: updateSessionSet
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
-        - $ref: "#/components/parameters/SetId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SetId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SetInput" }
+            schema: { $ref: '#/components/schemas/SetInput' }
       responses:
-        "200":
+        '200':
           description: Updated set.
           content:
             application/json:
@@ -437,22 +456,22 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/LoggedSet" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/Unprocessable" }
+                  data: { $ref: '#/components/schemas/LoggedSet' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
     delete:
       tags: [sessions]
       summary: Remove a single logged set from the current session.
       operationId: deleteSessionSet
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
-        - $ref: "#/components/parameters/SetId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SetId'
       responses:
-        "204": { description: Set removed (no body). }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        '204': { description: Set removed (no body). }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /sessions/{id}/finish:
     post:
@@ -467,15 +486,15 @@ paths:
         (finish-once guard).
       operationId: finishSession
       parameters:
-        - $ref: "#/components/parameters/RequestId"
-        - $ref: "#/components/parameters/SessionId"
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/SessionId'
       requestBody:
         required: false
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/FinishSessionRequest" }
+            schema: { $ref: '#/components/schemas/FinishSessionRequest' }
       responses:
-        "200":
+        '200':
           description: Post-session summary.
           content:
             application/json:
@@ -483,9 +502,9 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { $ref: "#/components/schemas/PostSessionSummary" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          $ref: "#/components/responses/Conflict"
+                  data: { $ref: '#/components/schemas/PostSessionSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
           description: Session already finished (SESSION_ALREADY_FINISHED).
-        "422": { $ref: "#/components/responses/Unprocessable" }
+        '422': { $ref: '#/components/responses/Unprocessable' }

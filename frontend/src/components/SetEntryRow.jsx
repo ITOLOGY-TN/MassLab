@@ -38,7 +38,12 @@ export default function SetEntryRow({ set, index, onChange, onComplete, onRemove
           max={10}
           value={set.rpe ?? ''}
           disabled={set.completed}
-          onChange={(e) => onChange({ rpe: e.target.value === '' ? null : Number(e.target.value) })}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === '') return onChange({ rpe: null });
+            const n = Number(raw);
+            return onChange({ rpe: Number.isNaN(n) ? null : Math.max(1, Math.min(10, n)) });
+          }}
           className="w-16 bg-bg border border-muted/30 text-text text-center rounded-md px-sm py-sm min-h-[44px] focus:outline-none focus:border-accent"
         />
       </label>

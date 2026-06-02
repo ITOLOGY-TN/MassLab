@@ -24,6 +24,15 @@ beforeAll(async () => {
     console.warn('[rls] skipped — Supabase unreachable');
     return;
   }
+  // Phase 4 (T055) probes the session tables too — skip cleanly if unmigrated.
+  const sessionProbe = await serverClient
+    .from('session_journal_entries')
+    .select('day_of_week')
+    .limit(1);
+  if (sessionProbe.error) {
+    console.warn('[rls] skipped — Phase 4 session migration not applied');
+    return;
+  }
   live = true;
 });
 

@@ -220,23 +220,38 @@ export function sessionsDao(supabase) {
     },
 
     /**
-     * Finish (D-6/D-7): discard incomplete sets, then finalize ended_at +
-     * aggregates. The finish-once guard lives in the controller (rejects when
-     * ended_at is already set).
+     * The athlete's all-time heaviest COMPLETED set for an exercise, optionally
+     * excluding one session (the one being finished). Single indexed max query —
+     * no session window, so an old heavy set can't be missed (D-10). Returns the
+     * set `{ weight_kg, reps, session_id }` or null.
+     */
+    async heaviestPriorCompletedSet(athleteId, exerciseId, { excludeSessionId } = {}) {
+      let q = supabase
+        .from('session_sets')
+        .select('weight_kg, reps, session_id')
+        .eq('athlete_id', athleteId)
+        .eq('exercise_id', exerciseId)
+        .eq('completed', true)
+        .order('weight_kg', { ascending: false })
+        .limit(1);
+      if (excludeSessionId != null) q = q.neq('session_id', excludeSessionId);
+      const { data, error } = await q;
+      if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+      return data?.[0] ?? null;
+    },
+
+    /**
+     * Finish (D-6/D-7): finalize the session, then discard incomplete sets. The
+     * finish-once guard is ATOMIC — the UPDATE only matches when `ended_at IS
+     * NULL`, so a concurrent second finisher matches no row and gets a 409 (no
+     * duplicate engine fan-out). Marking ended before deleting sets means a loser
+     * never deletes the winner's sets.
      */
     async finishSession(
       athleteId,
       sessionId,
       { note = null, energy_rating = null, total_volume_kg = null, ended_at } = {},
     ) {
-      const { error: delErr } = await supabase
-        .from('session_sets')
-        .delete()
-        .eq('athlete_id', athleteId)
-        .eq('session_id', sessionId)
-        .eq('completed', false);
-      if (delErr) throw new HttpError(500, 'DB_ERROR', delErr.message);
-
       const { data, error } = await supabase
         .from('session_journal_entries')
         .update({
@@ -247,9 +262,22 @@ export function sessionsDao(supabase) {
         })
         .eq('athlete_id', athleteId)
         .eq('id', sessionId)
+        .is('ended_at', null)
         .select('*')
-        .single();
+        .maybeSingle();
       if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+      if (!data) {
+        throw new HttpError(409, 'SESSION_ALREADY_FINISHED', 'This session is already finished.');
+      }
+
+      const { error: delErr } = await supabase
+        .from('session_sets')
+        .delete()
+        .eq('athlete_id', athleteId)
+        .eq('session_id', sessionId)
+        .eq('completed', false);
+      if (delErr) throw new HttpError(500, 'DB_ERROR', delErr.message);
+
       return data;
     },
 

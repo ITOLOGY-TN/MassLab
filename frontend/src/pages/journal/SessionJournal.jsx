@@ -70,23 +70,41 @@ function ExerciseCard({ exercise, onUpdate, onAdd, onRemove, onComplete }) {
 
 export default function SessionJournal() {
   const journal = useSessionJournal();
-  const [rest, setRest] = useState(null); // { seconds } when a rest is running
+  // `token` changes on every completion so RestTimer remounts and restarts even
+  // when the rest interval (seconds) is unchanged between sets.
+  const [rest, setRest] = useState(null); // { seconds, token } when a rest is running
   const [finishing, setFinishing] = useState(false);
   const [note, setNote] = useState('');
   const [energy, setEnergy] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const today = isoDayOfWeek(new Date());
 
   const handleComplete = async (exerciseId, setNumber) => {
     await journal.completeSet(exerciseId, setNumber);
-    setRest({ seconds: journal.session?.rest_seconds || 90 });
+    const seconds = journal.session?.rest_seconds ?? 90;
+    setRest((prev) => ({ seconds, token: (prev?.token ?? 0) + 1 }));
   };
 
   const submitFinish = async () => {
-    await journal.finish(note, energy);
-    setFinishing(false);
-    setNote('');
-    setEnergy(null);
+    setActionError(null);
+    try {
+      await journal.finish(note, energy);
+      setFinishing(false);
+      setNote('');
+      setEnergy(null);
+    } catch {
+      setActionError('La sauvegarde a échoué — réessayez avant de terminer.');
+    }
+  };
+
+  const handleDiscard = async () => {
+    setActionError(null);
+    try {
+      await journal.discard();
+    } catch {
+      setActionError("Échec de l'abandon — réessayez.");
+    }
   };
 
   return (
@@ -155,12 +173,13 @@ export default function SessionJournal() {
             </button>
             <button
               type="button"
-              onClick={journal.discard}
+              onClick={handleDiscard}
               className="min-h-[44px] rounded-md border border-danger/50 px-lg text-danger hover:bg-danger/10"
             >
               Abandonner
             </button>
           </div>
+          {actionError && <p className="text-sm text-danger">{actionError}</p>}
         </div>
       )}
 
@@ -170,7 +189,9 @@ export default function SessionJournal() {
             <h1 className="text-xl font-bold text-text">{journal.session.muscle_group.name}</h1>
           )}
 
-          {rest && <RestTimer seconds={rest.seconds} onDone={() => setRest(null)} />}
+          {rest && (
+            <RestTimer key={rest.token} seconds={rest.seconds} onDone={() => setRest(null)} />
+          )}
 
           {journal.session.exercises.length === 0 ? (
             <StateBlock kind="empty" title="Aucun exercice" message="Jour de repos ou plan vide." />
@@ -238,6 +259,7 @@ export default function SessionJournal() {
                   Annuler
                 </button>
               </div>
+              {actionError && <p className="text-sm text-danger">{actionError}</p>}
             </section>
           )}
         </div>

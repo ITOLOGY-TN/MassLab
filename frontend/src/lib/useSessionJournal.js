@@ -65,21 +65,26 @@ export function useSessionJournal() {
     };
   }, []);
 
+  // Surfaces save failures (re-marks dirty and rethrows) so callers like finish()
+  // can refuse to proceed on an unsaved session; background callers swallow it.
   const flush = useCallback(async () => {
     const s = sessionRef.current;
     if (!s || !dirty.current) return;
     dirty.current = false;
     try {
       await saveSessionSets(s.session_id, flattenSets(s));
-    } catch {
+    } catch (e) {
       dirty.current = true; // retry on the next tick
+      throw e;
     }
   }, []);
 
   useEffect(() => {
     if (status !== 'active') return undefined;
     const id = setInterval(() => {
-      flush();
+      flush().catch(() => {
+        /* background auto-save retries on the next tick */
+      });
     }, SESSION_AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(id);
   }, [status, flush]);
@@ -146,7 +151,9 @@ export function useSessionJournal() {
   const completeSet = useCallback(
     async (exerciseId, setNumber) => {
       updateSet(exerciseId, setNumber, { completed: true });
-      await flush(); // persist immediately on completion
+      // Persist immediately; a failed save stays dirty and auto-save retries, so
+      // swallow here (the set is already marked complete locally).
+      await flush().catch(() => {});
     },
     [updateSet, flush],
   );
@@ -168,13 +175,13 @@ export function useSessionJournal() {
 
   const discard = useCallback(async () => {
     const s = sessionRef.current;
-    if (s) {
-      try {
-        await discardSession(s.session_id);
-      } catch {
-        /* ignore — best effort */
-      }
+    if (!s) {
+      setStatus('idle');
+      return;
     }
+    // Only clear local state if the server-side discard succeeded; otherwise keep
+    // the session visible so the athlete can retry (don't silently lose it).
+    await discardSession(s.session_id);
     sessionRef.current = null;
     setSession(null);
     setStatus('idle');
