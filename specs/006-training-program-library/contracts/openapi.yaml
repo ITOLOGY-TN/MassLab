@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info:
+  title: MassLab API — Phase 3 surface (Training Program & Exercise Library)
+  version: 1.3.0-phase3
+  description: |
+    Phase 3 adds a read-only Training Program surface (/program/*) that composes
+    the existing schedule, exercise, session-history, and progression data into
+    three view models — week, day, and exercise detail — plus two ADDITIVE
+    mutating capabilities on the existing exercises surface: exercise media
+    upload/clear and one-directional alternative-exercise links.
+
+    All routes live under /api/v1/ and use the canonical `{ data: ... }` success
+    envelope and the canonical Error envelope from Phase 0. Phase 3 makes only
+    ADDITIVE changes to the v1 contract — no existing endpoint changes its
+    semantics (Principle IV). History-derived fields are null/empty until the
+    Phase 4 Session Journal populates session data.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local dev (Express); proxied by the Vite dev server.
+
+tags:
+  - name: program
+    description: Read-only composed training-program views (week, day, exercise).
+  - name: exercise-media
+    description: Upload / clear an exercise's image or video (additive on exercises).
+  - name: exercise-alternatives
+    description: One-directional alternative-exercise links (additive on exercises).
+
+components:
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+    DayOfWeek:
+      name: dayOfWeek
+      in: path
+      required: true
+      description: 1 = Monday … 7 = Sunday.
+      schema: { type: integer, minimum: 1, maximum: 7 }
+    ExerciseId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples:
+                [
+                  VALIDATION_FAILED,
+                  NOT_FOUND,
+                  CONFLICT,
+                  OUT_OF_RANGE,
+                  MEDIA_TOO_LARGE,
+                  MEDIA_UNSUPPORTED_TYPE,
+                  SELF_LINK_FORBIDDEN,
+                ]
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+
+    MuscleGroupRef:
+      type: object
+      required: [name, color]
+      properties:
+        name: { type: string }
+        color: { type: string, description: "Hex color, e.g. #E54D2E" }
+
+    WeekDay:
+      type: object
+      required: [day_of_week, kind]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        kind: { type: string, enum: [training, rest] }
+        slot_id:
+          type: [integer, "null"]
+          description: Present for training days; null for rest days.
+        muscle_group:
+          oneOf:
+            - $ref: "#/components/schemas/MuscleGroupRef"
+            - type: "null"
+        exercise_count:
+          type: [integer, "null"]
+          minimum: 0
+          description: Count of exercises on a training day; null for rest days.
+
+    WeekView:
+      type: object
+      required: [days, training_day_count, empty]
+      properties:
+        days:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: "#/components/schemas/WeekDay" }
+        training_day_count: { type: integer, minimum: 0, maximum: 7 }
+        empty:
+          type: boolean
+          description: true when zero training days are configured (FR-006).
+
+    ProgressionState:
+      type: string
+      enum: [ready_to_increase, stable, regressing]
+      description: >
+        Derived from the active progression flag (research D-4):
+        add_load → ready_to_increase, regression → regressing, otherwise stable.
+
+    DayExercise:
+      type: object
+      required:
+        [exercise_id, slug, name, position, target_sets, target_reps_low, target_reps_high, is_active, progression]
+      properties:
+        exercise_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        position: { type: integer, minimum: 1 }
+        target_sets: { type: integer, minimum: 1 }
+        target_reps_low: { type: integer, minimum: 1 }
+        target_reps_high: { type: integer, minimum: 1 }
+        is_active:
+          type: boolean
+          description: false → render an archived marker (edge case); row still openable.
+        last_weight_kg:
+          type: [number, "null"]
+          description: Heaviest completed set in the most recent session (D-2); null when no history.
+        progression: { $ref: "#/components/schemas/ProgressionState" }
+
+    DayView:
+      type: object
+      required: [day_of_week, muscle_group, exercises, empty_exercises]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        muscle_group: { $ref: "#/components/schemas/MuscleGroupRef" }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/DayExercise" }
+        empty_exercises:
+          type: boolean
+          description: true → "no exercises assigned" state (FR-012).
+
+    ExerciseVideo:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: [string, "null"], enum: [youtube, upload, null] }
+        url: { type: [string, "null"] }
+
+    ExerciseMedia:
+      type: object
+      required: [image_url, video]
+      properties:
+        image_url: { type: [string, "null"] }
+        video: { $ref: "#/components/schemas/ExerciseVideo" }
+
+    AlternativeRef:
+      type: object
+      required: [exercise_id, slug, name, is_active]
+      properties:
+        exercise_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        is_active:
+          type: boolean
+          description: false → alternative is archived but still shown (D-7).
+
+    RecentSet:
+      type: object
+      required: [weight_kg, reps, completed]
+      properties:
+        weight_kg: { type: number }
+        reps: { type: integer }
+        rpe: { type: [integer, "null"], minimum: 1, maximum: 10 }
+        completed: { type: boolean }
+
+    RecentSession:
+      type: object
+      required: [session_id, date, sets]
+      properties:
+        session_id: { type: integer }
+        date: { type: string, format: date }
+        sets:
+          type: array
+          items: { $ref: "#/components/schemas/RecentSet" }
+
+    ExerciseHistory:
+      type: object
+      required: [recent_sessions, estimated_1rm_kg, recommended_load_kg, has_history]
+      properties:
+        recent_sessions:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/RecentSession" }
+        estimated_1rm_kg:
+          type: [number, "null"]
+          description: Engine primary_estimate_kg from the heaviest completed set (D-1); null when no history.
+        recommended_load_kg:
+          type: [number, "null"]
+          description: Progression-engine-derived recommendation (D-3); null when no history.
+        has_history: { type: boolean }
+
+    ExerciseView:
+      type: object
+      required:
+        [exercise_id, slug, name, targeted_muscles, instructions, technique_points, is_active, media, alternatives, history]
+      properties:
+        exercise_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        targeted_muscles:
+          type: array
+          items: { type: string }
+        instructions: { type: string }
+        technique_points:
+          type: array
+          items: { type: string }
+        is_active: { type: boolean }
+        media: { $ref: "#/components/schemas/ExerciseMedia" }
+        alternatives:
+          type: array
+          items: { $ref: "#/components/schemas/AlternativeRef" }
+        history: { $ref: "#/components/schemas/ExerciseHistory" }
+
+    AddAlternativeRequest:
+      type: object
+      required: [alternative_exercise_id]
+      properties:
+        alternative_exercise_id: { type: integer }
+        display_order: { type: integer, minimum: 0, default: 0 }
+
+    SetVideoUrlRequest:
+      type: object
+      required: [video_url]
+      properties:
+        video_url:
+          type: string
+          format: uri
+          description: A YouTube watch/share URL. Stored as-is and embedded read-only.
+
+  responses:
+    NotFound:
+      description: Resource not found or not owned by the athlete.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unprocessable:
+      description: Validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Duplicate or self-referential link.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    PayloadTooLarge:
+      description: Uploaded media exceeds the configured size limit.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnsupportedMedia:
+      description: Uploaded media type is not in the configured allowlist.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+security:
+  - SupabaseBearer: []
+
+paths:
+  /program/week:
+    get:
+      tags: [program]
+      summary: Composed weekly planning view (training days + rest separators).
+      operationId: getProgramWeek
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: The athlete's configured week as 7 ordered day entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/WeekView" }
+
+  /program/day/{dayOfWeek}:
+    get:
+      tags: [program]
+      summary: Composed day detail (ordered exercises + last weight + progression).
+      operationId: getProgramDay
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/DayOfWeek"
+      responses:
+        "200":
+          description: Day detail view model. A rest day or an empty training day still returns 200.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/DayView" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+          description: dayOfWeek is not a configured training day, or out of the 1–7 range.
+
+  /program/exercises/{id}:
+    get:
+      tags: [program]
+      summary: Composed exercise detail (static + media + alternatives + history + 1RM + load rec).
+      operationId: getProgramExercise
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "200":
+          description: Full exercise read model; history fields null/empty when no sessions exist.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/ExerciseView" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /exercises/{id}/media/image:
+    post:
+      tags: [exercise-media]
+      summary: Upload (or replace) the exercise reference image.
+      operationId: uploadExerciseImage
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200":
+          description: Updated media block.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/ExerciseMedia" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMedia" }
+    delete:
+      tags: [exercise-media]
+      summary: Clear the exercise reference image.
+      operationId: clearExerciseImage
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "204": { description: Image cleared (no body). }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /exercises/{id}/media/video:
+    post:
+      tags: [exercise-media]
+      summary: Set the exercise video — multipart upload OR a YouTube URL.
+      description: >
+        Send multipart/form-data with a `file` to upload a local video, OR
+        application/json with `video_url` to set a YouTube link. Exactly one.
+      operationId: setExerciseVideo
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+          application/json:
+            schema: { $ref: "#/components/schemas/SetVideoUrlRequest" }
+      responses:
+        "200":
+          description: Updated media block.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/ExerciseMedia" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMedia" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [exercise-media]
+      summary: Clear the exercise video (URL or uploaded).
+      operationId: clearExerciseVideo
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "204": { description: Video cleared (no body). }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /exercises/{id}/alternatives:
+    get:
+      tags: [exercise-alternatives]
+      summary: List the exercise's alternatives (one-directional, ordered).
+      operationId: listExerciseAlternatives
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "200":
+          description: Ordered list of alternatives for the source exercise.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AlternativeRef" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [exercise-alternatives]
+      summary: Link an alternative to the exercise.
+      operationId: addExerciseAlternative
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddAlternativeRequest" }
+      responses:
+        "201":
+          description: Link created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/AlternativeRef" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+          description: Duplicate link, or self-link (SELF_LINK_FORBIDDEN).
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /exercises/{id}/alternatives/{alternativeId}:
+    delete:
+      tags: [exercise-alternatives]
+      summary: Unlink an alternative from the exercise.
+      operationId: removeExerciseAlternative
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - $ref: "#/components/parameters/ExerciseId"
+        - name: alternativeId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Link removed (no body). }
+        "404": { $ref: "#/components/responses/NotFound" }

@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/003-phase2-settings-data/plan.md
+- specs/006-training-program-library/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
