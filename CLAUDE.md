@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/003-phase2-settings-data/plan.md
+- specs/006-training-program-library/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
@@ -71,3 +71,14 @@ tests/{unit,integration,contract,frontend}/
 - **Soft-archive shapes**: `generated_programs` and `progression_flags` use `is_active` + `superseded_at`. Partial-unique indexes enforce "at most one active per scope" at the DB level.
 - **Frontend routing**: `react-router-dom@^6` is wired in `frontend/src/App.jsx`. `/`, `/nutrition`, `/calculators`, and `/calculators/<slug>` are the Phase 1 routes. Phase 4's journal screen extends this.
 - **Body measurement extension**: Phase 0's `body_measurements` table didn't include `neck_cm` / `hip_cm`. Phase 1 added migration `20260507000008_extend_body_measurements_neck_hip.sql` to support the U.S. Navy multi-measurement body-fat formula.
+
+## Phase 3 — Training Program & Exercise Library (added 2026-06-02)
+
+- **Read presenter boundary**: composed view models live under `services/trainingProgram/` (`weekView.js`, `dayView.js`, `exerciseView.js`, `mediaClassifier.js`) — pure, no `@supabase/supabase-js`. Controllers read DAOs and hand plain data to these presenters.
+- **Read-only session history**: `services/dataAccess/sessions.dao.js` is the first reader of `session_journal_entries` + `session_sets` (Phase 4 owns the write path). Phase 3 never writes sessions (FR-026).
+- **History-derived numbers** (test-first, `services/engine/`): `exerciseHistory.js` (`heaviestCompletedSet`, `feedSet`, `lastWeightUsed`, `recentSessions`), `loadRecommendation.js`. "Last weight" = heaviest **completed** set of the most recent session; the same feed set drives the 1RM estimate (`oneRepMax().primary_estimate_kg`) so the day row and detail page agree (SC-003). Load rec reuses the `add_load` flag's snapshotted `delta_kg`.
+- **Progression indicator**: read from active `progression_flags` (`scope_ref = String(exercise_id)`); `add_load`→ready_to_increase, `regression`→regressing, else stable.
+- **`/program/*` endpoints** are mounted as a SECOND router at `/api/v1/program` (after the program-generator router); paths are disjoint so unmatched requests fall through. `GET /program/week|day/:dayOfWeek|exercises/:id`.
+- **Alternatives**: one new table `exercise_alternatives` (migration `20260602000001`), one-directional, `CHECK` no-self + unique no-dup, FK `ON DELETE CASCADE`, RLS in-file. DAO maps `23505`→409 CONFLICT.
+- **Exercise media**: reuses `exercises.media_image_url` / `media_video_url`. Uploads go through the `photoStorage` adapter (root `PHOTO_STORAGE_ROOT`), served unauthenticated at `/static/*` so `<img>`/`<video>` can load them. YouTube videos are stored as URLs and normalized to `YOUTUBE_EMBED_HOST` by `mediaClassifier.normalizeYoutubeUrl` (shared by read + write paths). Size/type bounded by `EXERCISE_MEDIA_MAX_BYTES` / `EXERCISE_MEDIA_IMAGE_TYPES` / `EXERCISE_MEDIA_VIDEO_TYPES`.
+- **Frontend**: `/program`, `/program/day/:dayOfWeek`, `/program/exercises/:id` in `App.jsx`. Live Supabase-backed contract/integration tests for the alternatives surface **probe for the `exercise_alternatives` table and skip until the migration is applied**.

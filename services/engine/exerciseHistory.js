@@ -1,0 +1,77 @@
+// Pure helpers — derive read-only history facts for one exercise from already
+// logged sessions/sets. No clock, no I/O, no globals (Constitution II + V).
+// Ordering is driven by the caller-supplied `started_at`, never the wall clock.
+// Phase 3: research D-2 (last weight = heaviest completed set in the most
+// recent session), FR-009 / FR-016 / FR-027 (ignore incomplete/invalid sets).
+
+function isValidCompletedSet(s) {
+  return Boolean(s) && s.completed === true && Number(s.weight_kg) > 0 && Number(s.reps) > 0;
+}
+
+/**
+ * The heaviest *completed* set among `sets`, ignoring warm-up/incomplete and
+ * non-positive weight/reps. Strict `>` keeps the first set on a tie.
+ * @returns the winning set object, or null when none qualify.
+ */
+export function heaviestCompletedSet(sets = []) {
+  let best = null;
+  for (const s of sets) {
+    if (!isValidCompletedSet(s)) continue;
+    if (best === null || Number(s.weight_kg) > Number(best.weight_kg)) best = s;
+  }
+  return best;
+}
+
+function byStartedAtDesc(sessions) {
+  return [...sessions].sort(
+    (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+  );
+}
+
+/**
+ * The set that drives both "last weight used" and the 1RM estimate (SC-003):
+ * the heaviest completed set in the MOST RECENT session that has one. Sessions
+ * without a valid completed set are skipped. Returns the set object or null.
+ * @param {Array<{ started_at: string, sets: Array }>} sessions
+ */
+export function feedSet(sessions = []) {
+  for (const session of byStartedAtDesc(sessions)) {
+    const best = heaviestCompletedSet(session.sets ?? []);
+    if (best) return best;
+  }
+  return null;
+}
+
+/**
+ * Last weight used — the weight of {@link feedSet}, or null. Same set the 1RM
+ * estimate is computed from, so the day row and detail page stay consistent.
+ * @param {Array<{ started_at: string, sets: Array }>} sessions
+ */
+export function lastWeightUsed(sessions = []) {
+  const s = feedSet(sessions);
+  return s ? Number(s.weight_kg) : null;
+}
+
+/**
+ * Up to `n` most-recent sessions, newest first, normalized for the API model.
+ * @param {Array<{ id?: number, session_id?: number, started_at: string, sets: Array }>} sessions
+ */
+export function recentSessions(sessions = [], n = 5) {
+  return byStartedAtDesc(sessions)
+    .slice(0, n)
+    .map((s) => ({
+      session_id: s.id ?? s.session_id ?? null,
+      date: toCalendarDate(s.started_at),
+      sets: (s.sets ?? []).map((x) => ({
+        weight_kg: Number(x.weight_kg),
+        reps: x.reps,
+        rpe: x.rpe ?? null,
+        completed: Boolean(x.completed),
+      })),
+    }));
+}
+
+function toCalendarDate(ts) {
+  if (typeof ts === 'string') return ts.slice(0, 10);
+  return new Date(ts).toISOString().slice(0, 10);
+}

@@ -10,7 +10,7 @@
     "frontend"
   ],
   "scripts": {
-    "start": "concurrently -n api,web -c blue,green \"node server.js\" \"npm --prefix frontend run dev\"",
+    "start": "concurrently -n api,web -c blue,green \"node --watch server.js\" \"npm --prefix frontend run dev\"",
     "dev": "npm start",
     "seed": "node seed/runSeed.js",
     "db:reset": "supabase db reset && npm run seed",

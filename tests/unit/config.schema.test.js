@@ -65,4 +65,32 @@ describe('config schema', () => {
   it('exposes the forbidden legacy keys for tooling', () => {
     expect(FORBIDDEN_LEGACY_KEYS).toEqual(['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY']);
   });
+
+  // Phase 3 — exercise media config (T002).
+  describe('exercise media keys', () => {
+    it('applies documented defaults when the keys are absent', () => {
+      const out = validate(valid);
+      expect(out.EXERCISE_MEDIA_MAX_BYTES).toBe(26214400);
+      expect(out.EXERCISE_MEDIA_IMAGE_TYPES).toEqual(['image/jpeg', 'image/png', 'image/webp']);
+      expect(out.EXERCISE_MEDIA_VIDEO_TYPES).toEqual(['video/mp4', 'video/webm']);
+      expect(out.YOUTUBE_EMBED_HOST).toBe('https://www.youtube-nocookie.com');
+    });
+
+    it('parses a comma-separated MIME allowlist into a trimmed, de-duped array', () => {
+      const out = validate({
+        ...valid,
+        EXERCISE_MEDIA_IMAGE_TYPES: 'image/jpeg, image/png , image/jpeg',
+      });
+      expect(out.EXERCISE_MEDIA_IMAGE_TYPES).toEqual(['image/jpeg', 'image/png']);
+    });
+
+    it('coerces EXERCISE_MEDIA_MAX_BYTES from a string', () => {
+      const out = validate({ ...valid, EXERCISE_MEDIA_MAX_BYTES: '1048576' });
+      expect(out.EXERCISE_MEDIA_MAX_BYTES).toBe(1048576);
+    });
+
+    it('rejects a non-integer EXERCISE_MEDIA_MAX_BYTES', () => {
+      expect(() => validate({ ...valid, EXERCISE_MEDIA_MAX_BYTES: '10mb' })).toThrow(ConfigError);
+    });
+  });
 });

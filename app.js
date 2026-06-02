@@ -4,6 +4,7 @@ import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, HttpError } from './middleware/errorHandler.js';
 import { buildAuthMiddleware } from './middleware/auth.js';
+import { createPhotoStorage } from './services/photoStorage/index.js';
 import { athletesDao } from './services/dataAccess/athletes.dao.js';
 import { exercisesDao } from './services/dataAccess/exercises.dao.js';
 import { weeklyPlanDao } from './services/dataAccess/weeklyPlan.dao.js';
@@ -20,6 +21,8 @@ import { progressionFlagsDao } from './services/dataAccess/progressionFlags.dao.
 import { bodyCompositionDao } from './services/dataAccess/bodyComposition.dao.js';
 import { bodyMeasurementsDao } from './services/dataAccess/bodyMeasurements.dao.js';
 import { muscleGroupsDao } from './services/dataAccess/muscleGroups.dao.js';
+import { sessionsDao } from './services/dataAccess/sessions.dao.js';
+import { exerciseAlternativesDao } from './services/dataAccess/exerciseAlternatives.dao.js';
 import { exportersDao } from './services/dataAccess/exporters.dao.js';
 import { importersDao } from './services/dataAccess/importers.dao.js';
 import { resetDao } from './services/dataAccess/reset.dao.js';
@@ -42,6 +45,7 @@ import { oneRepMaxRecordsRoutes } from './routes/oneRepMaxRecords.routes.js';
 import { progressionFlagsRoutes } from './routes/progressionFlags.routes.js';
 import { bodyCompositionRoutes } from './routes/bodyComposition.routes.js';
 import { bodyMeasurementsRoutes } from './routes/bodyMeasurements.routes.js';
+import { trainingProgramRoutes } from './routes/trainingProgram.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -62,10 +66,14 @@ export function buildApp({ config, supabase, daos } = {}) {
     bodyComposition: bodyCompositionDao(sb),
     bodyMeasurements: bodyMeasurementsDao(sb),
     muscleGroups: muscleGroupsDao(sb),
+    sessions: sessionsDao(sb),
+    exerciseAlternatives: exerciseAlternativesDao(sb),
     exporters: exportersDao(sb),
     importers: importersDao(sb),
     reset: resetDao(sb),
   };
+
+  const photoStorage = createPhotoStorage({ root: config.PHOTO_STORAGE_ROOT });
 
   const app = express();
   app.disable('x-powered-by');
@@ -79,6 +87,21 @@ export function buildApp({ config, supabase, daos } = {}) {
   app.use(express.json({ limit: '256kb' }));
   app.use(requestId);
   app.use(requestLogger);
+
+  // Uploaded media served unauthenticated so <img>/<video> tags can load it
+  // (they cannot attach a bearer token). Keys are opaque + athlete-scoped.
+  app.get('/static/*', async (req, res, next) => {
+    try {
+      const key = req.params[0];
+      const bytes = await photoStorage.get(key);
+      const ext = key.includes('.') ? key.split('.').pop() : 'bin';
+      res.type(ext);
+      res.send(bytes);
+    } catch {
+      next(new HttpError(404, 'NOT_FOUND', 'Media not found'));
+    }
+  });
+
   app.use(buildAuthMiddleware({ config, supabase: sb, athletesDao: resolved.athletes }));
 
   const v1 = express.Router();
@@ -86,7 +109,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   // Phase 2 contract uses `/api/v1/me` (no `/athlete` prefix). Mount the same
   // router at the v1 root so both paths resolve to the same controller.
   v1.use('/', athleteRoutes({ daos: resolved }));
-  v1.use('/exercises', exercisesRoutes(resolved.exercises));
+  v1.use('/exercises', exercisesRoutes({ daos: resolved, config, photoStorage }));
   v1.use('/weekly-plan', weeklyPlanRoutes(resolved.weeklyPlan));
   v1.use('/training-phases', trainingPhasesRoutes(resolved.trainingPhases));
   v1.use('/nutrition', nutritionRoutes({ daos: resolved }));
@@ -95,6 +118,8 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/quotes', quotesRoutes(resolved.quotes));
   v1.use('/calculators', calculatorsRoutes({ daos: resolved }));
   v1.use('/program', programRoutes({ daos: resolved }));
+  // Phase 3 read-only views share the /program base; disjoint paths fall through.
+  v1.use('/program', trainingProgramRoutes({ daos: resolved, config }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));

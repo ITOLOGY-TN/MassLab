@@ -10,6 +10,9 @@ import TdeeCalculator from './pages/calculators/TdeeCalculator.jsx';
 import MacrosCalculator from './pages/calculators/MacrosCalculator.jsx';
 import OneRepMaxCalculator from './pages/calculators/OneRepMaxCalculator.jsx';
 import BodyCompositionCalculator from './pages/calculators/BodyCompositionCalculator.jsx';
+import ProgramWeek from './pages/program/ProgramWeek.jsx';
+import ProgramDay from './pages/program/ProgramDay.jsx';
+import ExerciseDetail from './pages/program/ExerciseDetail.jsx';
 import SettingsLayout from './pages/settings/SettingsLayout.jsx';
 import ProfileSettings from './pages/settings/ProfileSettings.jsx';
 import ScheduleSettings from './pages/settings/ScheduleSettings.jsx';
@@ -29,6 +32,9 @@ function Shell() {
         </Link>
         <Link to="/calculators" className="hover:text-accent">
           Calculateurs
+        </Link>
+        <Link to="/program" className="hover:text-accent">
+          Programme
         </Link>
         <Link to="/settings" className="hover:text-accent">
           Paramètres
@@ -62,6 +68,9 @@ export default function App() {
           <Route path="/calculators/macros" element={<MacrosCalculator />} />
           <Route path="/calculators/one-rep-max" element={<OneRepMaxCalculator />} />
           <Route path="/calculators/body-composition" element={<BodyCompositionCalculator />} />
+          <Route path="/program" element={<ProgramWeek />} />
+          <Route path="/program/day/:dayOfWeek" element={<ProgramDay />} />
+          <Route path="/program/exercises/:id" element={<ExerciseDetail />} />
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />

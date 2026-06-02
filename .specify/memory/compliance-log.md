@@ -105,3 +105,21 @@ in the phases that touch those modules.
 **Compliance signed off for Phase 2.** Next audit: end of Phase 3.
 
 ---
+
+---
+
+## Phase 3 — Training Program & Exercise Library (2026-06-02)
+
+**Audit method**: incremental review during `/speckit-implement` (US1–US4), tests-first for domain logic.
+
+- **I. Tenant-ready data model** — PASS. New `exercise_alternatives` carries `athlete_id NOT NULL` + ships `*_select_own`/`*_modify_own` RLS in its migration. New `sessions.dao.js` is read-only and always parameterised by `req.athleteId`. No endpoint trusts a body-supplied tenant id.
+- **II. Layered architecture** — PASS. `services/trainingProgram/*` + `services/engine/*` are pure (no Supabase import); the two new DAOs are the only Phase 3 Supabase importers. Controllers stay thin; the shared YouTube normalizer lives once in `mediaClassifier.js` (read + write paths reuse it).
+- **III. Config over hardcoding** — PASS. `EXERCISE_MEDIA_MAX_BYTES`, `EXERCISE_MEDIA_IMAGE_TYPES`, `EXERCISE_MEDIA_VIDEO_TYPES`, `YOUTUBE_EMBED_HOST`, `PHOTO_STORAGE_ROOT` added with defaults + `.env.example`. No hardcoded limits/hosts in services.
+- **IV. Versioned API** — PASS. All new paths under `/api/v1/`; additive `{ data }` / canonical-error envelopes; deletes/clears return 204.
+- **V. Test-first for domain logic** — PASS. `exerciseHistory`, `loadRecommendation`, `oneRepMax` detail-feed invariant, and the three presenters are unit-tested; last-weight / 1RM / load-rec verified end-to-end (live insert→assert→cleanup). UI ships smoke tests.
+- **VI. Athlete-first UX** — PASS. Three screens via Tailwind tokens, ≤2-tap nav, designed empty states.
+
+**Findings / follow-ups**:
+- T005 (apply `exercise_alternatives` migration to the cloud project) is OUTSTANDING — needs Supabase access-token/DB-password not available to the agent. US3/US4 alternatives contract+integration tests probe-skip until applied.
+- **Localization seam** (Operational Standard): new frontend copy is hardcoded French, consistent with the pre-existing Phases 1–2 pattern — project-wide deviation, tracked, not introduced by Phase 3.
+- Pre-existing frontend test failures (`scaffold.test.jsx`, `nutritionView.test.jsx`) predate Phase 3 (files untouched); flagged for a separate fix.

@@ -91,6 +91,25 @@ export function exercisesDao(supabase) {
       return data;
     },
 
+    // ---- Phase 3 media helpers (T008) ------------------------------------
+    // Write a single media column and return the updated row. A 0-row update
+    // (wrong athlete / missing id) surfaces as 404 so the controller maps it.
+    async setMedia(athleteId, id, column, value) {
+      if (column !== 'media_image_url' && column !== 'media_video_url') {
+        throw new HttpError(500, 'DB_ERROR', `Unsupported media column "${column}".`);
+      }
+      const { data, error } = await supabase
+        .from('exercises')
+        .update({ [column]: value })
+        .eq('athlete_id', athleteId)
+        .eq('id', id)
+        .select('*')
+        .maybeSingle();
+      if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+      if (!data) throw new HttpError(404, 'NOT_FOUND', `Exercise ${id} not found.`);
+      return data;
+    },
+
     async softDelete(athleteId, id) {
       const { error } = await supabase
         .from('exercises')

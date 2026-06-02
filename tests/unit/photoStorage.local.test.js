@@ -42,4 +42,11 @@ describe('photoStorage filesystem adapter', () => {
   it('rejects non-Buffer payloads', async () => {
     await expect(storage.put(athleteId, 'plain string', 'jpg')).rejects.toThrow(/Buffer/);
   });
+
+  it('refuses path-traversal, absolute, and null-byte keys (containment guard)', async () => {
+    for (const bad of ['../../../etc/passwd', 'photos/../../etc/passwd', '/etc/passwd', 'a\0b']) {
+      await expect(storage.get(bad)).rejects.toThrow(/invalid key/);
+      await expect(storage.delete(bad)).rejects.toThrow(/invalid key/);
+    }
+  });
 });
