@@ -4,6 +4,7 @@ import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, HttpError } from './middleware/errorHandler.js';
 import { buildAuthMiddleware } from './middleware/auth.js';
+import { createPhotoStorage } from './services/photoStorage/index.js';
 import { athletesDao } from './services/dataAccess/athletes.dao.js';
 import { exercisesDao } from './services/dataAccess/exercises.dao.js';
 import { weeklyPlanDao } from './services/dataAccess/weeklyPlan.dao.js';
@@ -72,6 +73,8 @@ export function buildApp({ config, supabase, daos } = {}) {
     reset: resetDao(sb),
   };
 
+  const photoStorage = createPhotoStorage({ root: config.PHOTO_STORAGE_ROOT });
+
   const app = express();
   app.disable('x-powered-by');
   app.use(
@@ -84,6 +87,21 @@ export function buildApp({ config, supabase, daos } = {}) {
   app.use(express.json({ limit: '256kb' }));
   app.use(requestId);
   app.use(requestLogger);
+
+  // Uploaded media served unauthenticated so <img>/<video> tags can load it
+  // (they cannot attach a bearer token). Keys are opaque + athlete-scoped.
+  app.get('/static/*', async (req, res, next) => {
+    try {
+      const key = req.params[0];
+      const bytes = await photoStorage.get(key);
+      const ext = key.includes('.') ? key.split('.').pop() : 'bin';
+      res.type(ext);
+      res.send(bytes);
+    } catch {
+      next(new HttpError(404, 'NOT_FOUND', 'Media not found'));
+    }
+  });
+
   app.use(buildAuthMiddleware({ config, supabase: sb, athletesDao: resolved.athletes }));
 
   const v1 = express.Router();
@@ -91,7 +109,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   // Phase 2 contract uses `/api/v1/me` (no `/athlete` prefix). Mount the same
   // router at the v1 root so both paths resolve to the same controller.
   v1.use('/', athleteRoutes({ daos: resolved }));
-  v1.use('/exercises', exercisesRoutes(resolved.exercises));
+  v1.use('/exercises', exercisesRoutes({ daos: resolved, config, photoStorage }));
   v1.use('/weekly-plan', weeklyPlanRoutes(resolved.weeklyPlan));
   v1.use('/training-phases', trainingPhasesRoutes(resolved.trainingPhases));
   v1.use('/nutrition', nutritionRoutes({ daos: resolved }));

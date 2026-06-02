@@ -1,9 +1,11 @@
 // US3 — Exercise detail. Static content always renders; media, alternatives,
 // and history degrade to empty states when absent. FR-013..FR-019.
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchProgramExercise } from '../../lib/programApi.js';
 import StateBlock from '../../components/StateBlock.jsx';
+import ExerciseMediaEditor from '../../components/ExerciseMediaEditor.jsx';
+import AlternativesEditor from '../../components/AlternativesEditor.jsx';
 
 function Section({ title, children }) {
   return (
@@ -38,20 +40,20 @@ function Video({ video, name }) {
 export default function ExerciseDetail() {
   const { id } = useParams();
   const [state, setState] = useState({ status: 'loading', ex: null });
+  const [editing, setEditing] = useState(false);
+
+  const load = useCallback(
+    () =>
+      fetchProgramExercise(id)
+        .then((ex) => setState({ status: 'ready', ex }))
+        .catch((err) => setState({ status: err?.status === 404 ? 'notfound' : 'error', ex: null })),
+    [id],
+  );
 
   useEffect(() => {
-    let active = true;
     setState({ status: 'loading', ex: null });
-    fetchProgramExercise(id)
-      .then((ex) => active && setState({ status: 'ready', ex }))
-      .catch(
-        (err) =>
-          active && setState({ status: err?.status === 404 ? 'notfound' : 'error', ex: null }),
-      );
-    return () => {
-      active = false;
-    };
-  }, [id]);
+    load();
+  }, [load]);
 
   if (state.status === 'loading') {
     return (
@@ -83,19 +85,40 @@ export default function ExerciseDetail() {
         ← Programme
       </Link>
 
-      <header className="mt-md">
-        <h1 className="text-xl font-bold text-text">
-          {ex.name}
-          {!ex.is_active && (
-            <span className="ml-sm rounded bg-muted/15 px-xs py-px text-xs text-muted">
-              archivé
-            </span>
+      <header className="mt-md flex items-start justify-between gap-md">
+        <div>
+          <h1 className="text-xl font-bold text-text">
+            {ex.name}
+            {!ex.is_active && (
+              <span className="ml-sm rounded bg-muted/15 px-xs py-px text-xs text-muted">
+                archivé
+              </span>
+            )}
+          </h1>
+          {ex.targeted_muscles?.length > 0 && (
+            <p className="mt-xs text-sm text-muted">{ex.targeted_muscles.join(' · ')}</p>
           )}
-        </h1>
-        {ex.targeted_muscles?.length > 0 && (
-          <p className="mt-xs text-sm text-muted">{ex.targeted_muscles.join(' · ')}</p>
-        )}
+        </div>
+        <button
+          type="button"
+          data-testid="edit-toggle"
+          onClick={() => setEditing((v) => !v)}
+          className="shrink-0 rounded-md border border-muted/30 px-sm py-xs text-xs text-muted hover:text-text"
+        >
+          {editing ? 'Terminer' : 'Modifier'}
+        </button>
       </header>
+
+      {editing && (
+        <section className="mt-md flex flex-col gap-md">
+          <ExerciseMediaEditor exerciseId={ex.exercise_id} onChange={load} />
+          <AlternativesEditor
+            exerciseId={ex.exercise_id}
+            alternatives={ex.alternatives}
+            onChange={load}
+          />
+        </section>
+      )}
 
       {ex.media?.image_url && (
         <img

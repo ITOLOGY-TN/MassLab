@@ -80,6 +80,8 @@ export const baseSchema = z.object({
   EXERCISE_MEDIA_VIDEO_TYPES: csvList.default('video/mp4,video/webm'),
   // Privacy-enhanced YouTube embed host (no SDK, no cookies, no key).
   YOUTUBE_EMBED_HOST: z.string().url().default('https://www.youtube-nocookie.com'),
+  // Filesystem root for the default photo/media storage adapter.
+  PHOTO_STORAGE_ROOT: z.string().min(1).default('data/photos'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */

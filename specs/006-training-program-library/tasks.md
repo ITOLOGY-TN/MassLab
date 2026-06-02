@@ -142,14 +142,14 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 > **Depends on US3** (edits the same `ExerciseDetail.jsx` + the exercises surface). T038 and T039 both edit `exercises.controller.js`/`routes/exercises.routes.js` → run them **sequentially**.
 
-- [ ] T038 [US4] Implement exercise **media** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `POST/DELETE /exercises/:id/media/image` and `POST/DELETE /exercises/:id/media/video` (multipart via reused `multer` memory storage for files; JSON `video_url` branch for YouTube → normalize by calling `normalizeYoutubeUrl` from `services/trainingProgram/mediaClassifier.js` (T031), NOT a second copy; validate type/size against config; on reject return canonical `413`/`415` and PRESERVE existing media; store via `photoStorage` + `exercises.dao` media helpers). (FR-020, FR-021, FR-024; D-8; remediation D1)
-- [ ] T039 [US4] Implement **alternatives** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `GET/POST /exercises/:id/alternatives`, `DELETE /exercises/:id/alternatives/:alternativeId` (self-link → `409 SELF_LINK_FORBIDDEN`, duplicate → `409 CONFLICT` via DAO; one-directional). (FR-022, FR-023; D-6)
-- [ ] T040 [P] [US4] Integration test `tests/integration/exercise.alternatives.test.js`: add → list ordered; self-link reject; duplicate reject; remove; cascade cleanup when an exercise is hard-deleted; RLS isolation (another athlete cannot read/modify). ALSO add a cross-athlete case asserting the three `/program/*` read endpoints (`/program/week`, `/program/day/:d`, `/program/exercises/:id`) never return another athlete's data (FR-025) — extend here or in `tests/integration/tenant.scoping.test.js`. (remediation G2)
-- [ ] T041 [P] [US4] Integration test `tests/integration/exercise.media.test.js`: image upload happy; local video upload happy; YouTube URL → stored as nocookie embed; oversize → 413 with prior media intact; wrong type → 415 with prior media intact; clear → 204.
-- [ ] T042 [P] [US4] Contract tests `tests/contract/exercise.media.contract.test.js` + `tests/contract/exercise.alternatives.contract.test.js` against the openapi paths.
-- [ ] T043 [P] [US4] Build `frontend/src/components/ExerciseMediaEditor.jsx` (image upload, video URL/upload toggle, clear) and wire into `ExerciseDetail.jsx`.
-- [ ] T044 [P] [US4] Build `frontend/src/components/AlternativesEditor.jsx` (pick exercise, link/unlink, surface self/duplicate errors) and wire into `ExerciseDetail.jsx`.
-- [ ] T045 [P] [US4] Frontend smoke test `tests/frontend/program.enrichment.test.jsx`: media editor calls upload/clear; alternatives editor calls add/remove and shows the conflict message.
+- [X] T038 [US4] Implement exercise **media** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `POST/DELETE /exercises/:id/media/image` and `POST/DELETE /exercises/:id/media/video` (multipart via reused `multer` memory storage for files; JSON `video_url` branch for YouTube → normalize by calling `normalizeYoutubeUrl` from `services/trainingProgram/mediaClassifier.js` (T031), NOT a second copy; validate type/size against config; on reject return canonical `413`/`415` and PRESERVE existing media; store via `photoStorage` + `exercises.dao` media helpers). (FR-020, FR-021, FR-024; D-8; remediation D1)
+- [X] T039 [US4] Implement **alternatives** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `GET/POST /exercises/:id/alternatives`, `DELETE /exercises/:id/alternatives/:alternativeId` (self-link → `409 SELF_LINK_FORBIDDEN`, duplicate → `409 CONFLICT` via DAO; one-directional). (FR-022, FR-023; D-6)
+- [X] T040 [P] [US4] Integration test `tests/integration/exercise.alternatives.test.js`: add → list ordered; self-link reject; duplicate reject; remove; cascade cleanup when an exercise is hard-deleted; RLS isolation (another athlete cannot read/modify). ALSO add a cross-athlete case asserting the three `/program/*` read endpoints (`/program/week`, `/program/day/:d`, `/program/exercises/:id`) never return another athlete's data (FR-025) — extend here or in `tests/integration/tenant.scoping.test.js`. (remediation G2)
+- [X] T041 [P] [US4] Integration test `tests/integration/exercise.media.test.js`: image upload happy; local video upload happy; YouTube URL → stored as nocookie embed; oversize → 413 with prior media intact; wrong type → 415 with prior media intact; clear → 204.
+- [X] T042 [P] [US4] Contract tests `tests/contract/exercise.media.contract.test.js` + `tests/contract/exercise.alternatives.contract.test.js` against the openapi paths.
+- [X] T043 [P] [US4] Build `frontend/src/components/ExerciseMediaEditor.jsx` (image upload, video URL/upload toggle, clear) and wire into `ExerciseDetail.jsx`.
+- [X] T044 [P] [US4] Build `frontend/src/components/AlternativesEditor.jsx` (pick exercise, link/unlink, surface self/duplicate errors) and wire into `ExerciseDetail.jsx`.
+- [X] T045 [P] [US4] Frontend smoke test `tests/frontend/program.enrichment.test.jsx`: media editor calls upload/clear; alternatives editor calls add/remove and shows the conflict message.
 - [ ] T046 [P] [US4] (Optional demo data) Add a few alternative links + sample media references to `seed/exercises.seed.json` so the detail page is populated on a fresh seed.
 
 **Checkpoint**: All four user stories independently functional; enrichment round-trips.
@@ -158,12 +158,12 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T047 [P] Run the `quickstart.md` curl flows end-to-end against dev Supabase; fix any drift between contract and implementation.
-- [ ] T048 [P] Run `npm test` (unit + contract + integration + frontend) and `npx eslint .`; ensure green.
-- [ ] T049 [P] Update the Phase 3 section of `CLAUDE.md` (new `services/trainingProgram/` pure presenter boundary; read-only `sessions.dao.js`; `exercise_alternatives` table + one-directional rule; exercise media handling + config keys).
-- [ ] T050 [P] Frontend Design skill polish pass on the three screens (tokens, hit targets, motion, designed empty states) and record which decisions were applied (Constitution VI review requirement).
-- [ ] T051 Verify performance budgets against dev Supabase: `/program/day` ≤ 500 ms, `/program/exercises/:id` ≤ 700 ms server-side (plan Performance Goals).
-- [ ] T052 Append a Phase 3 entry to `.specify/memory/compliance-log.md` auditing the six principles (esp. I tenant scoping + RLS on `exercise_alternatives`, II layering, III config-driven media limits, V test-first engine/presenters). Record the **pre-existing localization-seam deviation** (Operational Standard: user-facing copy is hardcoded across all frontend phases; no strings/i18n catalog exists yet) as a tracked, project-wide follow-up — NOT introduced by Phase 3, not a Phase 3 blocker. (remediation C1)
+- [X] T047 [P] Run the `quickstart.md` curl flows end-to-end against dev Supabase; fix any drift between contract and implementation.
+- [X] T048 [P] Run `npm test` (unit + contract + integration + frontend) and `npx eslint .`; ensure green.
+- [X] T049 [P] Update the Phase 3 section of `CLAUDE.md` (new `services/trainingProgram/` pure presenter boundary; read-only `sessions.dao.js`; `exercise_alternatives` table + one-directional rule; exercise media handling + config keys).
+- [X] T050 [P] Frontend Design skill polish pass on the three screens (tokens, hit targets, motion, designed empty states) and record which decisions were applied (Constitution VI review requirement).
+- [X] T051 Verify performance budgets against dev Supabase: `/program/day` ≤ 500 ms, `/program/exercises/:id` ≤ 700 ms server-side (plan Performance Goals).
+- [X] T052 Append a Phase 3 entry to `.specify/memory/compliance-log.md` auditing the six principles (esp. I tenant scoping + RLS on `exercise_alternatives`, II layering, III config-driven media limits, V test-first engine/presenters). Record the **pre-existing localization-seam deviation** (Operational Standard: user-facing copy is hardcoded across all frontend phases; no strings/i18n catalog exists yet) as a tracked, project-wide follow-up — NOT introduced by Phase 3, not a Phase 3 blocker. (remediation C1)
 
 ---
 
