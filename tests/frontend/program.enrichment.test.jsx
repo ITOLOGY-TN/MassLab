@@ -41,6 +41,7 @@ beforeEach(() => {
           data: [
             { id: 101, name: 'Bench Press' },
             { id: 145, name: 'DB Press' },
+            { id: 200, name: 'Incline Press' },
           ],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -89,7 +90,13 @@ describe('ExerciseDetail enrichment editors (US4)', () => {
     fireEvent.click(screen.getByTestId('edit-toggle'));
 
     await waitFor(() => expect(screen.getByTestId('alt-select')).toBeTruthy());
-    fireEvent.change(screen.getByTestId('alt-select'), { target: { value: '145' } });
+    // The current exercise (101) and already-linked alternatives (145) are
+    // excluded from the picker; only unlinked exercises remain selectable.
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Incline Press' })).toBeTruthy());
+    expect(screen.queryByRole('option', { name: 'DB Press' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Bench Press' })).toBeNull();
+
+    fireEvent.change(screen.getByTestId('alt-select'), { target: { value: '200' } });
     fireEvent.click(screen.getByText('Lier'));
 
     await waitFor(() =>

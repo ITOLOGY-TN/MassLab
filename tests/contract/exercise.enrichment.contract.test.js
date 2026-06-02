@@ -63,6 +63,10 @@ describe('contract — exercise enrichment paths', () => {
       return;
     }
     const ex = (await request(app).get('/api/v1/exercises')).body.data;
+    if (!Array.isArray(ex) || ex.length < 2) {
+      console.warn('[exercise.enrichment.contract] skipping — need >= 2 exercises');
+      return;
+    }
     const a = ex[0].id;
     const b = ex[1].id;
     try {

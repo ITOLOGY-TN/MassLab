@@ -45,6 +45,14 @@ describe('engine.exerciseHistory — lastWeightUsed (D-2)', () => {
     expect(lastWeightUsed(sessions)).toBe(75);
   });
 
+  it('returns the most-recent session weight, not the heaviest overall', () => {
+    const heavyOlder = [
+      { id: 1, started_at: '2026-05-20T10:00:00Z', sets: [set(100, 3), set(95, 5)] },
+      { id: 2, started_at: '2026-05-27T10:00:00Z', sets: [set(80, 8), set(120, 1, false)] },
+    ];
+    expect(lastWeightUsed(heavyOlder)).toBe(80);
+  });
+
   it('skips a most-recent session that has only incomplete sets', () => {
     const withEmptyLatest = [
       ...sessions,

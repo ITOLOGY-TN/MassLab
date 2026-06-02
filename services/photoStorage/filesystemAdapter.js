@@ -19,14 +19,25 @@ export function filesystemAdapter({ root = path.resolve('data', 'photos') } = {}
     return `photos/${athleteId}/${fname}`;
   }
 
+  // Keys are produced by put() as `photos/<athleteId>/<file>`; root itself ends
+  // in `photos`, so the containment base is root's parent. Reject absolute paths,
+  // null bytes, and any key that escapes the base via `..` before touching disk.
+  function resolveKey(key) {
+    if (typeof key !== 'string' || key.length === 0) throw new Error('invalid key');
+    if (key.includes('\0')) throw new Error('invalid key');
+    if (path.isAbsolute(key)) throw new Error('invalid key');
+    const base = path.resolve(root, '..');
+    const abs = path.resolve(base, key);
+    if (abs !== base && !abs.startsWith(base + path.sep)) throw new Error('invalid key');
+    return abs;
+  }
+
   async function get(key) {
-    const abs = path.join(root, '..', key);
-    return fs.readFile(abs);
+    return fs.readFile(resolveKey(key));
   }
 
   async function del(key) {
-    const abs = path.join(root, '..', key);
-    await fs.rm(abs, { force: true });
+    await fs.rm(resolveKey(key), { force: true });
   }
 
   function url(key) {

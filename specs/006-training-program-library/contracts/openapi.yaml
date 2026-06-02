@@ -251,7 +251,12 @@ components:
         video_url:
           type: string
           format: uri
-          description: A YouTube watch/share URL. Stored as-is and embedded read-only.
+          description: >-
+            A YouTube watch/share URL. The service normalizes it via
+            mediaClassifier.normalizeYoutubeUrl to the youtube-nocookie embed
+            form (https://www.youtube-nocookie.com/embed/<id>) before storage;
+            non-YouTube URLs are rejected (422). The stored value is read-only
+            and embedded.
 
   responses:
     NotFound:
@@ -312,7 +317,10 @@ paths:
         - $ref: "#/components/parameters/DayOfWeek"
       responses:
         "200":
-          description: Day detail view model. A rest day or an empty training day still returns 200.
+          description: >-
+            Day detail view model for a configured training day. An empty
+            training day (slot with zero exercises) still returns 200; a rest
+            day (no slot) returns 404.
           content:
             application/json:
               schema:

@@ -1,5 +1,5 @@
 // US4 — attach/clear an exercise's image and video (YouTube link or upload).
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   uploadExerciseImage,
   clearExerciseImage,
@@ -9,8 +9,6 @@ import {
 } from '../lib/programApi.js';
 
 export default function ExerciseMediaEditor({ exerciseId, onChange }) {
-  const imageInput = useRef(null);
-  const videoInput = useRef(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -35,14 +33,15 @@ export default function ExerciseMediaEditor({ exerciseId, onChange }) {
     >
       <div className="flex flex-wrap items-center gap-sm">
         <input
-          ref={imageInput}
           type="file"
           accept="image/*"
           data-testid="image-input"
           className="text-sm"
-          onChange={(e) =>
-            e.target.files?.[0] && run(() => uploadExerciseImage(exerciseId, e.target.files[0]))
-          }
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) run(() => uploadExerciseImage(exerciseId, file));
+          }}
         />
         <button
           type="button"
@@ -77,14 +76,15 @@ export default function ExerciseMediaEditor({ exerciseId, onChange }) {
           Définir
         </button>
         <input
-          ref={videoInput}
           type="file"
           accept="video/*"
           data-testid="video-input"
           className="text-sm"
-          onChange={(e) =>
-            e.target.files?.[0] && run(() => uploadExerciseVideo(exerciseId, e.target.files[0]))
-          }
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) run(() => uploadExerciseVideo(exerciseId, file));
+          }}
         />
         <button
           type="button"

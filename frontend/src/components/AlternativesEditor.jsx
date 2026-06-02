@@ -10,13 +10,14 @@ export default function AlternativesEditor({ exerciseId, alternatives = [], onCh
 
   useEffect(() => {
     let active = true;
+    const excluded = new Set([Number(exerciseId), ...alternatives.map((a) => a.exercise_id)]);
     listExercises()
-      .then((list) => active && setOptions(list.filter((e) => e.id !== Number(exerciseId))))
+      .then((list) => active && setOptions(list.filter((e) => !excluded.has(e.id))))
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [exerciseId]);
+  }, [exerciseId, alternatives]);
 
   async function run(fn) {
     setBusy(true);
