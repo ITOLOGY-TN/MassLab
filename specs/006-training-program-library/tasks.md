@@ -54,7 +54,7 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 ### Database
 
 - [X] T004 Create migration `supabase/migrations/<timestamp>_init_exercise_alternatives.sql`: table per data-model.md (`athlete_id`, `exercise_id`, `alternative_exercise_id`, `display_order`, `created_at`), `CHECK (exercise_id <> alternative_exercise_id)`, `UNIQUE (athlete_id, exercise_id, alternative_exercise_id)`, both FKs `ON DELETE CASCADE`, index `(athlete_id, exercise_id, display_order)`, and `exercise_alternatives_select_own` + `exercise_alternatives_modify_own` RLS in the same file. (research D-6, D-7; Constitution I)
-- [ ] T005 Apply T004 to the dev Supabase project and verify table + both RLS policies exist (per quickstart.md §1). Forward-only, replayable from empty.
+- [X] T005 Apply T004 to the dev Supabase project and verify table + both RLS policies exist (per quickstart.md §1). Forward-only, replayable from empty.
 
 ### Data-access (only Supabase-importing layer — Constitution II)
 
