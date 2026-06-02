@@ -122,6 +122,46 @@ export const PROFILE_OUTPUT_AFFECTING_FIELDS = Object.freeze([
   'target_weight_kg',
 ]);
 
+// Phase 4 (007-session-journal) — session journal write surface. A set may only
+// be `completed: true` when weight_kg > 0 and reps > 0 (FR-009); incomplete sets
+// may carry zeros (entered but not yet done).
+const sessionSetSchema = z
+  .object({
+    exercise_id: z.number().int().positive(),
+    set_number: z.number().int().positive(),
+    weight_kg: z
+      .number()
+      .min(0)
+      .max(r.weight_kg.max * 2),
+    reps: z.number().int().min(0).max(r.reps.max),
+    rpe: z.number().int().min(1).max(10).nullable().optional(),
+    completed: z.boolean().optional().default(false),
+  })
+  .superRefine((val, ctx) => {
+    if (val.completed && !(val.weight_kg > 0 && val.reps > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['completed'],
+        message: 'a completed set requires weight_kg > 0 and reps > 0',
+      });
+    }
+  });
+
+export const setInputSchema = sessionSetSchema;
+// Bound the bulk auto-save payload — a session never has hundreds of sets, so
+// the cap rejects oversized/abusive writes (mirrored as maxItems in the contract).
+export const SESSION_SETS_MAX = 200;
+export const upsertSetsSchema = z.object({
+  sets: z.array(sessionSetSchema).max(SESSION_SETS_MAX),
+});
+export const sessionStartSchema = z.object({
+  day_of_week: z.number().int().min(1).max(7).optional(),
+});
+export const finishSessionSchema = z.object({
+  note: z.string().max(2000).nullable().optional(),
+  energy_rating: z.number().int().min(1).max(5).nullable().optional(),
+});
+
 /**
  * Run a Zod schema against a body and throw the canonical 422 envelope on failure.
  */

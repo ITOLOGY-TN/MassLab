@@ -13,6 +13,7 @@ import BodyCompositionCalculator from './pages/calculators/BodyCompositionCalcul
 import ProgramWeek from './pages/program/ProgramWeek.jsx';
 import ProgramDay from './pages/program/ProgramDay.jsx';
 import ExerciseDetail from './pages/program/ExerciseDetail.jsx';
+import SessionJournal from './pages/journal/SessionJournal.jsx';
 import SettingsLayout from './pages/settings/SettingsLayout.jsx';
 import ProfileSettings from './pages/settings/ProfileSettings.jsx';
 import ScheduleSettings from './pages/settings/ScheduleSettings.jsx';
@@ -35,6 +36,9 @@ function Shell() {
         </Link>
         <Link to="/program" className="hover:text-accent">
           Programme
+        </Link>
+        <Link to="/journal" className="hover:text-accent">
+          Séance
         </Link>
         <Link to="/settings" className="hover:text-accent">
           Paramètres
@@ -71,6 +75,7 @@ export default function App() {
           <Route path="/program" element={<ProgramWeek />} />
           <Route path="/program/day/:dayOfWeek" element={<ProgramDay />} />
           <Route path="/program/exercises/:id" element={<ExerciseDetail />} />
+          <Route path="/journal" element={<SessionJournal />} />
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />
