@@ -101,7 +101,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/calculators', calculatorsRoutes({ daos: resolved }));
   v1.use('/program', programRoutes({ daos: resolved }));
   // Phase 3 read-only views share the /program base; disjoint paths fall through.
-  v1.use('/program', trainingProgramRoutes({ daos: resolved }));
+  v1.use('/program', trainingProgramRoutes({ daos: resolved, config }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));

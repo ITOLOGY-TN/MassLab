@@ -29,17 +29,27 @@ function byStartedAtDesc(sessions) {
 }
 
 /**
- * Last weight used = the heaviest completed set's weight in the MOST RECENT
- * session that contains a qualifying completed set. Sessions without any valid
- * completed set are skipped. Returns a number or null.
+ * The set that drives both "last weight used" and the 1RM estimate (SC-003):
+ * the heaviest completed set in the MOST RECENT session that has one. Sessions
+ * without a valid completed set are skipped. Returns the set object or null.
+ * @param {Array<{ started_at: string, sets: Array }>} sessions
+ */
+export function feedSet(sessions = []) {
+  for (const session of byStartedAtDesc(sessions)) {
+    const best = heaviestCompletedSet(session.sets ?? []);
+    if (best) return best;
+  }
+  return null;
+}
+
+/**
+ * Last weight used — the weight of {@link feedSet}, or null. Same set the 1RM
+ * estimate is computed from, so the day row and detail page stay consistent.
  * @param {Array<{ started_at: string, sets: Array }>} sessions
  */
 export function lastWeightUsed(sessions = []) {
-  for (const session of byStartedAtDesc(sessions)) {
-    const best = heaviestCompletedSet(session.sets ?? []);
-    if (best) return Number(best.weight_kg);
-  }
-  return null;
+  const s = feedSet(sessions);
+  return s ? Number(s.weight_kg) : null;
 }
 
 /**

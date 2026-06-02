@@ -4,6 +4,7 @@
 import { HttpError } from '../middleware/errorHandler.js';
 import { buildWeekView } from '../services/trainingProgram/weekView.js';
 import { buildDayView } from '../services/trainingProgram/dayView.js';
+import { buildExerciseView } from '../services/trainingProgram/exerciseView.js';
 import { lastWeightUsed } from '../services/engine/exerciseHistory.js';
 
 // Active exercise flags are keyed by scope_ref = String(exercise_id).
@@ -15,7 +16,8 @@ function flagTypeMap(activeFlags) {
   return m;
 }
 
-export function trainingProgramController({ daos }) {
+export function trainingProgramController({ daos, config }) {
+  const embedHost = config?.YOUTUBE_EMBED_HOST;
   return {
     // GET /api/v1/program/week — US1 (FR-001..FR-006).
     async getWeek(req, res, next) {
@@ -82,6 +84,42 @@ export function trainingProgramController({ daos }) {
             exerciseById,
             lastWeightByExerciseId,
             flagTypeByExerciseId: flagTypeMap(activeFlags),
+          }),
+        });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    // GET /api/v1/program/exercises/:id — US3 (FR-013..FR-019).
+    async getExercise(req, res, next) {
+      try {
+        const id = Number(req.params.id);
+        if (!Number.isInteger(id)) {
+          throw new HttpError(404, 'NOT_FOUND', 'Exercise id must be an integer.');
+        }
+
+        const exercise = await daos.exercises.findById(req.athleteId, id);
+        if (!exercise) {
+          throw new HttpError(404, 'NOT_FOUND', `Exercise ${id} not found.`);
+        }
+
+        const [alternatives, sessions, activeFlags] = await Promise.all([
+          daos.exerciseAlternatives.listForSource(req.athleteId, id),
+          daos.sessions.recentSessionsForExercise(req.athleteId, id, { limit: 5 }),
+          daos.progressionFlags.findActiveForAthlete(req.athleteId),
+        ]);
+        const activeFlag =
+          activeFlags.find((f) => f.scope_kind === 'exercise' && Number(f.scope_ref) === id) ??
+          null;
+
+        res.json({
+          data: buildExerciseView({
+            exercise,
+            alternatives,
+            sessions,
+            activeFlag,
+            embedHost,
           }),
         });
       } catch (err) {

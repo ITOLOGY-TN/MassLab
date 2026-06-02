@@ -9,10 +9,11 @@ import { trainingProgramController } from '../controllers/trainingProgram.contro
  *
  * US2 adds GET /day/:dayOfWeek; US3 adds GET /exercises/:id.
  */
-export function trainingProgramRoutes({ daos }) {
+export function trainingProgramRoutes({ daos, config }) {
   const r = Router();
-  const c = trainingProgramController({ daos });
+  const c = trainingProgramController({ daos, config });
   r.get('/week', c.getWeek);
   r.get('/day/:dayOfWeek', c.getDay);
+  r.get('/exercises/:id', c.getExercise);
   return r;
 }
