@@ -89,7 +89,7 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 - [ ] T017 [P] [US1] Write FAILING unit test `tests/unit/trainingProgram.weekView.test.js`: 7 ordered entries, `kind` training/rest derivation, `exercise_count` (incl. 0), `empty=true` on zero training days, muscle-group ref resolution. (FR-001…FR-006)
 - [ ] T018 [US1] Implement `services/trainingProgram/weekView.js` (pure: assemble `WeekView` from slots + per-slot exercise counts + muscle-groups) to make T017 green.
 - [ ] T019 [US1] Implement `getWeek` in `controllers/trainingProgram.controller.js` (read `weeklyPlan` + `muscleGroups` DAOs, call `weekView`, return `{ data }`). Wire `GET /program/week` in `routes/trainingProgram.routes.js`.
-- [ ] T020 [P] [US1] Contract test `tests/contract/program.week.contract.test.js` validating the response against `contracts/openapi.yaml` `WeekView` (7 entries, envelope, empty flag).
+- [ ] T020 [P] [US1] Contract test `tests/contract/program.week.contract.test.js` validating the response against `contracts/openapi.yaml` `WeekView` (7 entries, envelope, empty flag). PLUS an integration assertion in `tests/integration/program.week.reflect.test.js`: after a `PUT /me/schedule` change, `GET /program/week` reflects the new day/muscle-group/count on the next read with no stale labels (automates **SC-002**). (remediation G1)
 - [ ] T021 [P] [US1] Build `frontend/src/pages/program/ProgramWeek.jsx` + `frontend/src/components/DayCard.jsx` + `frontend/src/components/RestSeparator.jsx` (Frontend Design skill; Tailwind tokens; large tap targets; empty-week CTA to Settings). Replace the Phase-1 placeholder route.
 - [ ] T022 [P] [US1] Frontend smoke test `tests/frontend/program.week.test.jsx`: renders cards + separators from a stub week, renders empty-week state, card tap navigates to `/program/day/:d`.
 
@@ -122,7 +122,7 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 **Independent Test**: Open an exercise → static content always renders; media renders when present; linked alternatives list and navigate; with history, last-5 + 1RM + load rec render and the 1RM feed matches the day-view last-weight (SC-003); with no history those sections show empty states.
 
 - [ ] T030 [P] [US3] Write FAILING unit test `tests/unit/trainingProgram.exerciseView.test.js`: static always present; `media.video.kind` classification (youtube/upload/null); alternatives incl. `is_active` archived flag; `history` null/empty when no sets; `estimated_1rm_kg` + `recommended_load_kg` from the same heaviest set. (FR-013…FR-019; D-1, D-3, D-7)
-- [ ] T031 [P] [US3] Implement `services/trainingProgram/mediaClassifier.js` (pure: classify `media_video_url` as youtube vs upload vs null; normalize a YouTube watch/share URL to a `YOUTUBE_EMBED_HOST` embed URL) + unit test `tests/unit/trainingProgram.mediaClassifier.test.js`. (D-8)
+- [ ] T031 [P] [US3] Implement `services/trainingProgram/mediaClassifier.js` (pure) exporting BOTH `classifyVideo(media_video_url)` (youtube vs upload vs null) and `normalizeYoutubeUrl(url, embedHost)` (watch/share URL → `YOUTUBE_EMBED_HOST` embed URL). This is the **single source of truth** for YouTube normalization, reused by the write path (T038). Unit test `tests/unit/trainingProgram.mediaClassifier.test.js` covers watch/share/embed/short (`youtu.be`) forms + non-YouTube passthrough. (D-8; remediation D1)
 - [ ] T032 [US3] Implement `services/trainingProgram/exerciseView.js` (pure: compose exercise static + `mediaClassifier` + alternatives + `recentSessions` + `oneRepMax` + `loadRecommendation`) to make T030 green.
 - [ ] T033 [US3] Implement `getExercise` in `controllers/trainingProgram.controller.js` (read exercises/alternatives/sessions/flags DAOs; 404 when not owned). Wire `GET /program/exercises/:id`.
 - [ ] T034 [P] [US3] Contract test `tests/contract/program.exercise.contract.test.js` against `ExerciseView` (history nullability, media shape, alternatives).
@@ -142,9 +142,9 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 
 > **Depends on US3** (edits the same `ExerciseDetail.jsx` + the exercises surface). T038 and T039 both edit `exercises.controller.js`/`routes/exercises.routes.js` → run them **sequentially**.
 
-- [ ] T038 [US4] Implement exercise **media** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `POST/DELETE /exercises/:id/media/image` and `POST/DELETE /exercises/:id/media/video` (multipart via reused `multer` memory storage for files; JSON `video_url` branch for YouTube → normalize to embed host; validate type/size against config; on reject return canonical `413`/`415` and PRESERVE existing media; store via `photoStorage` + `exercises.dao` media helpers). (FR-020, FR-021, FR-024; D-8)
+- [ ] T038 [US4] Implement exercise **media** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `POST/DELETE /exercises/:id/media/image` and `POST/DELETE /exercises/:id/media/video` (multipart via reused `multer` memory storage for files; JSON `video_url` branch for YouTube → normalize by calling `normalizeYoutubeUrl` from `services/trainingProgram/mediaClassifier.js` (T031), NOT a second copy; validate type/size against config; on reject return canonical `413`/`415` and PRESERVE existing media; store via `photoStorage` + `exercises.dao` media helpers). (FR-020, FR-021, FR-024; D-8; remediation D1)
 - [ ] T039 [US4] Implement **alternatives** endpoints in `controllers/exercises.controller.js` + `routes/exercises.routes.js`: `GET/POST /exercises/:id/alternatives`, `DELETE /exercises/:id/alternatives/:alternativeId` (self-link → `409 SELF_LINK_FORBIDDEN`, duplicate → `409 CONFLICT` via DAO; one-directional). (FR-022, FR-023; D-6)
-- [ ] T040 [P] [US4] Integration test `tests/integration/exercise.alternatives.test.js`: add → list ordered; self-link reject; duplicate reject; remove; cascade cleanup when an exercise is hard-deleted; RLS isolation (another athlete cannot read/modify).
+- [ ] T040 [P] [US4] Integration test `tests/integration/exercise.alternatives.test.js`: add → list ordered; self-link reject; duplicate reject; remove; cascade cleanup when an exercise is hard-deleted; RLS isolation (another athlete cannot read/modify). ALSO add a cross-athlete case asserting the three `/program/*` read endpoints (`/program/week`, `/program/day/:d`, `/program/exercises/:id`) never return another athlete's data (FR-025) — extend here or in `tests/integration/tenant.scoping.test.js`. (remediation G2)
 - [ ] T041 [P] [US4] Integration test `tests/integration/exercise.media.test.js`: image upload happy; local video upload happy; YouTube URL → stored as nocookie embed; oversize → 413 with prior media intact; wrong type → 415 with prior media intact; clear → 204.
 - [ ] T042 [P] [US4] Contract tests `tests/contract/exercise.media.contract.test.js` + `tests/contract/exercise.alternatives.contract.test.js` against the openapi paths.
 - [ ] T043 [P] [US4] Build `frontend/src/components/ExerciseMediaEditor.jsx` (image upload, video URL/upload toggle, clear) and wire into `ExerciseDetail.jsx`.
@@ -163,7 +163,7 @@ Concurrency note: keep file-mutating agents on disjoint paths (the layout below 
 - [ ] T049 [P] Update the Phase 3 section of `CLAUDE.md` (new `services/trainingProgram/` pure presenter boundary; read-only `sessions.dao.js`; `exercise_alternatives` table + one-directional rule; exercise media handling + config keys).
 - [ ] T050 [P] Frontend Design skill polish pass on the three screens (tokens, hit targets, motion, designed empty states) and record which decisions were applied (Constitution VI review requirement).
 - [ ] T051 Verify performance budgets against dev Supabase: `/program/day` ≤ 500 ms, `/program/exercises/:id` ≤ 700 ms server-side (plan Performance Goals).
-- [ ] T052 Append a Phase 3 entry to `.specify/memory/compliance-log.md` auditing the six principles (esp. I tenant scoping + RLS on `exercise_alternatives`, II layering, III config-driven media limits, V test-first engine/presenters).
+- [ ] T052 Append a Phase 3 entry to `.specify/memory/compliance-log.md` auditing the six principles (esp. I tenant scoping + RLS on `exercise_alternatives`, II layering, III config-driven media limits, V test-first engine/presenters). Record the **pre-existing localization-seam deviation** (Operational Standard: user-facing copy is hardcoded across all frontend phases; no strings/i18n catalog exists yet) as a tracked, project-wide follow-up — NOT introduced by Phase 3, not a Phase 3 blocker. (remediation C1)
 
 ---
 
@@ -244,6 +244,7 @@ Run Setup+Foundational as one workflow (parallel legs + test-first pipelines), t
 - **Total**: 52 tasks (T001–T052)
 - **Setup**: 3 · **Foundational**: 13 · **US1**: 6 · **US2**: 7 · **US3**: 8 · **US4**: 9 · **Polish**: 6
 - **Test tasks**: 18 (engine/presenter unit, contract, integration, frontend smoke) — test-first for all domain logic per Constitution V.
+- **Post-analysis remediation (2026-06-02)** folded into existing tasks (no renumber): D1 shared YouTube normalizer (T031↔T038), G1 SC-002 reflection integration test (T020), G2 `/program/*` tenant isolation test (T040), A1/A2 spec wording (FR-016/017/018), C1 localization-seam follow-up logged (T052).
 
 ## Notes
 

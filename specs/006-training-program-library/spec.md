@@ -136,9 +136,9 @@ The athlete attaches a reference image, sets a video (YouTube link or uploaded l
 - **FR-013**: The exercise detail page MUST display the exercise name, targeted muscles, step-by-step instructions, and key technique points.
 - **FR-014**: The page MUST display the exercise image when present and a playable video when a YouTube link or uploaded video is present.
 - **FR-015**: The page MUST list linked alternative exercises, each navigable to its own detail page, and MUST omit the section gracefully when there are none.
-- **FR-016**: The page MUST show the up-to-five most recent sessions in which the exercise was performed, including each session's date and working sets, when history exists.
-- **FR-017**: The page MUST show the current estimated 1RM using the existing calculator engine's primary estimate (`primary_estimate_kg`, the average of Epley, Brzycki, Lander, and Lombardi), computed from the athlete's heaviest completed set in recent history, when sufficient history exists.
-- **FR-018**: The page MUST show a recommended working load derived from the progression engine: when the exercise has an active `add_load` flag, the recommendation is the last weight used plus the engine's `load_increment`; otherwise it holds the last weight used. Shown only when sufficient history exists.
+- **FR-016**: The page MUST show the up-to-five most recent sessions in which the exercise was performed, including each session's date and its sets (each carrying a completion flag), when history exists.
+- **FR-017**: The page MUST show the current estimated 1RM using the existing calculator engine's primary estimate (`primary_estimate_kg`, the average of Epley, Brzycki, Lander, and Lombardi), computed from the athlete's heaviest completed set in recent history, when history exists (i.e. at least one qualifying completed set).
+- **FR-018**: The page MUST show a recommended working load derived from the progression engine: when the exercise has an active `add_load` flag, the recommendation is the last weight used plus the engine's `load_increment`; otherwise it holds the last weight used. Shown when history exists (i.e. a last weight used can be determined); otherwise an empty state is shown.
 - **FR-019**: When no history exists, the history-dependent sections (recent sessions, estimated 1RM, load recommendation) MUST show clear empty states while static content still renders.
 
 #### Exercise enrichment (media & alternatives)
