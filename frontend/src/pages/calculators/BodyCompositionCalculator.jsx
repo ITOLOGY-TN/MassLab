@@ -42,14 +42,53 @@ export default function BodyCompositionCalculator() {
     <main className="min-h-full p-lg max-w-2xl mx-auto">
       <h1 className="text-3xl font-semibold mb-lg">Composition corporelle</h1>
       <form onSubmit={onSubmit} className="grid grid-cols-2 gap-md mb-lg">
-        <NumberField label="Poids (kg)" name="weight_kg" value={form.weight_kg} onChange={set('weight_kg')} step={0.1} required />
-        <NumberField label="Taille (cm)" name="height_cm" value={form.height_cm} onChange={set('height_cm')} step={0.1} required />
+        <NumberField
+          label="Poids (kg)"
+          name="weight_kg"
+          value={form.weight_kg}
+          onChange={set('weight_kg')}
+          step={0.1}
+          required
+        />
+        <NumberField
+          label="Taille (cm)"
+          name="height_cm"
+          value={form.height_cm}
+          onChange={set('height_cm')}
+          step={0.1}
+          required
+        />
         <NumberField label="Âge" name="age" value={form.age} onChange={set('age')} required />
-        <SelectField label="Sexe" name="biological_sex" value={form.biological_sex} onChange={set('biological_sex')} options={SEX_OPTIONS} required />
-        <NumberField label="Tour de taille (cm, opt.)" name="waist_cm" value={form.waist_cm} onChange={set('waist_cm')} step={0.5} />
-        <NumberField label="Tour de cou (cm, opt.)" name="neck_cm" value={form.neck_cm} onChange={set('neck_cm')} step={0.5} />
+        <SelectField
+          label="Sexe"
+          name="biological_sex"
+          value={form.biological_sex}
+          onChange={set('biological_sex')}
+          options={SEX_OPTIONS}
+          required
+        />
+        <NumberField
+          label="Tour de taille (cm, opt.)"
+          name="waist_cm"
+          value={form.waist_cm}
+          onChange={set('waist_cm')}
+          step={0.5}
+        />
+        <NumberField
+          label="Tour de cou (cm, opt.)"
+          name="neck_cm"
+          value={form.neck_cm}
+          onChange={set('neck_cm')}
+          step={0.5}
+        />
         {form.biological_sex === 'female' ? (
-          <NumberField label="Tour de hanches (cm)" name="hip_cm" value={form.hip_cm} onChange={set('hip_cm')} step={0.5} />
+          <NumberField
+            label="Tour de hanches (cm)"
+            name="hip_cm"
+            value={form.hip_cm}
+            onChange={set('hip_cm')}
+            step={0.5}
+          />
         ) : null}
         <div className="col-span-2">
           <button type="submit" className="bg-accent text-bg rounded-md px-lg py-sm font-semibold">
@@ -57,7 +96,11 @@ export default function BodyCompositionCalculator() {
           </button>
         </div>
       </form>
-      {error ? <ResultCard title="Erreur"><p className="text-danger">{error}</p></ResultCard> : null}
+      {error ? (
+        <ResultCard title="Erreur">
+          <p className="text-danger">{error}</p>
+        </ResultCard>
+      ) : null}
       {result ? (
         <ResultCard
           title="Résultat"

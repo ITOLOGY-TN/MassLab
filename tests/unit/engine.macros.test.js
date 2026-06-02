@@ -83,7 +83,9 @@ describe('engine.macros', () => {
   it('falls back to weight × (1 − default_body_fat_pct[morphotype]) for LBM when omitted', () => {
     const out = macros({ ...baseProfile, constants: DEFAULTS });
     const expectedLbm = 58 * (1 - DEFAULTS.default_body_fat_pct.ectomorph);
-    expect(out.protein_g).toBeGreaterThanOrEqual(Math.round(expectedLbm * DEFAULTS.protein_g_per_kg_lbm));
+    expect(out.protein_g).toBeGreaterThanOrEqual(
+      Math.round(expectedLbm * DEFAULTS.protein_g_per_kg_lbm),
+    );
   });
 
   it('fat covers at least 25 % of total calories', () => {
@@ -95,8 +97,18 @@ describe('engine.macros', () => {
     // The hard 25 % fat floor prevents ectomorph fat from dropping below floor;
     // the morphotype carb differentiation comes from the endomorph fat skew up,
     // which reduces carbs. Mesomorph and ectomorph share the floor.
-    const endo = macros({ ...baseProfile, morphotype: 'endomorph', lean_body_mass_kg: 50, constants: DEFAULTS });
-    const meso = macros({ ...baseProfile, morphotype: 'mesomorph', lean_body_mass_kg: 50, constants: DEFAULTS });
+    const endo = macros({
+      ...baseProfile,
+      morphotype: 'endomorph',
+      lean_body_mass_kg: 50,
+      constants: DEFAULTS,
+    });
+    const meso = macros({
+      ...baseProfile,
+      morphotype: 'mesomorph',
+      lean_body_mass_kg: 50,
+      constants: DEFAULTS,
+    });
     expect(endo.carbs_g).toBeLessThan(meso.carbs_g);
   });
 
@@ -107,8 +119,18 @@ describe('engine.macros', () => {
   });
 
   it('endomorph fat is skewed higher than mesomorph at fixed LBM and kcal', () => {
-    const endo = macros({ ...baseProfile, morphotype: 'endomorph', lean_body_mass_kg: 50, constants: DEFAULTS });
-    const meso = macros({ ...baseProfile, morphotype: 'mesomorph', lean_body_mass_kg: 50, constants: DEFAULTS });
+    const endo = macros({
+      ...baseProfile,
+      morphotype: 'endomorph',
+      lean_body_mass_kg: 50,
+      constants: DEFAULTS,
+    });
+    const meso = macros({
+      ...baseProfile,
+      morphotype: 'mesomorph',
+      lean_body_mass_kg: 50,
+      constants: DEFAULTS,
+    });
     expect(endo.fat_g).toBeGreaterThan(meso.fat_g);
   });
 

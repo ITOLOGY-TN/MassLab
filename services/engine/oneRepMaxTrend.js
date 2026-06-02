@@ -24,10 +24,11 @@ export function oneRepMaxTrend({ records = [], now = new Date(), constants = DEF
 
   if (!baseline) return { delta_pct: null, on_pace: null };
 
-  const delta_pct = Math.round(
-    ((latest.primary_estimate_kg - baseline.primary_estimate_kg) / baseline.primary_estimate_kg) *
-      1000,
-  ) / 10;
+  const delta_pct =
+    Math.round(
+      ((latest.primary_estimate_kg - baseline.primary_estimate_kg) / baseline.primary_estimate_kg) *
+        1000,
+    ) / 10;
 
   const on_pace = delta_pct >= constants.on_pace_pct_per_month;
   return { delta_pct, on_pace };

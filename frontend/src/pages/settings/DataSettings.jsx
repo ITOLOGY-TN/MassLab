@@ -62,7 +62,11 @@ export default function DataSettings() {
     setStatus(null);
     try {
       const blob = await apiGetBlob('/api/v1/data/export/sessions.csv', 'text/csv');
-      downloadBlob(blob, `masslab-sessions-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+      downloadBlob(
+        blob,
+        `masslab-sessions-${new Date().toISOString().slice(0, 10)}.csv`,
+        'text/csv',
+      );
       setStatus('Sessions CSV téléchargées.');
     } catch (err) {
       setError(err.message);
@@ -173,13 +177,16 @@ export default function DataSettings() {
       <section className="grid gap-sm">
         <h3 className="text-xl font-semibold">Importer</h3>
         <p className="text-sm text-muted">
-          Restaurez une sauvegarde JSON. <strong>Attention :</strong> remplace toutes vos données par celles du fichier.
+          Restaurez une sauvegarde JSON. <strong>Attention :</strong> remplace toutes vos données
+          par celles du fichier.
         </p>
         <input type="file" accept="application/json" onChange={onPickImportFile} />
         {importPreview ? (
           <div className="bg-bg border border-muted/30 rounded-md p-md">
             <p className="font-semibold">Aperçu</p>
-            <p className="text-sm text-muted">Schéma v{importPreview.schema_version} · {importPreview.exported_at}</p>
+            <p className="text-sm text-muted">
+              Schéma v{importPreview.schema_version} · {importPreview.exported_at}
+            </p>
             <ul className="text-sm mt-sm grid grid-cols-2">
               {Object.entries(importPreview.counts).map(([k, v]) => (
                 <li key={k}>

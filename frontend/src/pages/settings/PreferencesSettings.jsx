@@ -129,10 +129,30 @@ export default function PreferencesSettings() {
           {hasOverride ? <span className="text-xs text-accent">(custom)</span> : null}
         </h3>
         <div className="grid grid-cols-2 gap-md">
-          <Stat label="Calories" value={targets.daily_kcal} unit="kcal" source={targets.source.daily_kcal} />
-          <Stat label="Protéines" value={targets.daily_protein_g} unit="g" source={targets.source.daily_protein_g} />
-          <Stat label="Glucides" value={targets.daily_carbs_g} unit="g" source={targets.source.daily_carbs_g} />
-          <Stat label="Lipides" value={targets.daily_fat_g} unit="g" source={targets.source.daily_fat_g} />
+          <Stat
+            label="Calories"
+            value={targets.daily_kcal}
+            unit="kcal"
+            source={targets.source.daily_kcal}
+          />
+          <Stat
+            label="Protéines"
+            value={targets.daily_protein_g}
+            unit="g"
+            source={targets.source.daily_protein_g}
+          />
+          <Stat
+            label="Glucides"
+            value={targets.daily_carbs_g}
+            unit="g"
+            source={targets.source.daily_carbs_g}
+          />
+          <Stat
+            label="Lipides"
+            value={targets.daily_fat_g}
+            unit="g"
+            source={targets.source.daily_fat_g}
+          />
         </div>
 
         <h4 className="text-md font-semibold mt-md">Définir un objectif personnalisé</h4>

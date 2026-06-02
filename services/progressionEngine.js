@@ -24,10 +24,6 @@ function isoWeekStart(d, weeksAgo = 0) {
   return date.getTime();
 }
 
-function setsForSession(sets, sessionId) {
-  return sets.filter((s) => s.session_id === sessionId);
-}
-
 function evaluateExerciseAddLoad(exercise, sessions, sets, weeklyPlanSlot, constants) {
   const window = constants.double_progression_window_sessions;
   const exSessions = sessions
@@ -41,9 +37,7 @@ function evaluateExerciseAddLoad(exercise, sessions, sets, weeklyPlanSlot, const
   if (!targetSlot) return null;
 
   const everyTopOfRange = candidates.every((session) => {
-    const exSets = sets.filter(
-      (x) => x.session_id === session.id && x.exercise_id === exercise.id,
-    );
+    const exSets = sets.filter((x) => x.session_id === session.id && x.exercise_id === exercise.id);
     if (exSets.length < targetSlot.target_sets) return false;
     return exSets.every((set) => set.reps >= targetSlot.target_reps_high);
   });

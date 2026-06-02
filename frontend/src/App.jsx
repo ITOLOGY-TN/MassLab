@@ -21,10 +21,18 @@ function Shell() {
   return (
     <div className="min-h-full">
       <nav className="border-b border-muted/20 px-lg py-md flex gap-lg text-sm">
-        <Link to="/" className="hover:text-accent">Accueil</Link>
-        <Link to="/nutrition" className="hover:text-accent">Nutrition</Link>
-        <Link to="/calculators" className="hover:text-accent">Calculateurs</Link>
-        <Link to="/settings" className="hover:text-accent">Paramètres</Link>
+        <Link to="/" className="hover:text-accent">
+          Accueil
+        </Link>
+        <Link to="/nutrition" className="hover:text-accent">
+          Nutrition
+        </Link>
+        <Link to="/calculators" className="hover:text-accent">
+          Calculateurs
+        </Link>
+        <Link to="/settings" className="hover:text-accent">
+          Paramètres
+        </Link>
       </nav>
       <Outlet />
     </div>

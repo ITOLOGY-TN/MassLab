@@ -21,9 +21,13 @@ const activity_level = z.enum([
 const morphotype = z.enum(['ectomorph', 'mesomorph', 'endomorph']);
 const goal = z.enum(['bulk', 'cut', 'maintain']);
 const reps = z.number().int().min(r.reps.min).max(r.reps.max);
-const lift_weight_kg = z.number().min(1).max(r.weight_kg.max * 2); // bar can exceed bodyweight
+const lift_weight_kg = z
+  .number()
+  .min(1)
+  .max(r.weight_kg.max * 2); // bar can exceed bodyweight
 
-const measurement_optional = (range) => z.number().min(range.min).max(range.max).nullable().optional();
+const measurement_optional = (range) =>
+  z.number().min(range.min).max(range.max).nullable().optional();
 
 export const bmrSchema = z.object({
   weight_kg,
@@ -94,7 +98,10 @@ export const profilePatchSchema = z
     injuries: z.array(z.string()).optional(),
     display_name: z.string().min(1).max(100).optional(),
     target_weight_kg: z.number().min(r.weight_kg.min).max(r.weight_kg.max).optional(),
-    program_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    program_start_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   })
   .strict();
 
@@ -123,11 +130,7 @@ export function validate(schema, body) {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue.path.join('.') || '<root>';
-    throw new HttpError(
-      422,
-      'OUT_OF_RANGE',
-      `Invalid input for "${field}": ${issue.message}`,
-    );
+    throw new HttpError(422, 'OUT_OF_RANGE', `Invalid input for "${field}": ${issue.message}`);
   }
   return parsed.data;
 }

@@ -1,4 +1,13 @@
-export default function NumberField({ label, name, value, onChange, min, max, step = 1, required }) {
+export default function NumberField({
+  label,
+  name,
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+  required,
+}) {
   return (
     <label className="block">
       <span className="block text-sm text-muted mb-xs">{label}</span>

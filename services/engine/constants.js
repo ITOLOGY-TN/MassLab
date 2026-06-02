@@ -27,7 +27,7 @@ export const DEFAULTS = Object.freeze({
   default_body_fat_pct: Object.freeze({
     ectomorph: 0.12,
     mesomorph: 0.15,
-    endomorph: 0.20,
+    endomorph: 0.2,
   }),
 
   // Morphotype carb skew applied to the macros calculator (FR-005).

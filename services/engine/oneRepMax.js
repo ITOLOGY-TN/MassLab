@@ -30,12 +30,14 @@ export function oneRepMax({ weight_kg, reps, constants = DEFAULTS }) {
 
   const reduced_confidence = reps > constants.one_rep_max_reduced_confidence_reps;
 
-  const percentage_table = constants.percentage_table_default.map(({ pct, reps_low, reps_high }) => ({
-    pct,
-    load_kg: round1((pct / 100) * primary_estimate_kg),
-    reps_low,
-    reps_high,
-  }));
+  const percentage_table = constants.percentage_table_default.map(
+    ({ pct, reps_low, reps_high }) => ({
+      pct,
+      load_kg: round1((pct / 100) * primary_estimate_kg),
+      reps_low,
+      reps_high,
+    }),
+  );
 
   return {
     primary_estimate_kg,

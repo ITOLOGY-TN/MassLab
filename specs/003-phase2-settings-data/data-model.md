@@ -45,6 +45,7 @@ create policy muscle_groups_modify_own on public.muscle_groups
 ```
 
 **Lifecycle**:
+
 - **Create** (POST): inserts a new row with `is_active = true`. `slug` is derived server-side from `name` (lower-kebab, deduplicated within `athlete_id`).
 - **Rename** (PATCH name): updates `name` (and optionally `slug` if the athlete asks); `id` is stable so every reference (slots, historical session attribution) stays correct.
 - **Recolor** (PATCH display_color): cosmetic only.
@@ -166,11 +167,11 @@ Phase 1 introduced `engine_overrides JSONB DEFAULT '{}'::jsonb` on `app_config`.
 ```jsonc
 {
   "nutrition": {
-    "daily_kcal":      3500,            // optional
-    "daily_protein_g": 200,             // optional, takes precedence over auto-derived
-    "daily_carbs_g":   430,             // optional
-    "daily_fat_g":     90               // optional
-  }
+    "daily_kcal": 3500, // optional
+    "daily_protein_g": 200, // optional, takes precedence over auto-derived
+    "daily_carbs_g": 430, // optional
+    "daily_fat_g": 90, // optional
+  },
 }
 ```
 
@@ -182,7 +183,7 @@ Phase 1 introduced `engine_overrides JSONB DEFAULT '{}'::jsonb` on `app_config`.
    - If absent, the value is derived from the rules in PLAN.md §1.3 (protein floor 2.2 g/kg LBM, fat floor 25 % of calories, carbs fill the rest), morphotype-adjusted as today.
 3. Clearing a key (PUT body with `null` for that field) deletes the key from the JSONB; full clear of all four returns the resolver to engine-derived values everywhere.
 
-**Audit invariant**: every PUT or DELETE of any of these four values writes exactly one row to `calculation_results` per FR-003a — engine version + the resolved-constants snapshot *after* applying the change + `reason: 'override_set' | 'override_cleared'`. The Phase 1 audit writer is reused unchanged.
+**Audit invariant**: every PUT or DELETE of any of these four values writes exactly one row to `calculation_results` per FR-003a — engine version + the resolved-constants snapshot _after_ applying the change + `reason: 'override_set' | 'override_cleared'`. The Phase 1 audit writer is reused unchanged.
 
 ---
 

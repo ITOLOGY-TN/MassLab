@@ -51,13 +51,7 @@ const SPLIT_5_DAY = [
     day_of_week: 4,
     muscle_group: 'shoulders_traps',
     display_color: '#9b8cff',
-    exercise_slugs: [
-      'overhead-press',
-      'lateral-raise',
-      'rear-delt-fly',
-      'face-pull',
-      'shrug',
-    ],
+    exercise_slugs: ['overhead-press', 'lateral-raise', 'rear-delt-fly', 'face-pull', 'shrug'],
   },
   {
     day_of_week: 5,

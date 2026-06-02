@@ -59,38 +59,51 @@ const PATHS = [
 ];
 
 describe('US2 — every domain row is athlete-scoped', () => {
-  it.each(PATHS)('%s returns only the second athlete\'s rows (none from seeded athlete)', async (path) => {
-    if (!live) return;
-    // Build an app whose auth middleware resolves to the second athlete via a
-    // stub DAO — this exercises the controller/DAO chain with a different
-    // req.athleteId than the seeded one.
-    const stubAthletes = {
-      ...athletesDao(supabase),
-      findBySeed: async () => ({ id: secondAthleteId }),
-    };
-    const app = buildApp({
-      config,
-      supabase,
-      daos: {
-        athletes: stubAthletes,
-        exercises: (await import('../../services/dataAccess/exercises.dao.js')).exercisesDao(supabase),
-        weeklyPlan: (await import('../../services/dataAccess/weeklyPlan.dao.js')).weeklyPlanDao(supabase),
-        trainingPhases: (await import('../../services/dataAccess/trainingPhases.dao.js')).trainingPhasesDao(supabase),
-        nutrition: (await import('../../services/dataAccess/nutrition.dao.js')).nutritionDao(supabase),
-        supplements: (await import('../../services/dataAccess/supplements.dao.js')).supplementsDao(supabase),
-        foods: (await import('../../services/dataAccess/foods.dao.js')).foodsDao(supabase),
-        quotes: (await import('../../services/dataAccess/quotes.dao.js')).quotesDao(supabase),
-      },
-    });
-    const res = await request(app).get(path);
-    expect(res.status).toBeLessThan(500);
-    if (Array.isArray(res.body.data)) {
-      // No row should reference any other athlete
-      for (const row of res.body.data) {
-        if (row.athlete_id !== undefined) {
-          expect(row.athlete_id).toBe(secondAthleteId);
+  it.each(PATHS)(
+    "%s returns only the second athlete's rows (none from seeded athlete)",
+    async (path) => {
+      if (!live) return;
+      // Build an app whose auth middleware resolves to the second athlete via a
+      // stub DAO — this exercises the controller/DAO chain with a different
+      // req.athleteId than the seeded one.
+      const stubAthletes = {
+        ...athletesDao(supabase),
+        findBySeed: async () => ({ id: secondAthleteId }),
+      };
+      const app = buildApp({
+        config,
+        supabase,
+        daos: {
+          athletes: stubAthletes,
+          exercises: (await import('../../services/dataAccess/exercises.dao.js')).exercisesDao(
+            supabase,
+          ),
+          weeklyPlan: (await import('../../services/dataAccess/weeklyPlan.dao.js')).weeklyPlanDao(
+            supabase,
+          ),
+          trainingPhases: (
+            await import('../../services/dataAccess/trainingPhases.dao.js')
+          ).trainingPhasesDao(supabase),
+          nutrition: (await import('../../services/dataAccess/nutrition.dao.js')).nutritionDao(
+            supabase,
+          ),
+          supplements: (
+            await import('../../services/dataAccess/supplements.dao.js')
+          ).supplementsDao(supabase),
+          foods: (await import('../../services/dataAccess/foods.dao.js')).foodsDao(supabase),
+          quotes: (await import('../../services/dataAccess/quotes.dao.js')).quotesDao(supabase),
+        },
+      });
+      const res = await request(app).get(path);
+      expect(res.status).toBeLessThan(500);
+      if (Array.isArray(res.body.data)) {
+        // No row should reference any other athlete
+        for (const row of res.body.data) {
+          if (row.athlete_id !== undefined) {
+            expect(row.athlete_id).toBe(secondAthleteId);
+          }
         }
       }
-    }
-  });
+    },
+  );
 });

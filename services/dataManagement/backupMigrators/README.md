@@ -8,6 +8,7 @@ Phase 2 ships the v1 envelope; no older versions exist yet, so the manifest
 is empty. The first migrator lands the next time the envelope shape changes.
 
 Convention:
+
 - Pure: no I/O, no DAO imports.
 - One step at a time: do not skip versions.
 - Tests live alongside the migrator under `tests/unit/backupMigrators.<name>.test.js`.

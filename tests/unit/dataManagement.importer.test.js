@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { importBackup, ImportError } from '../../services/dataManagement/importer.js';
+import { importBackup } from '../../services/dataManagement/importer.js';
 import { BACKUP_SCHEMA_V1 } from '../../services/dataManagement/backupSchema.js';
 import { migrateChain } from '../../services/dataManagement/backupMigrators/index.js';
 
@@ -45,7 +45,9 @@ describe('dataManagement.importer', () => {
 
   it('rejects ownership mismatch with IMPORT_OWNERSHIP_MISMATCH', async () => {
     const dao = fakeDao();
-    const buf = Buffer.from(JSON.stringify(envelope({ athleteId: '11111111-1111-1111-1111-111111111111' })));
+    const buf = Buffer.from(
+      JSON.stringify(envelope({ athleteId: '11111111-1111-1111-1111-111111111111' })),
+    );
     await expect(
       importBackup(buf, {
         athleteId: ATHLETE,

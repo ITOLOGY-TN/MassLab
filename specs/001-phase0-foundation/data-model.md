@@ -25,25 +25,25 @@ This document is the source of truth for the database schema produced at the end
 
 The owner of every other domain row.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `uuid` | NOT NULL | PK; default `gen_random_uuid()` |
-| `auth_user_id` | `uuid` | NULL | UNIQUE; FK → `auth.users(id)` ON DELETE SET NULL. NULL while seeded single-user mode is in use. |
-| `email` | `text` | NOT NULL | UNIQUE; CITEXT-style normalised at write time |
-| `display_name` | `text` | NULL | Optional; shown in UI when present |
-| `age` | `int` | NOT NULL | Years |
-| `biological_sex` | `text` | NOT NULL | `male` / `female` (CHECK) |
-| `height_cm` | `numeric(5,1)` | NOT NULL | |
-| `starting_weight_kg` | `numeric(5,2)` | NOT NULL | |
-| `target_weight_kg` | `numeric(5,2)` | NOT NULL | |
-| `morphotype` | `text` | NOT NULL | `ectomorph` / `mesomorph` / `endomorph` (CHECK) |
-| `goal` | `text` | NOT NULL | `bulk` / `cut` / `maintain` (CHECK) |
-| `weekly_session_count` | `int` | NOT NULL | 1..7 (CHECK) |
-| `available_equipment` | `text[]` | NOT NULL | Array of slugs |
-| `injuries` | `text[]` | NOT NULL | Array of strings; empty array allowed |
-| `program_start_date` | `date` | NOT NULL | |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
-| `updated_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column                 | Type           | Null     | Notes                                                                                           |
+| ---------------------- | -------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `id`                   | `uuid`         | NOT NULL | PK; default `gen_random_uuid()`                                                                 |
+| `auth_user_id`         | `uuid`         | NULL     | UNIQUE; FK → `auth.users(id)` ON DELETE SET NULL. NULL while seeded single-user mode is in use. |
+| `email`                | `text`         | NOT NULL | UNIQUE; CITEXT-style normalised at write time                                                   |
+| `display_name`         | `text`         | NULL     | Optional; shown in UI when present                                                              |
+| `age`                  | `int`          | NOT NULL | Years                                                                                           |
+| `biological_sex`       | `text`         | NOT NULL | `male` / `female` (CHECK)                                                                       |
+| `height_cm`            | `numeric(5,1)` | NOT NULL |                                                                                                 |
+| `starting_weight_kg`   | `numeric(5,2)` | NOT NULL |                                                                                                 |
+| `target_weight_kg`     | `numeric(5,2)` | NOT NULL |                                                                                                 |
+| `morphotype`           | `text`         | NOT NULL | `ectomorph` / `mesomorph` / `endomorph` (CHECK)                                                 |
+| `goal`                 | `text`         | NOT NULL | `bulk` / `cut` / `maintain` (CHECK)                                                             |
+| `weekly_session_count` | `int`          | NOT NULL | 1..7 (CHECK)                                                                                    |
+| `available_equipment`  | `text[]`       | NOT NULL | Array of slugs                                                                                  |
+| `injuries`             | `text[]`       | NOT NULL | Array of strings; empty array allowed                                                           |
+| `program_start_date`   | `date`         | NOT NULL |                                                                                                 |
+| `created_at`           | `timestamptz`  | NOT NULL | default `now()`                                                                                 |
+| `updated_at`           | `timestamptz`  | NOT NULL | default `now()`                                                                                 |
 
 **RLS**: `athletes_self` — `auth_user_id = auth.uid()` for SELECT and ALL.
 **Indexes**: UNIQUE on `email`; UNIQUE on `auth_user_id` (where not null).
@@ -52,19 +52,19 @@ The owner of every other domain row.
 
 Reusable exercise library; locale-tagged.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slug` | `text` | NOT NULL | natural key for seed upserts |
-| `locale` | `text` | NOT NULL | e.g. `fr-FR` (FR-020) |
-| `name` | `text` | NOT NULL | |
-| `targeted_muscles` | `text[]` | NOT NULL | |
-| `instructions` | `text` | NOT NULL | |
-| `technique_points` | `text[]` | NOT NULL | bullet list |
-| `media_image_url` | `text` | NULL | optional |
-| `media_video_url` | `text` | NULL | YouTube or local |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column             | Type              | Null     | Notes                                 |
+| ------------------ | ----------------- | -------- | ------------------------------------- |
+| `id`               | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`       | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug`             | `text`            | NOT NULL | natural key for seed upserts          |
+| `locale`           | `text`            | NOT NULL | e.g. `fr-FR` (FR-020)                 |
+| `name`             | `text`            | NOT NULL |                                       |
+| `targeted_muscles` | `text[]`          | NOT NULL |                                       |
+| `instructions`     | `text`            | NOT NULL |                                       |
+| `technique_points` | `text[]`          | NOT NULL | bullet list                           |
+| `media_image_url`  | `text`            | NULL     | optional                              |
+| `media_video_url`  | `text`            | NULL     | YouTube or local                      |
+| `created_at`       | `timestamptz`     | NOT NULL | default `now()`                       |
 
 **RLS**: standard per-athlete pair (research.md §5).
 **Indexes**: UNIQUE on `(athlete_id, slug, locale)`; INDEX on `(athlete_id)`.
@@ -73,15 +73,15 @@ Reusable exercise library; locale-tagged.
 
 Per-athlete weekly schedule. One row per active training day (US-1 expects 5 rows for the seeded athlete).
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `day_of_week` | `int` | NOT NULL | 1..7 (Mon..Sun); CHECK |
-| `muscle_group` | `text` | NOT NULL | e.g. `chest_triceps` |
-| `display_color` | `text` | NOT NULL | hex; for UI badge |
-| `display_order` | `int` | NOT NULL | within the week |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column          | Type              | Null     | Notes                                 |
+| --------------- | ----------------- | -------- | ------------------------------------- |
+| `id`            | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`    | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `day_of_week`   | `int`             | NOT NULL | 1..7 (Mon..Sun); CHECK                |
+| `muscle_group`  | `text`            | NOT NULL | e.g. `chest_triceps`                  |
+| `display_color` | `text`            | NOT NULL | hex; for UI badge                     |
+| `display_order` | `int`             | NOT NULL | within the week                       |
+| `created_at`    | `timestamptz`     | NOT NULL | default `now()`                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, day_of_week)`.
@@ -90,16 +90,16 @@ Per-athlete weekly schedule. One row per active training day (US-1 expects 5 row
 
 Exercises assigned to a plan slot, ordered.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slot_id` | `bigint` | NOT NULL | FK → `weekly_plan_slots(id)` ON DELETE CASCADE |
-| `exercise_id` | `bigint` | NOT NULL | FK → `exercises(id)` |
-| `position` | `int` | NOT NULL | order within slot |
-| `target_sets` | `int` | NOT NULL | |
-| `target_reps_low` | `int` | NOT NULL | |
-| `target_reps_high` | `int` | NOT NULL | |
+| Column             | Type              | Null     | Notes                                          |
+| ------------------ | ----------------- | -------- | ---------------------------------------------- |
+| `id`               | `bigint` identity | NOT NULL | PK                                             |
+| `athlete_id`       | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE          |
+| `slot_id`          | `bigint`          | NOT NULL | FK → `weekly_plan_slots(id)` ON DELETE CASCADE |
+| `exercise_id`      | `bigint`          | NOT NULL | FK → `exercises(id)`                           |
+| `position`         | `int`             | NOT NULL | order within slot                              |
+| `target_sets`      | `int`             | NOT NULL |                                                |
+| `target_reps_low`  | `int`             | NOT NULL |                                                |
+| `target_reps_high` | `int`             | NOT NULL |                                                |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(slot_id, position)`; INDEX on `(athlete_id)`.
@@ -108,19 +108,19 @@ Exercises assigned to a plan slot, ordered.
 
 Multi-week phases with volume/intensity parameters used by the program generator.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slug` | `text` | NOT NULL | seed key |
-| `locale` | `text` | NOT NULL | `fr-FR` |
-| `name` | `text` | NOT NULL | |
-| `description` | `text` | NOT NULL | |
-| `weeks` | `int` | NOT NULL | duration |
-| `rest_seconds` | `int` | NOT NULL | default rest between sets |
-| `intensity_pct_min` | `int` | NOT NULL | of 1RM |
-| `intensity_pct_max` | `int` | NOT NULL | of 1RM |
-| `display_order` | `int` | NOT NULL | |
+| Column              | Type              | Null     | Notes                                 |
+| ------------------- | ----------------- | -------- | ------------------------------------- |
+| `id`                | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`        | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug`              | `text`            | NOT NULL | seed key                              |
+| `locale`            | `text`            | NOT NULL | `fr-FR`                               |
+| `name`              | `text`            | NOT NULL |                                       |
+| `description`       | `text`            | NOT NULL |                                       |
+| `weeks`             | `int`             | NOT NULL | duration                              |
+| `rest_seconds`      | `int`             | NOT NULL | default rest between sets             |
+| `intensity_pct_min` | `int`             | NOT NULL | of 1RM                                |
+| `intensity_pct_max` | `int`             | NOT NULL | of 1RM                                |
+| `display_order`     | `int`             | NOT NULL |                                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
@@ -129,16 +129,16 @@ Multi-week phases with volume/intensity parameters used by the program generator
 
 Per-athlete meal-slot template (5 meals for the seeded athlete).
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slot` | `text` | NOT NULL | e.g. `breakfast`, `lunch`, `pre_workout`, `dinner`, `evening_snack` |
-| `display_order` | `int` | NOT NULL | |
-| `target_kcal` | `int` | NOT NULL | |
-| `target_protein_g` | `int` | NOT NULL | |
-| `target_carbs_g` | `int` | NOT NULL | |
-| `target_fat_g` | `int` | NOT NULL | |
+| Column             | Type              | Null     | Notes                                                               |
+| ------------------ | ----------------- | -------- | ------------------------------------------------------------------- |
+| `id`               | `bigint` identity | NOT NULL | PK                                                                  |
+| `athlete_id`       | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                               |
+| `slot`             | `text`            | NOT NULL | e.g. `breakfast`, `lunch`, `pre_workout`, `dinner`, `evening_snack` |
+| `display_order`    | `int`             | NOT NULL |                                                                     |
+| `target_kcal`      | `int`             | NOT NULL |                                                                     |
+| `target_protein_g` | `int`             | NOT NULL |                                                                     |
+| `target_carbs_g`   | `int`             | NOT NULL |                                                                     |
+| `target_fat_g`     | `int`             | NOT NULL |                                                                     |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, slot)`.
@@ -147,17 +147,17 @@ Per-athlete meal-slot template (5 meals for the seeded athlete).
 
 Supplement stack with adherence later attached separately.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slug` | `text` | NOT NULL | |
-| `locale` | `text` | NOT NULL | `fr-FR` |
-| `name` | `text` | NOT NULL | |
-| `dosage` | `text` | NOT NULL | e.g. `5 g` |
-| `recommended_time` | `text` | NOT NULL | e.g. `morning`, `pre_workout` |
-| `notes` | `text` | NULL | |
-| `display_order` | `int` | NOT NULL | |
+| Column             | Type              | Null     | Notes                                 |
+| ------------------ | ----------------- | -------- | ------------------------------------- |
+| `id`               | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`       | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug`             | `text`            | NOT NULL |                                       |
+| `locale`           | `text`            | NOT NULL | `fr-FR`                               |
+| `name`             | `text`            | NOT NULL |                                       |
+| `dosage`           | `text`            | NOT NULL | e.g. `5 g`                            |
+| `recommended_time` | `text`            | NOT NULL | e.g. `morning`, `pre_workout`         |
+| `notes`            | `text`            | NULL     |                                       |
+| `display_order`    | `int`             | NOT NULL |                                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
@@ -166,18 +166,18 @@ Supplement stack with adherence later attached separately.
 
 Food database; per-100g macros.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slug` | `text` | NOT NULL | |
-| `locale` | `text` | NOT NULL | `fr-FR` |
-| `name` | `text` | NOT NULL | |
-| `kcal_per_100g` | `numeric(6,2)` | NOT NULL | |
-| `protein_per_100g` | `numeric(5,2)` | NOT NULL | |
-| `carbs_per_100g` | `numeric(5,2)` | NOT NULL | |
-| `fat_per_100g` | `numeric(5,2)` | NOT NULL | |
-| `category` | `text` | NOT NULL | e.g. `protein`, `carb`, `fat`, `mixed` |
+| Column             | Type              | Null     | Notes                                  |
+| ------------------ | ----------------- | -------- | -------------------------------------- |
+| `id`               | `bigint` identity | NOT NULL | PK                                     |
+| `athlete_id`       | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE  |
+| `slug`             | `text`            | NOT NULL |                                        |
+| `locale`           | `text`            | NOT NULL | `fr-FR`                                |
+| `name`             | `text`            | NOT NULL |                                        |
+| `kcal_per_100g`    | `numeric(6,2)`    | NOT NULL |                                        |
+| `protein_per_100g` | `numeric(5,2)`    | NOT NULL |                                        |
+| `carbs_per_100g`   | `numeric(5,2)`    | NOT NULL |                                        |
+| `fat_per_100g`     | `numeric(5,2)`    | NOT NULL |                                        |
+| `category`         | `text`            | NOT NULL | e.g. `protein`, `carb`, `fat`, `mixed` |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, slug, locale)`; INDEX on `(athlete_id, category)`.
@@ -186,14 +186,14 @@ Food database; per-100g macros.
 
 Motivational quotes; rotated daily by the dashboard later.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `slug` | `text` | NOT NULL | |
-| `locale` | `text` | NOT NULL | `fr-FR` |
-| `text` | `text` | NOT NULL | |
-| `author` | `text` | NULL | |
+| Column       | Type              | Null     | Notes                                 |
+| ------------ | ----------------- | -------- | ------------------------------------- |
+| `id`         | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id` | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `slug`       | `text`            | NOT NULL |                                       |
+| `locale`     | `text`            | NOT NULL | `fr-FR`                               |
+| `text`       | `text`            | NOT NULL |                                       |
+| `author`     | `text`            | NULL     |                                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, slug, locale)`.
@@ -202,16 +202,16 @@ Motivational quotes; rotated daily by the dashboard later.
 
 One row per logged training session. Empty in Phase 0 (the journal screen ships in Phase 4) — but the table exists so future migrations don't have to add `athlete_id`.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `started_at` | `timestamptz` | NOT NULL | |
-| `ended_at` | `timestamptz` | NULL | |
-| `total_volume_kg` | `numeric(10,2)` | NULL | computed at session close |
-| `energy_rating` | `int` | NULL | 1..5 |
-| `note` | `text` | NULL | |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column            | Type              | Null     | Notes                                 |
+| ----------------- | ----------------- | -------- | ------------------------------------- |
+| `id`              | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`      | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `started_at`      | `timestamptz`     | NOT NULL |                                       |
+| `ended_at`        | `timestamptz`     | NULL     |                                       |
+| `total_volume_kg` | `numeric(10,2)`   | NULL     | computed at session close             |
+| `energy_rating`   | `int`             | NULL     | 1..5                                  |
+| `note`            | `text`            | NULL     |                                       |
+| `created_at`      | `timestamptz`     | NOT NULL | default `now()`                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: INDEX on `(athlete_id, started_at DESC)`.
@@ -220,17 +220,17 @@ One row per logged training session. Empty in Phase 0 (the journal screen ships 
 
 Per-set rows attached to a journal entry. Empty in Phase 0.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `session_id` | `bigint` | NOT NULL | FK → `session_journal_entries(id)` ON DELETE CASCADE |
-| `exercise_id` | `bigint` | NOT NULL | FK → `exercises(id)` |
-| `set_number` | `int` | NOT NULL | |
-| `weight_kg` | `numeric(6,2)` | NOT NULL | |
-| `reps` | `int` | NOT NULL | |
-| `rpe` | `int` | NULL | 1..10 |
-| `completed` | `boolean` | NOT NULL | default `false` |
+| Column        | Type              | Null     | Notes                                                |
+| ------------- | ----------------- | -------- | ---------------------------------------------------- |
+| `id`          | `bigint` identity | NOT NULL | PK                                                   |
+| `athlete_id`  | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                |
+| `session_id`  | `bigint`          | NOT NULL | FK → `session_journal_entries(id)` ON DELETE CASCADE |
+| `exercise_id` | `bigint`          | NOT NULL | FK → `exercises(id)`                                 |
+| `set_number`  | `int`             | NOT NULL |                                                      |
+| `weight_kg`   | `numeric(6,2)`    | NOT NULL |                                                      |
+| `reps`        | `int`             | NOT NULL |                                                      |
+| `rpe`         | `int`             | NULL     | 1..10                                                |
+| `completed`   | `boolean`         | NOT NULL | default `false`                                      |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(session_id, set_number)`; INDEX on `(athlete_id, exercise_id)`.
@@ -239,18 +239,18 @@ Per-set rows attached to a journal entry. Empty in Phase 0.
 
 Plaintext numeric body data (FR-022). Empty in Phase 0.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `measured_on` | `date` | NOT NULL | |
-| `weight_kg` | `numeric(5,2)` | NULL | |
-| `arm_cm` | `numeric(5,2)` | NULL | |
-| `chest_cm` | `numeric(5,2)` | NULL | |
-| `thigh_cm` | `numeric(5,2)` | NULL | |
-| `shoulder_cm` | `numeric(5,2)` | NULL | |
-| `waist_cm` | `numeric(5,2)` | NULL | |
-| `note` | `text` | NULL | |
+| Column        | Type              | Null     | Notes                                 |
+| ------------- | ----------------- | -------- | ------------------------------------- |
+| `id`          | `bigint` identity | NOT NULL | PK                                    |
+| `athlete_id`  | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `measured_on` | `date`            | NOT NULL |                                       |
+| `weight_kg`   | `numeric(5,2)`    | NULL     |                                       |
+| `arm_cm`      | `numeric(5,2)`    | NULL     |                                       |
+| `chest_cm`    | `numeric(5,2)`    | NULL     |                                       |
+| `thigh_cm`    | `numeric(5,2)`    | NULL     |                                       |
+| `shoulder_cm` | `numeric(5,2)`    | NULL     |                                       |
+| `waist_cm`    | `numeric(5,2)`    | NULL     |                                       |
+| `note`        | `text`            | NULL     |                                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: UNIQUE on `(athlete_id, measured_on)`.
@@ -259,15 +259,15 @@ Plaintext numeric body data (FR-022). Empty in Phase 0.
 
 Photo metadata only; binary lives behind the `photo_storage` adapter (FR-021).
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `uuid` | NOT NULL | PK; default `gen_random_uuid()` |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `taken_on` | `date` | NOT NULL | |
-| `storage_key` | `text` | NOT NULL | opaque key returned by the adapter |
-| `weight_overlay_kg` | `numeric(5,2)` | NULL | snapshot at the time of the photo |
-| `note` | `text` | NULL | |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column              | Type           | Null     | Notes                                 |
+| ------------------- | -------------- | -------- | ------------------------------------- |
+| `id`                | `uuid`         | NOT NULL | PK; default `gen_random_uuid()`       |
+| `athlete_id`        | `uuid`         | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
+| `taken_on`          | `date`         | NOT NULL |                                       |
+| `storage_key`       | `text`         | NOT NULL | opaque key returned by the adapter    |
+| `weight_overlay_kg` | `numeric(5,2)` | NULL     | snapshot at the time of the photo     |
+| `note`              | `text`         | NULL     |                                       |
+| `created_at`        | `timestamptz`  | NOT NULL | default `now()`                       |
 
 **RLS**: standard per-athlete pair.
 **Indexes**: INDEX on `(athlete_id, taken_on DESC)`.
@@ -276,14 +276,14 @@ Photo metadata only; binary lives behind the `photo_storage` adapter (FR-021).
 
 Per-athlete preferences (theme, units, custom nutrition targets, etc.). Phase 0 seeds defaults; Phase 2 exposes editing.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `athlete_id` | `uuid` | NOT NULL | PK; FK → `athletes(id)` ON DELETE CASCADE |
-| `theme` | `text` | NOT NULL | `dark` / `light` |
-| `units` | `text` | NOT NULL | `kg` / `lbs` |
-| `rest_timer_sound` | `boolean` | NOT NULL | default `true` |
-| `daily_kcal_override` | `int` | NULL | overrides program target if set |
-| `updated_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column                | Type          | Null     | Notes                                     |
+| --------------------- | ------------- | -------- | ----------------------------------------- |
+| `athlete_id`          | `uuid`        | NOT NULL | PK; FK → `athletes(id)` ON DELETE CASCADE |
+| `theme`               | `text`        | NOT NULL | `dark` / `light`                          |
+| `units`               | `text`        | NOT NULL | `kg` / `lbs`                              |
+| `rest_timer_sound`    | `boolean`     | NOT NULL | default `true`                            |
+| `daily_kcal_override` | `int`         | NULL     | overrides program target if set           |
+| `updated_at`          | `timestamptz` | NOT NULL | default `now()`                           |
 
 **RLS**: `app_config_self` — same indirection through `athletes.auth_user_id`.
 

@@ -157,21 +157,24 @@ export default function ScheduleSettings() {
       </header>
 
       <p className="text-xs text-muted">
-        Glissez les jours pour réorganiser votre semaine. Choisissez « Repos » pour marquer un
-        jour sans entraînement.
+        Glissez les jours pour réorganiser votre semaine. Choisissez « Repos » pour marquer un jour
+        sans entraînement.
       </p>
 
       <SortableList
         items={rows}
         getId={(r) => rowId(r.idx)}
-        onReorder={(_ids, items) => handleReorder(_ids, items.map((r) => r.slot))}
+        onReorder={(_ids, items) =>
+          handleReorder(
+            _ids,
+            items.map((r) => r.slot),
+          )
+        }
       >
         {({ idx, slot }, handle) => {
           const value = slot?.muscle_group_id ?? REST;
           const usedElsewhere = new Set(
-            draft
-              .map((s, j) => (j !== idx ? s?.muscle_group_id : null))
-              .filter(Boolean),
+            draft.map((s, j) => (j !== idx ? s?.muscle_group_id : null)).filter(Boolean),
           );
           return (
             <li
@@ -204,7 +207,9 @@ export default function ScheduleSettings() {
                       disabled={usedElsewhere.has(g.id) && g.id !== slot?.muscle_group_id}
                     >
                       {g.name}
-                      {usedElsewhere.has(g.id) && g.id !== slot?.muscle_group_id ? ' (déjà utilisé)' : ''}
+                      {usedElsewhere.has(g.id) && g.id !== slot?.muscle_group_id
+                        ? ' (déjà utilisé)'
+                        : ''}
                     </option>
                   ))}
               </select>

@@ -17,9 +17,9 @@ describe('engine.tdee', () => {
   });
 
   it('throws on an unknown activity level', () => {
-    expect(() =>
-      tdee({ bmr_kcal: 2000, activity_level: 'olympian', constants: DEFAULTS }),
-    ).toThrow(/unknown activity_level/);
+    expect(() => tdee({ bmr_kcal: 2000, activity_level: 'olympian', constants: DEFAULTS })).toThrow(
+      /unknown activity_level/,
+    );
   });
 
   it('returns an integer', () => {

@@ -1,5 +1,5 @@
 ---
-description: "Task list for MassLab Phase 1 — Calculators Engine"
+description: 'Task list for MassLab Phase 1 — Calculators Engine'
 ---
 
 # Tasks: Phase 1 — Calculators Engine
@@ -30,10 +30,10 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 **Purpose**: Add the one new frontend dependency and scaffold the new directory layout. No backend dependencies are added.
 
-- [X] T001 Add `react-router-dom@^6` to `frontend/package.json` (`npm --prefix frontend install react-router-dom@^6`)
-- [X] T002 [P] Create `services/engine/` directory with a placeholder `services/engine/.gitkeep` so the engine boundary is visible from the first commit
-- [X] T003 [P] Create `frontend/src/components/` and `frontend/src/pages/calculators/` directories with `.gitkeep` placeholders
-- [X] T004 Run the existing Phase 0 test suite (`npm test`) and confirm the 53 backend + 1 frontend tests still pass before any Phase 1 changes land
+- [x] T001 Add `react-router-dom@^6` to `frontend/package.json` (`npm --prefix frontend install react-router-dom@^6`)
+- [x] T002 [P] Create `services/engine/` directory with a placeholder `services/engine/.gitkeep` so the engine boundary is visible from the first commit
+- [x] T003 [P] Create `frontend/src/components/` and `frontend/src/pages/calculators/` directories with `.gitkeep` placeholders
+- [x] T004 Run the existing Phase 0 test suite (`npm test`) and confirm the 53 backend + 1 frontend tests still pass before any Phase 1 changes land
 
 **Checkpoint**: Workspace ready; no behaviour change yet.
 
@@ -47,39 +47,39 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### Engine constants & resolver
 
-- [X] T005 Create `services/engine/constants.js` exporting `ENGINE_VERSION = '1.0.0'` and a frozen `DEFAULTS` object with every constant from data-model.md §"app_config — add engine_overrides" (bulk_surplus_kcal=400, cut_deficit_kcal=400, protein_g_per_kg_lbm=2.2, load_increment_upper_kg=2.5, load_increment_lower_kg=5, deload_volume_cut_pct=30, stagnation_window_weeks=3, double_progression_window_sessions=2, deload_rpe_threshold=9, regression_window_weeks=2, rpe_coverage_minimum_pct=60, activity_factors map {sedentary:1.2, lightly_active:1.375, moderately_active:1.55, very_active:1.725, extremely_active:1.9}, default_body_fat_pct map {ectomorph:0.12, mesomorph:0.15, endomorph:0.20} consumed by macros when LBM is not provided, percentage_table_default rep ranges per research.md §8)
-- [X] T006 [P] Write unit test `tests/unit/engine.resolveConstants.test.js`: empty override returns defaults exactly; partial override merges; unknown override keys are dropped; result is frozen
-- [X] T007 Implement `services/engine/resolveConstants.js` exporting `resolveConstants(athleteOverride)` that returns `Object.freeze({ ...DEFAULTS, ...sanitized })`; passes T006
+- [x] T005 Create `services/engine/constants.js` exporting `ENGINE_VERSION = '1.0.0'` and a frozen `DEFAULTS` object with every constant from data-model.md §"app_config — add engine_overrides" (bulk_surplus_kcal=400, cut_deficit_kcal=400, protein_g_per_kg_lbm=2.2, load_increment_upper_kg=2.5, load_increment_lower_kg=5, deload_volume_cut_pct=30, stagnation_window_weeks=3, double_progression_window_sessions=2, deload_rpe_threshold=9, regression_window_weeks=2, rpe_coverage_minimum_pct=60, activity_factors map {sedentary:1.2, lightly_active:1.375, moderately_active:1.55, very_active:1.725, extremely_active:1.9}, default_body_fat_pct map {ectomorph:0.12, mesomorph:0.15, endomorph:0.20} consumed by macros when LBM is not provided, percentage_table_default rep ranges per research.md §8)
+- [x] T006 [P] Write unit test `tests/unit/engine.resolveConstants.test.js`: empty override returns defaults exactly; partial override merges; unknown override keys are dropped; result is frozen
+- [x] T007 Implement `services/engine/resolveConstants.js` exporting `resolveConstants(athleteOverride)` that returns `Object.freeze({ ...DEFAULTS, ...sanitized })`; passes T006
 
 ### Migrations (each ships table + RLS in the same file)
 
-- [X] T008 [P] Migration `supabase/migrations/20260507000001_extend_athletes_activity_level.sql` — add `activity_level text not null default 'moderately_active'` with CHECK on the five-level enum per data-model.md §"athletes — add activity_level"
-- [X] T009 [P] Migration `supabase/migrations/20260507000002_init_generated_programs.sql` — table + indexes + the partial-unique `unique (athlete_id) where is_active = true` + RLS pair per data-model.md §1
-- [X] T010 [P] Migration `supabase/migrations/20260507000006_init_calculation_results.sql` — table + indexes (`(athlete_id, created_at desc)`, `(athlete_id, calculator, created_at desc)`) + RLS pair per data-model.md §5
-- [X] T011 [P] Migration `supabase/migrations/20260507000007_extend_app_config_engine_overrides.sql` — add `engine_overrides jsonb not null default '{}'::jsonb` per data-model.md §"app_config — add engine_overrides"
-- [X] T012 Apply foundational migrations against the linked cloud project: `supabase db push`; verify in Studio that `generated_programs`, `calculation_results`, `athletes.activity_level`, and `app_config.engine_overrides` are present with RLS enabled
+- [x] T008 [P] Migration `supabase/migrations/20260507000001_extend_athletes_activity_level.sql` — add `activity_level text not null default 'moderately_active'` with CHECK on the five-level enum per data-model.md §"athletes — add activity_level"
+- [x] T009 [P] Migration `supabase/migrations/20260507000002_init_generated_programs.sql` — table + indexes + the partial-unique `unique (athlete_id) where is_active = true` + RLS pair per data-model.md §1
+- [x] T010 [P] Migration `supabase/migrations/20260507000006_init_calculation_results.sql` — table + indexes (`(athlete_id, created_at desc)`, `(athlete_id, calculator, created_at desc)`) + RLS pair per data-model.md §5
+- [x] T011 [P] Migration `supabase/migrations/20260507000007_extend_app_config_engine_overrides.sql` — add `engine_overrides jsonb not null default '{}'::jsonb` per data-model.md §"app_config — add engine_overrides"
+- [x] T012 Apply foundational migrations against the linked cloud project: `supabase db push`; verify in Studio that `generated_programs`, `calculation_results`, `athletes.activity_level`, and `app_config.engine_overrides` are present with RLS enabled
 
 ### Foundational DAOs (only `services/dataAccess/*` imports `@supabase/supabase-js`)
 
-- [X] T013 [P] Extend `services/dataAccess/athletes.dao.js`: include `activity_level` in `findById`, `findBySeed`, `findByAuthUserId`, and `upsertProfile` payloads
-- [X] T014 [P] Create `services/dataAccess/appConfig.dao.js`: `getOverridesFor(athleteId)` returning `engine_overrides` JSONB (empty `{}` if no row), `setOverridesFor(athleteId, overrides)` (Phase 1 has no caller besides tests)
-- [X] T015 [P] Create `services/dataAccess/calculationResults.dao.js`: `insert(row)` (append-only), `listForAthlete({ athleteId, calculator?, limit })`
-- [X] T016 [P] Create `services/dataAccess/generatedPrograms.dao.js`: `findActiveForAthlete(athleteId)`, `listHistoryForAthlete(athleteId, { limit })`, `archiveAndInsert(athleteId, newPayload, engineMeta)` — wraps the soft-archive update + insert in a single transaction (use `rpc` or sequential calls per Phase 0 DAO style)
+- [x] T013 [P] Extend `services/dataAccess/athletes.dao.js`: include `activity_level` in `findById`, `findBySeed`, `findByAuthUserId`, and `upsertProfile` payloads
+- [x] T014 [P] Create `services/dataAccess/appConfig.dao.js`: `getOverridesFor(athleteId)` returning `engine_overrides` JSONB (empty `{}` if no row), `setOverridesFor(athleteId, overrides)` (Phase 1 has no caller besides tests)
+- [x] T015 [P] Create `services/dataAccess/calculationResults.dao.js`: `insert(row)` (append-only), `listForAthlete({ athleteId, calculator?, limit })`
+- [x] T016 [P] Create `services/dataAccess/generatedPrograms.dao.js`: `findActiveForAthlete(athleteId)`, `listHistoryForAthlete(athleteId, { limit })`, `archiveAndInsert(athleteId, newPayload, engineMeta)` — wraps the soft-archive update + insert in a single transaction (use `rpc` or sequential calls per Phase 0 DAO style)
 
 ### Audit-log writer + program generator extension
 
-- [X] T017 Create `services/engine/auditWriter.js` exporting `writeAudit({ daos, athleteId, calculator, inputs, outputs, resolvedConstants, engineVersion, producedRecord? })` that calls `calculationResults.dao.insert(...)`. Single helper used by every persisted-write code path
-- [X] T018 Extend `services/programGenerator.js`: read `activity_level` and merge it into the profile, call `resolveConstants(override)` from `appConfig.dao` (when caller provides a daos bag), include `engine_version` and `resolved_constants` in the returned object so DAOs can persist them. The pure function still takes a profile + constants; only the orchestration changes
+- [x] T017 Create `services/engine/auditWriter.js` exporting `writeAudit({ daos, athleteId, calculator, inputs, outputs, resolvedConstants, engineVersion, producedRecord? })` that calls `calculationResults.dao.insert(...)`. Single helper used by every persisted-write code path
+- [x] T018 Extend `services/programGenerator.js`: read `activity_level` and merge it into the profile, call `resolveConstants(override)` from `appConfig.dao` (when caller provides a daos bag), include `engine_version` and `resolved_constants` in the returned object so DAOs can persist them. The pure function still takes a profile + constants; only the orchestration changes
 
 ### Seed extension
 
-- [X] T019 Update `seed/athlete.seed.js` to add `activity_level: 'moderately_active'` (matches the new column default; explicit for clarity)
-- [X] T020 Update `seed/runSeed.js` so that after the existing catalogue + per-meal seeds, it computes the program via `programGenerator.generateProgram(profileWithConstants)` and calls `generatedPrograms.dao.archiveAndInsert(...)` to write the initial active program row, plus a matching `calculation_results` audit entry via `writeAudit` with `calculator: 'program_generate'`. The runner remains idempotent: re-running detects the existing active row, archives it, writes a new identical one (deterministic engine ⇒ same payload)
-- [X] T021 Run `npm run seed` and verify (via curl or Studio) that `generated_programs` has exactly one row with `is_active = true` for the seeded athlete
+- [x] T019 Update `seed/athlete.seed.js` to add `activity_level: 'moderately_active'` (matches the new column default; explicit for clarity)
+- [x] T020 Update `seed/runSeed.js` so that after the existing catalogue + per-meal seeds, it computes the program via `programGenerator.generateProgram(profileWithConstants)` and calls `generatedPrograms.dao.archiveAndInsert(...)` to write the initial active program row, plus a matching `calculation_results` audit entry via `writeAudit` with `calculator: 'program_generate'`. The runner remains idempotent: re-running detects the existing active row, archives it, writes a new identical one (deterministic engine ⇒ same payload)
+- [x] T021 Run `npm run seed` and verify (via curl or Studio) that `generated_programs` has exactly one row with `is_active = true` for the seeded athlete
 
 ### Input validation (FR-022 / FR-030 / SC-010)
 
-- [X] T021a Create `services/engine/inputSchemas.js` exporting one Zod schema per calculator (`bmrSchema`, `tdeeSchema`, `macrosSchema`, `oneRepMaxSchema`, `bodyCompositionSchema`) covering the plausibility ranges from research.md §9 (waist 50–200 cm, neck 25–60 cm, hip 60–200 cm, weight 30–250 kg, height 100–250 cm, age 10–100 years, reps 1–30, weight_kg ≥ 1) plus enum constraints (biological_sex, activity_level, morphotype, goal). Export a `validate(schema, body)` helper that throws an `HttpError(422, 'OUT_OF_RANGE', message, { field })` on failure so the canonical error envelope from Phase 0 carries the offending field name. Used by every `/api/v1/calculators/*` route, the `/api/v1/one-rep-max-records` POST, and the `/api/v1/body-measurements` POST. Unit-tested in `tests/unit/engine.inputSchemas.test.js` (out-of-range + enum + missing-required cases for each schema)
+- [x] T021a Create `services/engine/inputSchemas.js` exporting one Zod schema per calculator (`bmrSchema`, `tdeeSchema`, `macrosSchema`, `oneRepMaxSchema`, `bodyCompositionSchema`) covering the plausibility ranges from research.md §9 (waist 50–200 cm, neck 25–60 cm, hip 60–200 cm, weight 30–250 kg, height 100–250 cm, age 10–100 years, reps 1–30, weight_kg ≥ 1) plus enum constraints (biological_sex, activity_level, morphotype, goal). Export a `validate(schema, body)` helper that throws an `HttpError(422, 'OUT_OF_RANGE', message, { field })` on failure so the canonical error envelope from Phase 0 carries the offending field name. Used by every `/api/v1/calculators/*` route, the `/api/v1/one-rep-max-records` POST, and the `/api/v1/body-measurements` POST. Unit-tested in `tests/unit/engine.inputSchemas.test.js` (out-of-range + enum + missing-required cases for each schema)
 
 **Checkpoint**: `GET /api/v1/athlete/me` still returns the seeded athlete (Phase 0 behaviour intact); the cloud DB carries the four new schema objects; the engine resolver passes its unit tests; an active program row exists ready for US1's read; the input-schema module exists and is unit-tested green.
 
@@ -95,40 +95,40 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 > **MUST be written first and assert RED before T025–T027.**
 
-- [X] T022 [P] [US1] Write unit tests `tests/unit/engine.bmr.test.js`: Mifflin–St Jeor for both biological sexes; integer-rounded kcal; rejects non-numeric inputs; pure (no side effects)
-- [X] T023 [P] [US1] Write unit tests `tests/unit/engine.tdee.test.js`: each of the five activity levels multiplies BMR by the documented factor (1.2 / 1.375 / 1.55 / 1.725 / 1.9); rejects unknown level
-- [X] T024 [P] [US1] Write unit tests `tests/unit/engine.macros.test.js`: protein floor ≥ `protein_g_per_kg_lbm × LBM`; fat ≥ 25 % of kcal; ectomorph carb skew (>50 % of kcal); endomorph fat skew; mesomorph balanced; macro grams sum to within ±2 % of daily kcal; bulk surplus, cut deficit, maintain branches; deterministic across calls
+- [x] T022 [P] [US1] Write unit tests `tests/unit/engine.bmr.test.js`: Mifflin–St Jeor for both biological sexes; integer-rounded kcal; rejects non-numeric inputs; pure (no side effects)
+- [x] T023 [P] [US1] Write unit tests `tests/unit/engine.tdee.test.js`: each of the five activity levels multiplies BMR by the documented factor (1.2 / 1.375 / 1.55 / 1.725 / 1.9); rejects unknown level
+- [x] T024 [P] [US1] Write unit tests `tests/unit/engine.macros.test.js`: protein floor ≥ `protein_g_per_kg_lbm × LBM`; fat ≥ 25 % of kcal; ectomorph carb skew (>50 % of kcal); endomorph fat skew; mesomorph balanced; macro grams sum to within ±2 % of daily kcal; bulk surplus, cut deficit, maintain branches; deterministic across calls
 
 ### Implementation — calculator pure functions
 
-- [X] T025 [P] [US1] Implement `services/engine/bmr.js` exporting `bmr({ weight_kg, height_cm, age, biological_sex })`; passes T022; no Supabase, no env, no `Date.now()`
-- [X] T026 [P] [US1] Implement `services/engine/tdee.js` exporting `tdee({ bmr_kcal, activity_level, constants })` reading `constants.activity_factors`; passes T023
-- [X] T027 [P] [US1] Implement `services/engine/macros.js` exporting `macros({ daily_kcal, lean_body_mass_kg, morphotype, constants })`; passes T024
+- [x] T025 [P] [US1] Implement `services/engine/bmr.js` exporting `bmr({ weight_kg, height_cm, age, biological_sex })`; passes T022; no Supabase, no env, no `Date.now()`
+- [x] T026 [P] [US1] Implement `services/engine/tdee.js` exporting `tdee({ bmr_kcal, activity_level, constants })` reading `constants.activity_factors`; passes T023
+- [x] T027 [P] [US1] Implement `services/engine/macros.js` exporting `macros({ daily_kcal, lean_body_mass_kg, morphotype, constants })`; passes T024
 
 ### Ad-hoc calculator endpoints (also serve US6)
 
-- [X] T028 [P] [US1] Create `controllers/calculators.controller.js` with `bmr`, `tdee`, `macros` handlers (request → `validate(schema, req.body)` from T021a → engine call → response). NO writes to `calculation_results` per FR-029. Each handler returns 422 with `OUT_OF_RANGE` envelope on validation failure
-- [X] T029 [P] [US1] Create `routes/calculators.routes.js` mounting `POST /bmr`, `/tdee`, `/macros` (the 1RM and body-composition routes are added in US2 and US5)
-- [X] T030 [US1] Wire `routes/calculators.routes.js` under `/api/v1/calculators` in `app.js`; add a contract assertion in `tests/contract/api.v1.test.js` that the three POST paths return `200` with the expected `{ data: {...} }` shape
+- [x] T028 [P] [US1] Create `controllers/calculators.controller.js` with `bmr`, `tdee`, `macros` handlers (request → `validate(schema, req.body)` from T021a → engine call → response). NO writes to `calculation_results` per FR-029. Each handler returns 422 with `OUT_OF_RANGE` envelope on validation failure
+- [x] T029 [P] [US1] Create `routes/calculators.routes.js` mounting `POST /bmr`, `/tdee`, `/macros` (the 1RM and body-composition routes are added in US2 and US5)
+- [x] T030 [US1] Wire `routes/calculators.routes.js` under `/api/v1/calculators` in `app.js`; add a contract assertion in `tests/contract/api.v1.test.js` that the three POST paths return `200` with the expected `{ data: {...} }` shape
 
 ### Active-program read endpoints
 
-- [X] T031 [P] [US1] Create `controllers/program.controller.js` with `getActive(req, res, next)` calling `generatedPrograms.dao.findActiveForAthlete(req.athleteId)`; returns `404 NOT_FOUND` envelope when no row exists
-- [X] T032 [P] [US1] Create `routes/program.routes.js` exposing `GET /` (delegates to `getActive`); `POST /regenerate` and `GET /history` are added in US4
-- [X] T033 [US1] Wire `routes/program.routes.js` under `/api/v1/program` in `app.js`
-- [X] T034 [P] [US1] Extend `controllers/nutrition.controller.js`: add `getTargets(req, res, next)` that reads `generatedPrograms.dao.findActiveForAthlete` and returns `data: { tdee_kcal, daily_kcal, macros }` from the program payload. NO recomputation
-- [X] T035 [US1] Extend `routes/nutrition.routes.js`: add `GET /targets` (handler from T034). Existing `GET /template` is unchanged
+- [x] T031 [P] [US1] Create `controllers/program.controller.js` with `getActive(req, res, next)` calling `generatedPrograms.dao.findActiveForAthlete(req.athleteId)`; returns `404 NOT_FOUND` envelope when no row exists
+- [x] T032 [P] [US1] Create `routes/program.routes.js` exposing `GET /` (delegates to `getActive`); `POST /regenerate` and `GET /history` are added in US4
+- [x] T033 [US1] Wire `routes/program.routes.js` under `/api/v1/program` in `app.js`
+- [x] T034 [P] [US1] Extend `controllers/nutrition.controller.js`: add `getTargets(req, res, next)` that reads `generatedPrograms.dao.findActiveForAthlete` and returns `data: { tdee_kcal, daily_kcal, macros }` from the program payload. NO recomputation
+- [x] T035 [US1] Extend `routes/nutrition.routes.js`: add `GET /targets` (handler from T034). Existing `GET /template` is unchanged
 
 ### Story-level integration test
 
-- [X] T036 [US1] Add `tests/integration/nutrition.targets.test.js`: seeds athlete (Phase 0 path), hits `GET /api/v1/nutrition/targets`, asserts the four documented constraints (protein floor, fat ≥ 25 %, sum within ±2 %, ectomorph carb skew); skips gracefully when `.env` / Supabase is unreachable using the Phase 0 pattern
+- [x] T036 [US1] Add `tests/integration/nutrition.targets.test.js`: seeds athlete (Phase 0 path), hits `GET /api/v1/nutrition/targets`, asserts the four documented constraints (protein floor, fat ≥ 25 %, sum within ±2 %, ectomorph carb skew); skips gracefully when `.env` / Supabase is unreachable using the Phase 0 pattern
 
 ### Frontend Nutrition view
 
-- [X] T037 [P] [US1] Create `frontend/src/components/ResultCard.jsx` (a Tailwind-tokenized result-display primitive; reused by US6 calculators)
-- [X] T038 [P] [US1] Create `frontend/src/pages/NutritionHome.jsx`: fetches `/api/v1/nutrition/targets`, renders the four numbers in `<ResultCard>` instances with Tailwind tokens only; accessible heading; loading + error states
-- [X] T039 [US1] Update `frontend/src/App.jsx` to wrap routes in `BrowserRouter` and add a `<Route path="/nutrition" element={<NutritionHome />} />`; keep `/` pointing at `ScaffoldHome`
-- [X] T040 [P] [US1] Add `tests/frontend/nutritionView.test.jsx`: mocks `fetch` for `/api/v1/nutrition/targets`, renders `NutritionHome`, asserts the four numbers appear and no recomputation is performed client-side
+- [x] T037 [P] [US1] Create `frontend/src/components/ResultCard.jsx` (a Tailwind-tokenized result-display primitive; reused by US6 calculators)
+- [x] T038 [P] [US1] Create `frontend/src/pages/NutritionHome.jsx`: fetches `/api/v1/nutrition/targets`, renders the four numbers in `<ResultCard>` instances with Tailwind tokens only; accessible heading; loading + error states
+- [x] T039 [US1] Update `frontend/src/App.jsx` to wrap routes in `BrowserRouter` and add a `<Route path="/nutrition" element={<NutritionHome />} />`; keep `/` pointing at `ScaffoldHome`
+- [x] T040 [P] [US1] Add `tests/frontend/nutritionView.test.jsx`: mocks `fetch` for `/api/v1/nutrition/targets`, renders `NutritionHome`, asserts the four numbers appear and no recomputation is performed client-side
 
 **Checkpoint**: US1 demoable end-to-end. `GET /api/v1/nutrition/targets` returns the seeded athlete's persisted targets; the Nutrition view at `http://localhost:5173/nutrition` renders them; all engine pure-function unit tests pass green.
 
@@ -142,29 +142,29 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### TDD tasks ⚠️
 
-- [X] T041 [P] [US2] Write unit tests `tests/unit/engine.oneRepMax.test.js`: each of Epley / Brzycki / Lander / Lombardi for known reference values; primary = average of the four; `reps = 1 ⇒ primary === weight`; `reps > 10 ⇒ reduced_confidence: true`; percentage table contains exactly six rows (60/70/75/80/85/90), monotonically decreasing in `load_kg` as `pct` decreases NO — increasing in `load_kg` as `pct` increases; rep ranges per the table in research.md §8
+- [x] T041 [P] [US2] Write unit tests `tests/unit/engine.oneRepMax.test.js`: each of Epley / Brzycki / Lander / Lombardi for known reference values; primary = average of the four; `reps = 1 ⇒ primary === weight`; `reps > 10 ⇒ reduced_confidence: true`; percentage table contains exactly six rows (60/70/75/80/85/90), monotonically decreasing in `load_kg` as `pct` decreases NO — increasing in `load_kg` as `pct` increases; rep ranges per the table in research.md §8
 
 ### Implementation
 
-- [X] T042 [US2] Implement `services/engine/oneRepMax.js` exporting `oneRepMax({ weight_kg, reps, constants })`; passes T041
+- [x] T042 [US2] Implement `services/engine/oneRepMax.js` exporting `oneRepMax({ weight_kg, reps, constants })`; passes T041
 
 ### Migration + DAO
 
-- [X] T043 [P] [US2] Migration `supabase/migrations/20260507000004_init_one_rep_max_records.sql` — table + index `(athlete_id, exercise_id, created_at desc)` + RLS pair per data-model.md §3
-- [X] T044 [US2] Apply migration to cloud (`supabase db push`); verify in Studio
-- [X] T045 [P] [US2] Create `services/dataAccess/oneRepMaxRecords.dao.js`: `insert(row)`, `listForAthlete({ athleteId, exerciseId? })`, `latestForAthletePerExercise(athleteId)` (returns at most one row per exercise via window function or grouped query)
+- [x] T043 [P] [US2] Migration `supabase/migrations/20260507000004_init_one_rep_max_records.sql` — table + index `(athlete_id, exercise_id, created_at desc)` + RLS pair per data-model.md §3
+- [x] T044 [US2] Apply migration to cloud (`supabase db push`); verify in Studio
+- [x] T045 [P] [US2] Create `services/dataAccess/oneRepMaxRecords.dao.js`: `insert(row)`, `listForAthlete({ athleteId, exerciseId? })`, `latestForAthletePerExercise(athleteId)` (returns at most one row per exercise via window function or grouped query)
 
 ### Routes / controllers
 
-- [X] T046 [US2] Extend `controllers/calculators.controller.js`: add `oneRepMax(req, res, next)` ad-hoc handler (no persistence). Validate body with `oneRepMaxSchema` from T021a; reject `reps = 0` and `weight_kg = 0` with `OUT_OF_RANGE`
-- [X] T047 [US2] Extend `routes/calculators.routes.js`: add `POST /one-rep-max`
-- [X] T048 [P] [US2] Create `controllers/oneRepMaxRecords.controller.js`: `create` (validates body with `oneRepMaxSchema` + `exercise_id` extension from T021a, calls engine + DAO + `writeAudit`), `list`, `latest`
-- [X] T049 [P] [US2] Create `routes/oneRepMaxRecords.routes.js`: `POST /`, `GET /`, `GET /latest`
-- [X] T050 [US2] Wire `routes/oneRepMaxRecords.routes.js` under `/api/v1/one-rep-max-records` in `app.js`
+- [x] T046 [US2] Extend `controllers/calculators.controller.js`: add `oneRepMax(req, res, next)` ad-hoc handler (no persistence). Validate body with `oneRepMaxSchema` from T021a; reject `reps = 0` and `weight_kg = 0` with `OUT_OF_RANGE`
+- [x] T047 [US2] Extend `routes/calculators.routes.js`: add `POST /one-rep-max`
+- [x] T048 [P] [US2] Create `controllers/oneRepMaxRecords.controller.js`: `create` (validates body with `oneRepMaxSchema` + `exercise_id` extension from T021a, calls engine + DAO + `writeAudit`), `list`, `latest`
+- [x] T049 [P] [US2] Create `routes/oneRepMaxRecords.routes.js`: `POST /`, `GET /`, `GET /latest`
+- [x] T050 [US2] Wire `routes/oneRepMaxRecords.routes.js` under `/api/v1/one-rep-max-records` in `app.js`
 
 ### Story-level integration test
 
-- [X] T051 [US2] Add `tests/integration/oneRepMaxRecords.persist.test.js`: posts a record, asserts the row is in `one_rep_max_records`, asserts a matching `calculation_results` row was written with `calculator: 'one_rep_max'`, asserts `produced_record_kind = 'one_rep_max_records'` and `produced_record_id` is the inserted row's id
+- [x] T051 [US2] Add `tests/integration/oneRepMaxRecords.persist.test.js`: posts a record, asserts the row is in `one_rep_max_records`, asserts a matching `calculation_results` row was written with `calculator: 'one_rep_max'`, asserts `produced_record_kind = 'one_rep_max_records'` and `produced_record_id` is the inserted row's id
 
 **Checkpoint**: US2 works end-to-end. Both ad-hoc and persisted 1RM endpoints respond correctly; reduced-confidence indicator fires at `reps > 10`; audit log captures persisted runs only.
 
@@ -178,33 +178,33 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### TDD tasks ⚠️
 
-- [X] T052 [P] [US3] Write unit tests `tests/unit/progressionEngine.test.js`: double progression positive (top of range × 2 sessions), double progression negative (one session short, one rep short), stagnation 3-week (synthetic volume rows), regression 2-week (load drop), deload by RPE ≥ 9 (synthetic RPE coverage ≥ 60 %), deload by 2+ regressions in the week, insufficient-history suppression (1 session, 2 weeks of volume, RPE coverage < 60 %), idempotent same-input ⇒ same-output
+- [x] T052 [P] [US3] Write unit tests `tests/unit/progressionEngine.test.js`: double progression positive (top of range × 2 sessions), double progression negative (one session short, one rep short), stagnation 3-week (synthetic volume rows), regression 2-week (load drop), deload by RPE ≥ 9 (synthetic RPE coverage ≥ 60 %), deload by 2+ regressions in the week, insufficient-history suppression (1 session, 2 weeks of volume, RPE coverage < 60 %), idempotent same-input ⇒ same-output
 
 ### Implementation
 
-- [X] T053 [US3] Implement `services/progressionEngine.js` exporting `evaluateForAthlete({ sessions, sets, weeklyPlan, constants, now })`; passes T052; pure function — accepts time as a parameter
+- [x] T053 [US3] Implement `services/progressionEngine.js` exporting `evaluateForAthlete({ sessions, sets, weeklyPlan, constants, now })`; passes T052; pure function — accepts time as a parameter
 
 ### Migration + DAO
 
-- [X] T054 [P] [US3] Migration `supabase/migrations/20260507000003_init_progression_flags.sql` — table + indexes (partial-unique `(athlete_id, scope_kind, scope_ref) where is_active = true`, plus `(athlete_id, created_at desc)`) + RLS pair per data-model.md §2
-- [X] T055 [US3] Apply migration to cloud (`supabase db push`); verify
-- [X] T056 [P] [US3] Create `services/dataAccess/progressionFlags.dao.js`: `findActiveForAthlete(athleteId)`, `listHistoryForAthlete(athleteId, { limit })`, `supersedeAndInsert(scope, candidateOrNull)` — handles the three branches from research.md §4 (no-op same flag, supersede + insert different flag, supersede with no replacement when candidate is null)
+- [x] T054 [P] [US3] Migration `supabase/migrations/20260507000003_init_progression_flags.sql` — table + indexes (partial-unique `(athlete_id, scope_kind, scope_ref) where is_active = true`, plus `(athlete_id, created_at desc)`) + RLS pair per data-model.md §2
+- [x] T055 [US3] Apply migration to cloud (`supabase db push`); verify
+- [x] T056 [P] [US3] Create `services/dataAccess/progressionFlags.dao.js`: `findActiveForAthlete(athleteId)`, `listHistoryForAthlete(athleteId, { limit })`, `supersedeAndInsert(scope, candidateOrNull)` — handles the three branches from research.md §4 (no-op same flag, supersede + insert different flag, supersede with no replacement when candidate is null)
 
 ### Routes / controllers
 
-- [X] T057 [P] [US3] Create `controllers/progressionFlags.controller.js`: `listActive`, `listHistory`, `evaluate` (reads sessions/sets from existing Phase 0 DAOs, calls engine, calls `progressionFlags.dao.supersedeAndInsert` per scope, writes one `calculation_results` row per scope evaluated via `writeAudit` with `calculator: 'progression_eval'`)
-- [X] T058 [P] [US3] Create `routes/progressionFlags.routes.js`: `GET /`, `GET /history`, `POST /evaluate`
-- [X] T059 [US3] Wire `routes/progressionFlags.routes.js` under `/api/v1/progression-flags` in `app.js`
+- [x] T057 [P] [US3] Create `controllers/progressionFlags.controller.js`: `listActive`, `listHistory`, `evaluate` (reads sessions/sets from existing Phase 0 DAOs, calls engine, calls `progressionFlags.dao.supersedeAndInsert` per scope, writes one `calculation_results` row per scope evaluated via `writeAudit` with `calculator: 'progression_eval'`)
+- [x] T058 [P] [US3] Create `routes/progressionFlags.routes.js`: `GET /`, `GET /history`, `POST /evaluate`
+- [x] T059 [US3] Wire `routes/progressionFlags.routes.js` under `/api/v1/progression-flags` in `app.js`
 
 ### Story-level integration test
 
-- [X] T060 [US3] Add `tests/integration/progression.flags.lifecycle.test.js`: seeds two sessions hitting top-of-range → evaluate → `add_load` flag exists; insert flat-volume rows → evaluate again → `stagnation` for muscle group, prior `add_load` is `is_active = false`, history endpoint returns both; re-evaluate with no new data → DAO is a no-op (no new rows)
+- [x] T060 [US3] Add `tests/integration/progression.flags.lifecycle.test.js`: seeds two sessions hitting top-of-range → evaluate → `add_load` flag exists; insert flat-volume rows → evaluate again → `stagnation` for muscle group, prior `add_load` is `is_active = false`, history endpoint returns both; re-evaluate with no new data → DAO is a no-op (no new rows)
 
 ### Month-over-month 1RM trend (FR-017)
 
-- [X] T060a [P] [US3] Write unit tests `tests/unit/engine.oneRepMaxTrend.test.js`: given a synthetic history of `one_rep_max_records` for one exercise spanning ≥ 30 days, assert `oneRepMaxTrend({ records, now })` returns `{ delta_pct, on_pace }` where `delta_pct` is `(latest − one_month_ago) / one_month_ago × 100` rounded to one decimal, and `on_pace` is `true` when `delta_pct >= goal_threshold` (default `2 % per month` from `constants.on_pace_pct_per_month`); covers insufficient history (no record older than 25 days) returning `{ delta_pct: null, on_pace: null }`; deterministic; takes `now` as a parameter
-- [X] T060b [US3] Implement `services/engine/oneRepMaxTrend.js` exporting `oneRepMaxTrend({ records, now, constants })`; passes T060a; pure function. Add `on_pace_pct_per_month` (default `2`) to `services/engine/constants.js` `DEFAULTS`
-- [X] T060c [US3] Extend `controllers/oneRepMaxRecords.controller.js` with `trend(req, res, next)` that reads `oneRepMaxRecords.dao.listForAthlete({ athleteId, exerciseId? })`, calls `oneRepMaxTrend({ records, now: new Date(), constants })`, returns `{ data: [{ exercise_id, primary_estimate_kg, delta_pct, on_pace }, …] }`. Extend `routes/oneRepMaxRecords.routes.js` with `GET /trend?exercise_id=…` (omitted = all exercises with ≥ 1 record). Update `contracts/openapi.yaml` to document the new path
+- [x] T060a [P] [US3] Write unit tests `tests/unit/engine.oneRepMaxTrend.test.js`: given a synthetic history of `one_rep_max_records` for one exercise spanning ≥ 30 days, assert `oneRepMaxTrend({ records, now })` returns `{ delta_pct, on_pace }` where `delta_pct` is `(latest − one_month_ago) / one_month_ago × 100` rounded to one decimal, and `on_pace` is `true` when `delta_pct >= goal_threshold` (default `2 % per month` from `constants.on_pace_pct_per_month`); covers insufficient history (no record older than 25 days) returning `{ delta_pct: null, on_pace: null }`; deterministic; takes `now` as a parameter
+- [x] T060b [US3] Implement `services/engine/oneRepMaxTrend.js` exporting `oneRepMaxTrend({ records, now, constants })`; passes T060a; pure function. Add `on_pace_pct_per_month` (default `2`) to `services/engine/constants.js` `DEFAULTS`
+- [x] T060c [US3] Extend `controllers/oneRepMaxRecords.controller.js` with `trend(req, res, next)` that reads `oneRepMaxRecords.dao.listForAthlete({ athleteId, exerciseId? })`, calls `oneRepMaxTrend({ records, now: new Date(), constants })`, returns `{ data: [{ exercise_id, primary_estimate_kg, delta_pct, on_pace }, …] }`. Extend `routes/oneRepMaxRecords.routes.js` with `GET /trend?exercise_id=…` (omitted = all exercises with ≥ 1 record). Update `contracts/openapi.yaml` to document the new path
 
 **Checkpoint**: US3 verified — flag supersession, scope handling, idempotent re-eval, audit-log writes, and per-exercise month-over-month trend with on-pace/off-pace indicator all behave per spec.
 
@@ -218,23 +218,23 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### Program-generator tests (extends Phase 0 test file)
 
-- [X] T061 [P] [US4] Extend `tests/unit/programGenerator.test.js`: same-profile twice ⇒ identical output (already in Phase 0; reaffirm); different goal ⇒ different daily_kcal but same training split structure for the same weekly_session_count; output carries `engine_version` and `resolved_constants`
-- [X] T062 [P] [US4] Add `tests/unit/programGenerator.fixtures.test.js`: 50 representative profiles (vary age/sex/morphotype/goal/activity/sessions) × constraint set (protein floor, fat floor, macro-sum ±2 %, percentage-table monotonicity, no negative values) — covers SC-009
+- [x] T061 [P] [US4] Extend `tests/unit/programGenerator.test.js`: same-profile twice ⇒ identical output (already in Phase 0; reaffirm); different goal ⇒ different daily_kcal but same training split structure for the same weekly_session_count; output carries `engine_version` and `resolved_constants`
+- [x] T062 [P] [US4] Add `tests/unit/programGenerator.fixtures.test.js`: 50 representative profiles (vary age/sex/morphotype/goal/activity/sessions) × constraint set (protein floor, fat floor, macro-sum ±2 %, percentage-table monotonicity, no negative values) — covers SC-009
 
 ### Routes / controllers — regenerate + history
 
-- [X] T063 [US4] Extend `controllers/program.controller.js`: add `regenerate(req, res, next)` (reads athlete profile, calls `programGenerator.generateProgram(profile, resolvedConstants)`, calls `generatedPrograms.dao.archiveAndInsert`, writes `calculation_results` audit row with `calculator: 'program_generate'`); add `listHistory`
-- [X] T064 [US4] Extend `routes/program.routes.js`: add `POST /regenerate`, `GET /history`
+- [x] T063 [US4] Extend `controllers/program.controller.js`: add `regenerate(req, res, next)` (reads athlete profile, calls `programGenerator.generateProgram(profile, resolvedConstants)`, calls `generatedPrograms.dao.archiveAndInsert`, writes `calculation_results` audit row with `calculator: 'program_generate'`); add `listHistory`
+- [x] T064 [US4] Extend `routes/program.routes.js`: add `POST /regenerate`, `GET /history`
 
 ### Conditional regenerate on profile change
 
-- [X] T065 [US4] Extend `controllers/athlete.controller.js`: add `patchMe(req, res, next)` accepting `weight`, `height`, `age`, `morphotype`, `goal`, `activity_level`, `weekly_session_count`, `available_equipment`, `injuries`, `display_name`, `theme`. Determine the dirty set; if any field in `OUTPUT_AFFECTING_FIELDS = [weight, height, age, morphotype, goal, activity_level, weekly_session_count, available_equipment, injuries]` changed, call the regenerate flow after the profile UPDATE. If only non-output fields changed, skip regeneration. Returns the updated profile and (when applicable) the new program id
-- [X] T066 [US4] Extend `routes/athlete.routes.js`: add `PATCH /me` route bound to `patchMe`
+- [x] T065 [US4] Extend `controllers/athlete.controller.js`: add `patchMe(req, res, next)` accepting `weight`, `height`, `age`, `morphotype`, `goal`, `activity_level`, `weekly_session_count`, `available_equipment`, `injuries`, `display_name`, `theme`. Determine the dirty set; if any field in `OUTPUT_AFFECTING_FIELDS = [weight, height, age, morphotype, goal, activity_level, weekly_session_count, available_equipment, injuries]` changed, call the regenerate flow after the profile UPDATE. If only non-output fields changed, skip regeneration. Returns the updated profile and (when applicable) the new program id
+- [x] T066 [US4] Extend `routes/athlete.routes.js`: add `PATCH /me` route bound to `patchMe`
 
 ### Story-level integration tests
 
-- [X] T067 [US4] Add `tests/integration/program.regenerate.test.js`: POST /program/regenerate twice; assert (a) two rows total, (b) at most one row with `is_active = true`, (c) the prior row's `superseded_at` is non-null, (d) the new payload's `daily_kcal` matches what `programGenerator.generateProgram` returns for the same profile, (e) one `calculation_results` row per regenerate
-- [X] T068 [US4] Add `tests/integration/program.profileTrigger.test.js`: PATCH `/me { goal: 'cut' }` → active program id changes, payload reflects cut deficit; PATCH `/me { display_name: 'X' }` → active program id unchanged; PATCH `/me { weight: 60 }` → active program id changes, BMR/TDEE/macros recompute
+- [x] T067 [US4] Add `tests/integration/program.regenerate.test.js`: POST /program/regenerate twice; assert (a) two rows total, (b) at most one row with `is_active = true`, (c) the prior row's `superseded_at` is non-null, (d) the new payload's `daily_kcal` matches what `programGenerator.generateProgram` returns for the same profile, (e) one `calculation_results` row per regenerate
+- [x] T068 [US4] Add `tests/integration/program.profileTrigger.test.js`: PATCH `/me { goal: 'cut' }` → active program id changes, payload reflects cut deficit; PATCH `/me { display_name: 'X' }` → active program id unchanged; PATCH `/me { weight: 60 }` → active program id changes, BMR/TDEE/macros recompute
 
 **Checkpoint**: US4 demoable. Regeneration soft-archives correctly; output-affecting fields trigger; non-affecting fields don't.
 
@@ -248,34 +248,34 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### TDD tasks ⚠️
 
-- [X] T069 [P] [US5] Write unit tests `tests/unit/engine.bodyComposition.test.js`: US Navy formula for male and female reference inputs (matches published values within ±0.5 %); BMI fallback when neck or waist is null; rejects out-of-range inputs with `OUT_OF_RANGE`; lean body mass = weight × (1 − bf%/100); deterministic across calls
+- [x] T069 [P] [US5] Write unit tests `tests/unit/engine.bodyComposition.test.js`: US Navy formula for male and female reference inputs (matches published values within ±0.5 %); BMI fallback when neck or waist is null; rejects out-of-range inputs with `OUT_OF_RANGE`; lean body mass = weight × (1 − bf%/100); deterministic across calls
 
 ### Implementation
 
-- [X] T070 [US5] Implement `services/engine/bodyComposition.js` exporting `bodyComposition({ weight_kg, height_cm, age, biological_sex, waist_cm?, neck_cm?, hip_cm? })`; passes T069
+- [x] T070 [US5] Implement `services/engine/bodyComposition.js` exporting `bodyComposition({ weight_kg, height_cm, age, biological_sex, waist_cm?, neck_cm?, hip_cm? })`; passes T069
 
 ### Migration + DAO
 
-- [X] T071 [P] [US5] Migration `supabase/migrations/20260507000005_init_body_composition_results.sql` — table + index `(athlete_id, created_at desc)` + RLS pair per data-model.md §4
-- [X] T072 [US5] Apply migration to cloud; verify
-- [X] T073 [P] [US5] Create `services/dataAccess/bodyComposition.dao.js`: `insert(row)`, `latestForAthlete(athleteId)`, `listForAthlete(athleteId, { limit })`
+- [x] T071 [P] [US5] Migration `supabase/migrations/20260507000005_init_body_composition_results.sql` — table + index `(athlete_id, created_at desc)` + RLS pair per data-model.md §4
+- [x] T072 [US5] Apply migration to cloud; verify
+- [x] T073 [P] [US5] Create `services/dataAccess/bodyComposition.dao.js`: `insert(row)`, `latestForAthlete(athleteId)`, `listForAthlete(athleteId, { limit })`
 
 ### Routes / controllers
 
-- [X] T074 [US5] Extend `controllers/calculators.controller.js`: add `bodyComposition(req, res, next)` ad-hoc handler (no persistence). Validate body with `bodyCompositionSchema` from T021a
-- [X] T075 [US5] Extend `routes/calculators.routes.js`: add `POST /body-composition`
-- [X] T076 [P] [US5] Create `controllers/bodyComposition.controller.js`: `list`, `latest` (read endpoints only — writes happen via the body-measurements trigger below)
-- [X] T077 [P] [US5] Create `routes/bodyComposition.routes.js`: `GET /`, `GET /latest`
-- [X] T078 [US5] Wire `routes/bodyComposition.routes.js` under `/api/v1/body-composition` in `app.js`
+- [x] T074 [US5] Extend `controllers/calculators.controller.js`: add `bodyComposition(req, res, next)` ad-hoc handler (no persistence). Validate body with `bodyCompositionSchema` from T021a
+- [x] T075 [US5] Extend `routes/calculators.routes.js`: add `POST /body-composition`
+- [x] T076 [P] [US5] Create `controllers/bodyComposition.controller.js`: `list`, `latest` (read endpoints only — writes happen via the body-measurements trigger below)
+- [x] T077 [P] [US5] Create `routes/bodyComposition.routes.js`: `GET /`, `GET /latest`
+- [x] T078 [US5] Wire `routes/bodyComposition.routes.js` under `/api/v1/body-composition` in `app.js`
 
 ### Auto-trigger on body-measurement save
 
-- [X] T079 [US5] Create `controllers/bodyMeasurements.controller.js` (Phase 0 has the table but no HTTP surface) with `create(req, res, next)` that: validates the body using a `bodyMeasurementSchema` added in T021a (or a shared variant of `bodyCompositionSchema`), inserts the measurement, runs `bodyComposition` engine, inserts a `body_composition_results` row, calls the program-regenerate flow (US4) so the protein target picks up the new LBM, writes `calculation_results` audit rows for both `body_composition` and the resulting `program_generate`
-- [X] T080 [US5] Create `routes/bodyMeasurements.routes.js` with `POST /` and wire under `/api/v1/body-measurements` in `app.js`
+- [x] T079 [US5] Create `controllers/bodyMeasurements.controller.js` (Phase 0 has the table but no HTTP surface) with `create(req, res, next)` that: validates the body using a `bodyMeasurementSchema` added in T021a (or a shared variant of `bodyCompositionSchema`), inserts the measurement, runs `bodyComposition` engine, inserts a `body_composition_results` row, calls the program-regenerate flow (US4) so the protein target picks up the new LBM, writes `calculation_results` audit rows for both `body_composition` and the resulting `program_generate`
+- [x] T080 [US5] Create `routes/bodyMeasurements.routes.js` with `POST /` and wire under `/api/v1/body-measurements` in `app.js`
 
 ### Story-level integration test
 
-- [X] T081 [US5] Add `tests/integration/bodyComposition.refresh.test.js`: posts a body-measurement with waist+neck → asserts a `body_composition_results` row exists with `method: 'us_navy'`, then asserts `GET /api/v1/nutrition/targets` returns a different protein number than before; posts a body-measurement without neck → method is `bmi_fallback`; posts an out-of-range weight → 422 + active program unchanged
+- [x] T081 [US5] Add `tests/integration/bodyComposition.refresh.test.js`: posts a body-measurement with waist+neck → asserts a `body_composition_results` row exists with `method: 'us_navy'`, then asserts `GET /api/v1/nutrition/targets` returns a different protein number than before; posts a body-measurement without neck → method is `bmi_fallback`; posts an out-of-range weight → 422 + active program unchanged
 
 **Checkpoint**: US5 verified. Body composition refines targets automatically without athlete action; the audit log shows the cascading writes; out-of-range inputs are rejected.
 
@@ -289,20 +289,20 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### Frontend pages (no backend tasks — all routes already exist)
 
-- [X] T082 [P] [US6] Create `frontend/src/components/NumberField.jsx` (Tailwind-tokenized input wrapper with label + error state; reused by every calculator form)
-- [X] T083 [P] [US6] Create `frontend/src/components/SelectField.jsx` (same shape as NumberField, for biological_sex / activity_level / morphotype / goal selects)
-- [X] T084 [P] [US6] Extend `frontend/src/lib/api.js` with `apiPost(path, body)` mirroring the existing `apiGet` (returns parsed JSON; throws with status + body on non-2xx)
-- [X] T085 [P] [US6] Create `frontend/src/pages/calculators/CalculatorsHome.jsx` — landing index with five `<Link>` cards routing to the sub-pages
-- [X] T086 [P] [US6] Create `frontend/src/pages/calculators/BmrCalculator.jsx`: form (weight, height, age, biological_sex) → `apiPost('/api/v1/calculators/bmr', …)` → `<ResultCard>` with `bmr_kcal`
-- [X] T087 [P] [US6] Create `frontend/src/pages/calculators/TdeeCalculator.jsx`: form (BMR inputs + activity_level) → `apiPost('/api/v1/calculators/tdee')` → `<ResultCard>` with `bmr_kcal` + `tdee_kcal`
-- [X] T088 [P] [US6] Create `frontend/src/pages/calculators/MacrosCalculator.jsx`: full profile form → `apiPost('/api/v1/calculators/macros')` → `<ResultCard>` with `tdee_kcal`, `daily_kcal`, and the three macro grams
-- [X] T089 [P] [US6] Create `frontend/src/pages/calculators/OneRepMaxCalculator.jsx`: weight + reps form → `apiPost('/api/v1/calculators/one-rep-max')` → `<ResultCard>` with the four formula values, primary, percentage table (responsive Tailwind grid), and reduced-confidence badge when present
-- [X] T090 [P] [US6] Create `frontend/src/pages/calculators/BodyCompositionCalculator.jsx`: profile + optional waist/neck/hip form → `apiPost('/api/v1/calculators/body-composition')` → `<ResultCard>` with `method`, `body_fat_pct`, `lean_body_mass_kg`
-- [X] T091 [US6] Update `frontend/src/App.jsx` to register the calculator routes: `/calculators` (CalculatorsHome) + sub-routes per calculator; update `frontend/src/pages/ScaffoldHome.jsx` with `<Link>`s to `/nutrition` and `/calculators` so the home page is a usable directory
+- [x] T082 [P] [US6] Create `frontend/src/components/NumberField.jsx` (Tailwind-tokenized input wrapper with label + error state; reused by every calculator form)
+- [x] T083 [P] [US6] Create `frontend/src/components/SelectField.jsx` (same shape as NumberField, for biological_sex / activity_level / morphotype / goal selects)
+- [x] T084 [P] [US6] Extend `frontend/src/lib/api.js` with `apiPost(path, body)` mirroring the existing `apiGet` (returns parsed JSON; throws with status + body on non-2xx)
+- [x] T085 [P] [US6] Create `frontend/src/pages/calculators/CalculatorsHome.jsx` — landing index with five `<Link>` cards routing to the sub-pages
+- [x] T086 [P] [US6] Create `frontend/src/pages/calculators/BmrCalculator.jsx`: form (weight, height, age, biological_sex) → `apiPost('/api/v1/calculators/bmr', …)` → `<ResultCard>` with `bmr_kcal`
+- [x] T087 [P] [US6] Create `frontend/src/pages/calculators/TdeeCalculator.jsx`: form (BMR inputs + activity_level) → `apiPost('/api/v1/calculators/tdee')` → `<ResultCard>` with `bmr_kcal` + `tdee_kcal`
+- [x] T088 [P] [US6] Create `frontend/src/pages/calculators/MacrosCalculator.jsx`: full profile form → `apiPost('/api/v1/calculators/macros')` → `<ResultCard>` with `tdee_kcal`, `daily_kcal`, and the three macro grams
+- [x] T089 [P] [US6] Create `frontend/src/pages/calculators/OneRepMaxCalculator.jsx`: weight + reps form → `apiPost('/api/v1/calculators/one-rep-max')` → `<ResultCard>` with the four formula values, primary, percentage table (responsive Tailwind grid), and reduced-confidence badge when present
+- [x] T090 [P] [US6] Create `frontend/src/pages/calculators/BodyCompositionCalculator.jsx`: profile + optional waist/neck/hip form → `apiPost('/api/v1/calculators/body-composition')` → `<ResultCard>` with `method`, `body_fat_pct`, `lean_body_mass_kg`
+- [x] T091 [US6] Update `frontend/src/App.jsx` to register the calculator routes: `/calculators` (CalculatorsHome) + sub-routes per calculator; update `frontend/src/pages/ScaffoldHome.jsx` with `<Link>`s to `/nutrition` and `/calculators` so the home page is a usable directory
 
 ### Frontend smoke tests
 
-- [X] T092 [P] [US6] Add `tests/frontend/calculatorsPage.test.jsx`: mocks `fetch` for each `/api/v1/calculators/*` path; renders each sub-page; submits valid inputs; asserts a result card appears; asserts no profile/program endpoint was called
+- [x] T092 [P] [US6] Add `tests/frontend/calculatorsPage.test.jsx`: mocks `fetch` for each `/api/v1/calculators/*` path; renders each sub-page; submits valid inputs; asserts a result card appears; asserts no profile/program endpoint was called
 
 **Checkpoint**: US6 verified. Athlete can verify the engine's outputs end-to-end from the browser; persisted state is untouched.
 
@@ -310,11 +310,11 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [X] T093 [P] Extend `services/dataAccess/types.js` with JSDoc typedefs for the 5 new typed tables and the audit row shape
-- [X] T094 [P] Update `CLAUDE.md` Phase 1 section with the engine-version-bump policy from research.md §10 and the audit-log writer's expected call sites
-- [X] T095 Run `quickstart.md` end-to-end against the cloud project: verify each Success Criterion (SC-001 → SC-010); record results in `specs/002-calculators-engine/validation.md`
-- [X] T096 [P] Add a contract assertion in `tests/contract/api.v1.test.js` covering every Phase 1 path from `contracts/openapi.yaml` (program / nutrition/targets / 5 calculators / 1RM records / progression flags / body composition)
-- [X] T097 Run the full test suite (`npm test` + `cd frontend && npx vitest run`) and confirm all backend + frontend tests pass against the cloud DB
+- [x] T093 [P] Extend `services/dataAccess/types.js` with JSDoc typedefs for the 5 new typed tables and the audit row shape
+- [x] T094 [P] Update `CLAUDE.md` Phase 1 section with the engine-version-bump policy from research.md §10 and the audit-log writer's expected call sites
+- [x] T095 Run `quickstart.md` end-to-end against the cloud project: verify each Success Criterion (SC-001 → SC-010); record results in `specs/002-calculators-engine/validation.md`
+- [x] T096 [P] Add a contract assertion in `tests/contract/api.v1.test.js` covering every Phase 1 path from `contracts/openapi.yaml` (program / nutrition/targets / 5 calculators / 1RM records / progression flags / body composition)
+- [x] T097 Run the full test suite (`npm test` + `cd frontend && npx vitest run`) and confirm all backend + frontend tests pass against the cloud DB
 
 ---
 
@@ -341,21 +341,21 @@ description: "Task list for MassLab Phase 1 — Calculators Engine"
 
 ### Parallel Opportunities
 
-| Group | Tasks | Why parallel |
-|---|---|---|
-| Setup | T002, T003 | Different directories. |
-| Foundational migrations | T008, T009, T010, T011 | Different SQL files; lexical order is enforced by timestamps. |
-| Foundational DAOs | T013, T014, T015, T016 | Different files; no inter-DAO calls. |
-| US1 engine TDD tests | T022, T023, T024 | Different test files. |
-| US1 engine implementations | T025, T026, T027 | Different files; each independent of the other. |
-| US1 controllers/routes | T028 + T029, T031 + T032, T034 | Three independent controller/route pairs. |
-| US1 frontend | T037, T038, T040 | Different files. |
-| US2 DAO + controller + route | T045, T048, T049 | Different files. |
-| US3 controller/route | T057, T058 | Different files. |
-| US4 program-generator tests | T061, T062 | Different test files. |
-| US5 routes/controllers | T076, T077 | Different files. |
-| US6 frontend pages | T082–T090 | Different files; landing page links to sub-pages. |
-| Polish | T093, T094, T096 | Different files. |
+| Group                        | Tasks                          | Why parallel                                                  |
+| ---------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| Setup                        | T002, T003                     | Different directories.                                        |
+| Foundational migrations      | T008, T009, T010, T011         | Different SQL files; lexical order is enforced by timestamps. |
+| Foundational DAOs            | T013, T014, T015, T016         | Different files; no inter-DAO calls.                          |
+| US1 engine TDD tests         | T022, T023, T024               | Different test files.                                         |
+| US1 engine implementations   | T025, T026, T027               | Different files; each independent of the other.               |
+| US1 controllers/routes       | T028 + T029, T031 + T032, T034 | Three independent controller/route pairs.                     |
+| US1 frontend                 | T037, T038, T040               | Different files.                                              |
+| US2 DAO + controller + route | T045, T048, T049               | Different files.                                              |
+| US3 controller/route         | T057, T058                     | Different files.                                              |
+| US4 program-generator tests  | T061, T062                     | Different test files.                                         |
+| US5 routes/controllers       | T076, T077                     | Different files.                                              |
+| US6 frontend pages           | T082–T090                      | Different files; landing page links to sub-pages.             |
+| Polish                       | T093, T094, T096               | Different files.                                              |
 
 ---
 
@@ -385,13 +385,13 @@ Each pair lives in a separate file and shares only `services/engine/constants.js
 ### Incremental Delivery
 
 1. Setup + Foundational → infrastructure ready (no new demo yet beyond Phase 0).
-2. + US1 → MVP demo: Nutrition view renders the engine's primary output.
-3. + US2 → 1RM endpoints + reduced-confidence indicator demoable via curl.
-4. + US3 → progression flags can be triggered manually via `POST /api/v1/progression-flags/evaluate`.
-5. + US4 → profile changes regenerate the program automatically; history is queryable.
-6. + US5 → body-measurement save updates the protein target in the same Nutrition view.
-7. + US6 → Calculators page available in the browser; entire engine surface explorable.
-8. + Polish → 50-profile fixture suite, validation report, doc updates.
+2. - US1 → MVP demo: Nutrition view renders the engine's primary output.
+3. - US2 → 1RM endpoints + reduced-confidence indicator demoable via curl.
+4. - US3 → progression flags can be triggered manually via `POST /api/v1/progression-flags/evaluate`.
+5. - US4 → profile changes regenerate the program automatically; history is queryable.
+6. - US5 → body-measurement save updates the protein target in the same Nutrition view.
+7. - US6 → Calculators page available in the browser; entire engine surface explorable.
+8. - Polish → 50-profile fixture suite, validation report, doc updates.
 
 ### Parallel Team Strategy
 

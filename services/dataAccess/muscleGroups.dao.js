@@ -3,13 +3,15 @@
 import { HttpError } from '../../middleware/errorHandler.js';
 
 function deriveSlug(name) {
-  return String(name)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'group';
+  return (
+    String(name)
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'group'
+  );
 }
 
 export function muscleGroupsDao(supabase) {
@@ -79,7 +81,11 @@ export function muscleGroupsDao(supabase) {
         .single();
       if (error) {
         if (error.code === '23505') {
-          throw new HttpError(409, 'CONFLICT', `A muscle group with slug "${finalSlug}" already exists.`);
+          throw new HttpError(
+            409,
+            'CONFLICT',
+            `A muscle group with slug "${finalSlug}" already exists.`,
+          );
         }
         throw new HttpError(500, 'DB_ERROR', error.message);
       }
@@ -164,10 +170,7 @@ export function muscleGroupsDao(supabase) {
       const toDelete = ids.filter((id) => !referenced.has(id));
       if (!toDelete.length) return 0;
 
-      const { error: pruneErr } = await supabase
-        .from('muscle_groups')
-        .delete()
-        .in('id', toDelete);
+      const { error: pruneErr } = await supabase.from('muscle_groups').delete().in('id', toDelete);
       if (pruneErr) throw new HttpError(500, 'DB_ERROR', pruneErr.message);
       return toDelete.length;
     },

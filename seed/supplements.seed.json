@@ -1,10 +1,45 @@
 {
   "locale": "fr-FR",
   "supplements": [
-    { "slug": "creatine-monohydrate", "name": "Créatine monohydrate", "dosage": "5 g", "recommended_time": "morning", "notes": "Quotidien, hors entraînement compris.", "display_order": 1 },
-    { "slug": "serious-mass", "name": "Serious Mass (gainer)", "dosage": "1 dose (≈ 165 g) dans 500 ml de lait", "recommended_time": "post_workout", "notes": "Optionnel les jours sans surplus suffisant.", "display_order": 2 },
-    { "slug": "vitamin-d3", "name": "Vitamine D3", "dosage": "2000 UI", "recommended_time": "morning", "notes": "Avec un repas contenant des lipides.", "display_order": 3 },
-    { "slug": "magnesium", "name": "Magnésium bisglycinate", "dosage": "300 mg", "recommended_time": "evening", "notes": "Améliore la récupération et le sommeil.", "display_order": 4 },
-    { "slug": "omega-3", "name": "Oméga-3 EPA/DHA", "dosage": "2 g (≥ 1 g EPA+DHA combinés)", "recommended_time": "with_meal", "notes": "Réduit l’inflammation post-effort.", "display_order": 5 }
+    {
+      "slug": "creatine-monohydrate",
+      "name": "Créatine monohydrate",
+      "dosage": "5 g",
+      "recommended_time": "morning",
+      "notes": "Quotidien, hors entraînement compris.",
+      "display_order": 1
+    },
+    {
+      "slug": "serious-mass",
+      "name": "Serious Mass (gainer)",
+      "dosage": "1 dose (≈ 165 g) dans 500 ml de lait",
+      "recommended_time": "post_workout",
+      "notes": "Optionnel les jours sans surplus suffisant.",
+      "display_order": 2
+    },
+    {
+      "slug": "vitamin-d3",
+      "name": "Vitamine D3",
+      "dosage": "2000 UI",
+      "recommended_time": "morning",
+      "notes": "Avec un repas contenant des lipides.",
+      "display_order": 3
+    },
+    {
+      "slug": "magnesium",
+      "name": "Magnésium bisglycinate",
+      "dosage": "300 mg",
+      "recommended_time": "evening",
+      "notes": "Améliore la récupération et le sommeil.",
+      "display_order": 4
+    },
+    {
+      "slug": "omega-3",
+      "name": "Oméga-3 EPA/DHA",
+      "dosage": "2 g (≥ 1 g EPA+DHA combinés)",
+      "recommended_time": "with_meal",
+      "notes": "Réduit l’inflammation post-effort.",
+      "display_order": 5
+    }
   ]
 }

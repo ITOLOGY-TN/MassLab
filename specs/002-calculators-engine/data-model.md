@@ -54,7 +54,7 @@ alter table public.app_config
   "default_body_fat_pct": {
     "ectomorph": 0.12,
     "mesomorph": 0.15,
-    "endomorph": 0.20
+    "endomorph": 0.2
   }
 }
 ```
@@ -67,18 +67,19 @@ All keys are optional; missing keys fall through to `services/engine/constants.j
 
 The athlete's program record. Soft-archive versioned: at most one row per athlete carries `is_active = true`.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `payload` | `jsonb` | NOT NULL | full program object: `{ training, nutrition, supplements, recovery }` |
-| `engine_version` | `text` | NOT NULL | semver string from `services/engine/constants.js` |
-| `resolved_constants` | `jsonb` | NOT NULL | snapshot of `default ⊕ override` at generation time |
-| `is_active` | `boolean` | NOT NULL | default `true`; exactly one row per athlete carries `true` |
-| `generated_at` | `timestamptz` | NOT NULL | default `now()` |
-| `superseded_at` | `timestamptz` | NULL | set when `is_active` flips to `false` |
+| Column               | Type              | Null     | Notes                                                                 |
+| -------------------- | ----------------- | -------- | --------------------------------------------------------------------- |
+| `id`                 | `bigint` identity | NOT NULL | PK                                                                    |
+| `athlete_id`         | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                                 |
+| `payload`            | `jsonb`           | NOT NULL | full program object: `{ training, nutrition, supplements, recovery }` |
+| `engine_version`     | `text`            | NOT NULL | semver string from `services/engine/constants.js`                     |
+| `resolved_constants` | `jsonb`           | NOT NULL | snapshot of `default ⊕ override` at generation time                   |
+| `is_active`          | `boolean`         | NOT NULL | default `true`; exactly one row per athlete carries `true`            |
+| `generated_at`       | `timestamptz`     | NOT NULL | default `now()`                                                       |
+| `superseded_at`      | `timestamptz`     | NULL     | set when `is_active` flips to `false`                                 |
 
 **Indexes**:
+
 - Partial UNIQUE on `(athlete_id) where is_active = true` — enforces "at most one active program".
 - INDEX on `(athlete_id, generated_at desc)` for history reads.
 
@@ -90,28 +91,30 @@ The athlete's program record. Soft-archive versioned: at most one row per athlet
 
 Per-scope progression decision. Soft-supersede on every rule re-eval; one active row per scope.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `scope_kind` | `text` | NOT NULL | `'exercise'` or `'muscle_group'` (CHECK) |
-| `scope_ref` | `text` | NOT NULL | `exercise_id::text` or muscle-group slug |
-| `flag_type` | `text` | NOT NULL | `'add_load'` / `'maintain'` / `'stagnation'` / `'regression'` / `'deload_suggested'` (CHECK) |
-| `rule` | `text` | NOT NULL | identifier of the rule that produced it (e.g. `'double_progression'`) |
-| `suggested_adjustment` | `jsonb` | NULL | rule-specific (e.g. `{ "delta_kg": 2.5 }` or `{ "volume_cut_pct": 30 }`) |
-| `engine_version` | `text` | NOT NULL | |
-| `resolved_constants` | `jsonb` | NOT NULL | snapshot |
-| `is_active` | `boolean` | NOT NULL | default `true` |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
-| `superseded_at` | `timestamptz` | NULL | |
+| Column                 | Type              | Null     | Notes                                                                                        |
+| ---------------------- | ----------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `id`                   | `bigint` identity | NOT NULL | PK                                                                                           |
+| `athlete_id`           | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                                                        |
+| `scope_kind`           | `text`            | NOT NULL | `'exercise'` or `'muscle_group'` (CHECK)                                                     |
+| `scope_ref`            | `text`            | NOT NULL | `exercise_id::text` or muscle-group slug                                                     |
+| `flag_type`            | `text`            | NOT NULL | `'add_load'` / `'maintain'` / `'stagnation'` / `'regression'` / `'deload_suggested'` (CHECK) |
+| `rule`                 | `text`            | NOT NULL | identifier of the rule that produced it (e.g. `'double_progression'`)                        |
+| `suggested_adjustment` | `jsonb`           | NULL     | rule-specific (e.g. `{ "delta_kg": 2.5 }` or `{ "volume_cut_pct": 30 }`)                     |
+| `engine_version`       | `text`            | NOT NULL |                                                                                              |
+| `resolved_constants`   | `jsonb`           | NOT NULL | snapshot                                                                                     |
+| `is_active`            | `boolean`         | NOT NULL | default `true`                                                                               |
+| `created_at`           | `timestamptz`     | NOT NULL | default `now()`                                                                              |
+| `superseded_at`        | `timestamptz`     | NULL     |                                                                                              |
 
 **Indexes**:
+
 - Partial UNIQUE on `(athlete_id, scope_kind, scope_ref) where is_active = true` — one active flag per scope.
 - INDEX on `(athlete_id, created_at desc)` for history reads.
 
 **RLS**: standard per-athlete pair.
 
 **Notes**:
+
 - The same flag re-emitted unchanged is a no-op (the DAO compares the candidate to the active row and skips both UPDATE and INSERT if `flag_type` + `suggested_adjustment` match).
 - "No flag" outcomes (rule did not fire because of insufficient history or because conditions cleared) supersede the active flag with no replacement.
 
@@ -119,25 +122,26 @@ Per-scope progression decision. Soft-supersede on every rule re-eval; one active
 
 Per-exercise 1RM history. Append-only; the "current" 1RM for an exercise is the latest row.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `exercise_id` | `bigint` | NOT NULL | FK → `exercises(id)` |
-| `source_weight_kg` | `numeric(6,2)` | NOT NULL | input weight |
-| `source_reps` | `int` | NOT NULL | input reps |
-| `primary_estimate_kg` | `numeric(6,2)` | NOT NULL | average of the four formulas |
-| `epley_kg` | `numeric(6,2)` | NOT NULL | individual formula values exposed per FR-007 |
-| `brzycki_kg` | `numeric(6,2)` | NOT NULL | |
-| `lander_kg` | `numeric(6,2)` | NOT NULL | |
-| `lombardi_kg` | `numeric(6,2)` | NOT NULL | |
-| `percentage_table` | `jsonb` | NOT NULL | `[{ pct: 60, load_kg, reps_low, reps_high }, …]` |
-| `reduced_confidence` | `boolean` | NOT NULL | `true` when `source_reps > 10` |
-| `engine_version` | `text` | NOT NULL | |
-| `resolved_constants` | `jsonb` | NOT NULL | |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column                | Type              | Null     | Notes                                            |
+| --------------------- | ----------------- | -------- | ------------------------------------------------ |
+| `id`                  | `bigint` identity | NOT NULL | PK                                               |
+| `athlete_id`          | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE            |
+| `exercise_id`         | `bigint`          | NOT NULL | FK → `exercises(id)`                             |
+| `source_weight_kg`    | `numeric(6,2)`    | NOT NULL | input weight                                     |
+| `source_reps`         | `int`             | NOT NULL | input reps                                       |
+| `primary_estimate_kg` | `numeric(6,2)`    | NOT NULL | average of the four formulas                     |
+| `epley_kg`            | `numeric(6,2)`    | NOT NULL | individual formula values exposed per FR-007     |
+| `brzycki_kg`          | `numeric(6,2)`    | NOT NULL |                                                  |
+| `lander_kg`           | `numeric(6,2)`    | NOT NULL |                                                  |
+| `lombardi_kg`         | `numeric(6,2)`    | NOT NULL |                                                  |
+| `percentage_table`    | `jsonb`           | NOT NULL | `[{ pct: 60, load_kg, reps_low, reps_high }, …]` |
+| `reduced_confidence`  | `boolean`         | NOT NULL | `true` when `source_reps > 10`                   |
+| `engine_version`      | `text`            | NOT NULL |                                                  |
+| `resolved_constants`  | `jsonb`           | NOT NULL |                                                  |
+| `created_at`          | `timestamptz`     | NOT NULL | default `now()`                                  |
 
 **Indexes**:
+
 - INDEX on `(athlete_id, exercise_id, created_at desc)` for "latest per exercise".
 
 **RLS**: standard per-athlete pair.
@@ -146,20 +150,21 @@ Per-exercise 1RM history. Append-only; the "current" 1RM for an exercise is the 
 
 History of body-fat % and lean-body-mass estimates. Append-only.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `source_measurement_id` | `bigint` | NULL | FK → `body_measurements(id)` when computed off a logged entry; null when computed off the profile alone |
-| `method` | `text` | NOT NULL | `'us_navy'` (multi-measurement) or `'bmi_fallback'` (CHECK) |
-| `body_fat_pct` | `numeric(4,1)` | NOT NULL | e.g. `15.4` |
-| `lean_body_mass_kg` | `numeric(5,2)` | NOT NULL | derived from weight × (1 − bf%/100) |
-| `inputs` | `jsonb` | NOT NULL | `{ weight_kg, height_cm, age, sex, waist_cm?, neck_cm?, hip_cm? }` |
-| `engine_version` | `text` | NOT NULL | |
-| `resolved_constants` | `jsonb` | NOT NULL | |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column                  | Type              | Null     | Notes                                                                                                   |
+| ----------------------- | ----------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `id`                    | `bigint` identity | NOT NULL | PK                                                                                                      |
+| `athlete_id`            | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                                                                   |
+| `source_measurement_id` | `bigint`          | NULL     | FK → `body_measurements(id)` when computed off a logged entry; null when computed off the profile alone |
+| `method`                | `text`            | NOT NULL | `'us_navy'` (multi-measurement) or `'bmi_fallback'` (CHECK)                                             |
+| `body_fat_pct`          | `numeric(4,1)`    | NOT NULL | e.g. `15.4`                                                                                             |
+| `lean_body_mass_kg`     | `numeric(5,2)`    | NOT NULL | derived from weight × (1 − bf%/100)                                                                     |
+| `inputs`                | `jsonb`           | NOT NULL | `{ weight_kg, height_cm, age, sex, waist_cm?, neck_cm?, hip_cm? }`                                      |
+| `engine_version`        | `text`            | NOT NULL |                                                                                                         |
+| `resolved_constants`    | `jsonb`           | NOT NULL |                                                                                                         |
+| `created_at`            | `timestamptz`     | NOT NULL | default `now()`                                                                                         |
 
 **Indexes**:
+
 - INDEX on `(athlete_id, created_at desc)` for "latest body composition".
 
 **RLS**: standard per-athlete pair.
@@ -168,20 +173,21 @@ History of body-fat % and lean-body-mass estimates. Append-only.
 
 Single shared audit log; one row per persisted calculator run. Read path: timeline / replay only — typed tables (1–4) are the primary read path for production code.
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `id` | `bigint` identity | NOT NULL | PK |
-| `athlete_id` | `uuid` | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE |
-| `calculator` | `text` | NOT NULL | `'bmr'` / `'tdee'` / `'macros'` / `'one_rep_max'` / `'body_composition'` / `'progression_eval'` / `'program_generate'` (CHECK) |
-| `inputs` | `jsonb` | NOT NULL | snapshot |
-| `outputs` | `jsonb` | NOT NULL | snapshot |
-| `resolved_constants` | `jsonb` | NOT NULL | snapshot |
-| `engine_version` | `text` | NOT NULL | |
-| `produced_record_kind` | `text` | NULL | name of the typed table the run wrote to (when applicable) |
-| `produced_record_id` | `text` | NULL | string id of the typed row (`bigint`/`uuid` cast to text) |
-| `created_at` | `timestamptz` | NOT NULL | default `now()` |
+| Column                 | Type              | Null     | Notes                                                                                                                          |
+| ---------------------- | ----------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                   | `bigint` identity | NOT NULL | PK                                                                                                                             |
+| `athlete_id`           | `uuid`            | NOT NULL | FK → `athletes(id)` ON DELETE CASCADE                                                                                          |
+| `calculator`           | `text`            | NOT NULL | `'bmr'` / `'tdee'` / `'macros'` / `'one_rep_max'` / `'body_composition'` / `'progression_eval'` / `'program_generate'` (CHECK) |
+| `inputs`               | `jsonb`           | NOT NULL | snapshot                                                                                                                       |
+| `outputs`              | `jsonb`           | NOT NULL | snapshot                                                                                                                       |
+| `resolved_constants`   | `jsonb`           | NOT NULL | snapshot                                                                                                                       |
+| `engine_version`       | `text`            | NOT NULL |                                                                                                                                |
+| `produced_record_kind` | `text`            | NULL     | name of the typed table the run wrote to (when applicable)                                                                     |
+| `produced_record_id`   | `text`            | NULL     | string id of the typed row (`bigint`/`uuid` cast to text)                                                                      |
+| `created_at`           | `timestamptz`     | NOT NULL | default `now()`                                                                                                                |
 
 **Indexes**:
+
 - INDEX on `(athlete_id, created_at desc)` — timeline.
 - INDEX on `(athlete_id, calculator, created_at desc)` — per-calculator timeline.
 

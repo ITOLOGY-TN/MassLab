@@ -6,10 +6,10 @@
 
 ## Two bring-up paths
 
-| Path | When to pick it | Trade-off |
-|---|---|---|
-| **A. Cloud** *(default)* | Solo operator with a Supabase account; data should persist beyond a single laptop. | ~150 ms request latency vs ~5 ms local; needs network. |
-| **B. Local CLI stack** | Offline work; sandboxing destructive migrations away from real data. | Requires Docker; data lives in a Docker volume. |
+| Path                     | When to pick it                                                                    | Trade-off                                              |
+| ------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **A. Cloud** _(default)_ | Solo operator with a Supabase account; data should persist beyond a single laptop. | ~150 ms request latency vs ~5 ms local; needs network. |
+| **B. Local CLI stack**   | Offline work; sandboxing destructive migrations away from real data.               | Requires Docker; data lives in a Docker volume.        |
 
 The application code is identical for both — only `.env` and the migration command differ.
 
@@ -19,13 +19,14 @@ The application code is identical for both — only `.env` and the migration com
 
 ### Prerequisites
 
-| Tool | Why | How |
-|---|---|---|
-| Node.js 20.x LTS | runs the API and Vite | https://nodejs.org/ |
-| Supabase CLI | links the project and applies migrations | `brew install supabase/tap/supabase-beta` (macOS) / see https://supabase.com/docs/guides/cli |
-| A Supabase project | hosts the database + auth | https://supabase.com/dashboard → New Project |
+| Tool               | Why                                      | How                                                                                          |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Node.js 20.x LTS   | runs the API and Vite                    | https://nodejs.org/                                                                          |
+| Supabase CLI       | links the project and applies migrations | `brew install supabase/tap/supabase-beta` (macOS) / see https://supabase.com/docs/guides/cli |
+| A Supabase project | hosts the database + auth                | https://supabase.com/dashboard → New Project                                                 |
 
 Verify:
+
 ```bash
 node -v          # v20.x.x or newer
 supabase --version
@@ -71,8 +72,8 @@ Open http://localhost:5173. The scaffold page renders the seeded athlete's `disp
 
 ### Additional prerequisites
 
-| Tool | Why | How |
-|---|---|---|
+| Tool                                  | Why                               | How                     |
+| ------------------------------------- | --------------------------------- | ----------------------- |
 | Docker Desktop (or Colima / OrbStack) | hosts the local Supabase services | https://www.docker.com/ |
 
 ### Bring-up sequence
@@ -108,15 +109,15 @@ concurrently
 
 ## Useful scripts
 
-| Script | What it does |
-|---|---|
-| `npm start` | Boot API + Vite together (default workflow). |
-| `npm run dev` | Alias of `npm start`. |
-| `npm run seed` | Re-run the athlete-scoped seed (idempotent; safe on a populated DB). |
-| `npm run db:reset` | **Local stack only.** `supabase db reset` then re-run `npm run seed`. **Destructive.** |
-| `supabase db push` | **Cloud only.** Apply pending migrations to the linked cloud project. |
-| `npm test` | Run all Vitest suites (unit, integration, contract). |
-| `npm run test:contract` | Just the OpenAPI contract suite (`tests/contract/api.v1.test.js`). |
+| Script                  | What it does                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `npm start`             | Boot API + Vite together (default workflow).                                           |
+| `npm run dev`           | Alias of `npm start`.                                                                  |
+| `npm run seed`          | Re-run the athlete-scoped seed (idempotent; safe on a populated DB).                   |
+| `npm run db:reset`      | **Local stack only.** `supabase db reset` then re-run `npm run seed`. **Destructive.** |
+| `supabase db push`      | **Cloud only.** Apply pending migrations to the linked cloud project.                  |
+| `npm test`              | Run all Vitest suites (unit, integration, contract).                                   |
+| `npm run test:contract` | Just the OpenAPI contract suite (`tests/contract/api.v1.test.js`).                     |
 
 ## Verifying the principles
 

@@ -4,7 +4,11 @@ import { HttpError } from '../../middleware/errorHandler.js';
 export function athletesDao(supabase) {
   return {
     async findById(id) {
-      const { data, error } = await supabase.from('athletes').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await supabase
+        .from('athletes')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
       if (error) throw new HttpError(500, 'DB_ERROR', error.message);
       return data;
     },

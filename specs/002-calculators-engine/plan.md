@@ -12,6 +12,7 @@ Phase 1 makes MassLab "smart". On top of the Phase 0 foundation, we add a determ
 **Language/Version**: Node.js 20+ (project runs on 22.17 in dev), JavaScript ES2022 ESM. React 18.3 for the frontend.
 
 **Primary Dependencies** (all already installed in Phase 0; nothing new at runtime):
+
 - Backend: `express`, `@supabase/supabase-js`, `pino`, `pino-http`, `dotenv`, `zod`, `uuid`, `cors`. No new runtime dependencies for Phase 1 — the engine is pure JavaScript.
 - Frontend: `react`, `react-dom`, `vite`, `tailwindcss`. New dev addition for routing: `react-router-dom@^6` (the Calculators page and Nutrition view need navigation; Phase 0 had a single scaffold page).
 - Tooling: `vitest` (already configured for unit + integration + contract suites), `@testing-library/react@^15` for the Calculators / Nutrition smoke tests.
@@ -25,12 +26,14 @@ Phase 1 makes MassLab "smart". On top of the Phase 0 foundation, we add a determ
 **Project Type**: Web application — same layout as Phase 0 (`/routes`, `/controllers`, `/services`, `/middleware`, `/config`, `/frontend`). The engine lives under `/services/engine/` (one file per pure calculator) and `/services/progressionEngine.js`. The program generator already exists at `/services/programGenerator.js` — Phase 1 expands it to consume the new calculator engine and write through the soft-archive DAO.
 
 **Performance Goals** (from Success Criteria):
+
 - SC-001: end-to-end program generation ≤ 2 s from `POST /api/v1/program/regenerate` to response.
 - SC-004: a progression flag triggered by a saved session is visible on the next read of `/api/v1/progression-flags` within 1 s of the save completing (Phase 1 ships the engine; Phase 4 wires the session-save trigger).
 - SC-006: protein target reflects new lean body mass within 1 s of a body-weight save.
 - SC-007: manual calculator on the Calculators page returns within 500 ms of submitting valid inputs.
 
 **Constraints**:
+
 - Determinism: no `Date.now()`, no `Math.random()`, no env reads inside engine pure functions. Time-dependent values (e.g. "this week's volume") are passed in by the caller.
 - Engine-version pinning: every persisted calculation row carries the engine semver string and a `resolved_constants` JSONB snapshot of `default ⊕ athlete_override` so old rows can be replayed exactly.
 - All domain rows continue to carry `athlete_id` and ship RLS in the same migration (Constitution I).
@@ -41,7 +44,7 @@ Phase 1 makes MassLab "smart". On top of the Phase 0 foundation, we add a determ
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 Reviewed against `.specify/memory/constitution.md` v1.1.1:
 
@@ -75,9 +78,10 @@ Reviewed against `.specify/memory/constitution.md` v1.1.1:
 - **VI. Athlete-First UX** — **PARTIAL → PASS**. Phase 1 ships two surfaces:
   - **Calculators page** (US6): one navigable page, sub-routes per calculator (`/calculators/bmr`, `/calculators/tdee`, etc.) using `react-router-dom`. Tailwind utilities only; design tokens from `frontend/src/styles/tokens.css`. Form inputs use the same large hit-target convention the Phase 4 journal will need; even though Phase 1 doesn't have set-logging, building the input pattern now keeps Phase 4 cheap.
   - **Nutrition view**: read-only display of `calories / protein g / carbs g / fat g` for the active program, plus the per-meal breakdown from the existing nutrition_template_meals. No charts in Phase 1.
-  - One-handed operability and 30-second auto-save activate when the journal screen ships in Phase 4 — Phase 1 has no editing surfaces other than the Calculators forms (which are explicitly *not* persisting), so the auto-save rule does not apply.
+  - One-handed operability and 30-second auto-save activate when the journal screen ships in Phase 4 — Phase 1 has no editing surfaces other than the Calculators forms (which are explicitly _not_ persisting), so the auto-save rule does not apply.
 
 **Post-design re-check (after Phase 1 artifacts)**: still **PASS** —
+
 - `data-model.md` enumerates the 5 new tables + the `app_config` extension; every domain table carries `athlete_id` and ships RLS.
 - `contracts/openapi.yaml` keeps every new path under `/api/v1/` with the `{ data }` envelope; the canonical error envelope from Phase 0 is reused unchanged.
 - The proposed source layout keeps Supabase imports inside `services/dataAccess/*` and engine logic inside pure modules under `services/engine/` and `services/progressionEngine.js`. No `models/` directory is introduced.

@@ -173,7 +173,6 @@ components:
         superseded_at: { type: string, format: date-time, nullable: true }
 
 paths:
-
   # ------------------------------------------------------------------
   # PROGRAM
   # ------------------------------------------------------------------
@@ -324,7 +323,8 @@ paths:
                 biological_sex: { type: string, enum: [male, female] }
                 activity_level:
                   type: string
-                  enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+                  enum:
+                    [sedentary, lightly_active, moderately_active, very_active, extremely_active]
       responses:
         '200':
           description: BMR + TDEE.
@@ -368,7 +368,8 @@ paths:
                 biological_sex: { type: string, enum: [male, female] }
                 activity_level:
                   type: string
-                  enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+                  enum:
+                    [sedentary, lightly_active, moderately_active, very_active, extremely_active]
                 morphotype:
                   type: string
                   enum: [ectomorph, mesomorph, endomorph]

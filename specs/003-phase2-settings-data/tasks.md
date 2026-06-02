@@ -1,6 +1,5 @@
 ---
-
-description: "Phase 2 — Settings & Data Management implementation tasks"
+description: 'Phase 2 — Settings & Data Management implementation tasks'
 ---
 
 # Tasks: Phase 2 — Settings & Data Management
@@ -28,10 +27,10 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 **Purpose**: Install new dependencies and wire the config knobs Phase 2 introduces. Nothing in this phase touches a story-specific code path.
 
-- [X] T001 Install `multer@^1.4` at the repo root (`npm install multer`) — only used by `routes/dataManagement.routes.js` for the import upload; configured to memory storage in T013.
-- [X] T002 Install `@dnd-kit/core@^6` and `@dnd-kit/sortable@^8` in the frontend workspace (`npm --prefix frontend install @dnd-kit/core @dnd-kit/sortable`). Used by both the schedule reorder (US2) and the exercise reorder (US3).
-- [X] T003 [P] Extend `config/schema.js` with the four new keys: `BACKUP_SCHEMA_VERSION` (int, default `1`), `IMPORT_MAX_BYTES` (int, default `26214400`), `CSV_SEPARATOR` (string, default `","`), `RESET_CONFIRM_TOKEN` (string, default `"RESET-MASSLAB"`). Add each to the existing zod schema; none of them are secrets so they are not added to the `SECRET_KEYS` redactor list.
-- [X] T004 [P] Update `.env.example` with the four new keys (without real values) so local devs see them on first checkout. No code change needed beyond the file.
+- [x] T001 Install `multer@^1.4` at the repo root (`npm install multer`) — only used by `routes/dataManagement.routes.js` for the import upload; configured to memory storage in T013.
+- [x] T002 Install `@dnd-kit/core@^6` and `@dnd-kit/sortable@^8` in the frontend workspace (`npm --prefix frontend install @dnd-kit/core @dnd-kit/sortable`). Used by both the schedule reorder (US2) and the exercise reorder (US3).
+- [x] T003 [P] Extend `config/schema.js` with the four new keys: `BACKUP_SCHEMA_VERSION` (int, default `1`), `IMPORT_MAX_BYTES` (int, default `26214400`), `CSV_SEPARATOR` (string, default `","`), `RESET_CONFIRM_TOKEN` (string, default `"RESET-MASSLAB"`). Add each to the existing zod schema; none of them are secrets so they are not added to the `SECRET_KEYS` redactor list.
+- [x] T004 [P] Update `.env.example` with the four new keys (without real values) so local devs see them on first checkout. No code change needed beyond the file.
 
 **Checkpoint**: dependencies installed, config keys readable via `loadConfig()`. Foundational phase can begin.
 
@@ -43,12 +42,12 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 **⚠️ CRITICAL**: No user story implementation may begin until this phase is complete.
 
-- [X] T005 Add the `/settings`, `/settings/profile`, `/settings/schedule`, `/settings/exercises`, `/settings/preferences`, `/settings/data` routes to `frontend/src/App.jsx`. Each route renders a placeholder component for now; the real sub-views land in their respective story phases.
-- [X] T006 [P] Create `frontend/src/pages/settings/SettingsLayout.jsx` — the shared layout for all five sub-routes (sidebar nav + outlet). Apply Frontend Design skill output; Tailwind utilities only; tokens from `frontend/src/styles/tokens.css`. Hit targets sized for one-handed use per Constitution VI.
-- [X] T007 [P] Extend `frontend/src/lib/api.js` with `apiPatch`, `apiPut`, `apiDelete`, and `apiUpload` (multipart) helpers. Match the shape of the existing `apiPost`. No new dependency.
-- [X] T008 [P] Create `frontend/src/lib/units.js` — pure helpers: `kgToLbs(kg)`, `lbsToKg(lbs)`, `formatWeight(value, unit)`. Round-trip drift bounded to ±0.05 kg per Phase 2 SC-006. Unit tests live in T053.
-- [X] T009 [P] Create `frontend/src/components/ConfirmDialog.jsx` — typed-token destructive confirmation dialog. Reused by US6 (import replace) and US7 (reset). Token is read from a prop; the prop value comes from a runtime-config endpoint or is hardcoded to `RESET-MASSLAB` in dev (server-side check is the source of truth — FE check is UX only).
-- [X] T010 [P] Create `frontend/src/components/SortableList.jsx` — `@dnd-kit/sortable` wrapper exposing a render-prop API (`<SortableList items={...} onReorder={(orderedIds) => ...} />`). Drag handles ≥ 44 px. Reused by US2 (schedule slots, weekly_plan_exercises) and US3 (exercise manager re-attach order).
+- [x] T005 Add the `/settings`, `/settings/profile`, `/settings/schedule`, `/settings/exercises`, `/settings/preferences`, `/settings/data` routes to `frontend/src/App.jsx`. Each route renders a placeholder component for now; the real sub-views land in their respective story phases.
+- [x] T006 [P] Create `frontend/src/pages/settings/SettingsLayout.jsx` — the shared layout for all five sub-routes (sidebar nav + outlet). Apply Frontend Design skill output; Tailwind utilities only; tokens from `frontend/src/styles/tokens.css`. Hit targets sized for one-handed use per Constitution VI.
+- [x] T007 [P] Extend `frontend/src/lib/api.js` with `apiPatch`, `apiPut`, `apiDelete`, and `apiUpload` (multipart) helpers. Match the shape of the existing `apiPost`. No new dependency.
+- [x] T008 [P] Create `frontend/src/lib/units.js` — pure helpers: `kgToLbs(kg)`, `lbsToKg(lbs)`, `formatWeight(value, unit)`. Round-trip drift bounded to ±0.05 kg per Phase 2 SC-006. Unit tests live in T053.
+- [x] T009 [P] Create `frontend/src/components/ConfirmDialog.jsx` — typed-token destructive confirmation dialog. Reused by US6 (import replace) and US7 (reset). Token is read from a prop; the prop value comes from a runtime-config endpoint or is hardcoded to `RESET-MASSLAB` in dev (server-side check is the source of truth — FE check is UX only).
+- [x] T010 [P] Create `frontend/src/components/SortableList.jsx` — `@dnd-kit/sortable` wrapper exposing a render-prop API (`<SortableList items={...} onReorder={(orderedIds) => ...} />`). Drag handles ≥ 44 px. Reused by US2 (schedule slots, weekly_plan_exercises) and US3 (exercise manager re-attach order).
 
 **Checkpoint**: shared scaffolding ready. User stories may now proceed in parallel.
 
@@ -64,18 +63,18 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 > Write these tests FIRST, ensure they FAIL before implementation.
 
-- [X] T011 [P] [US1] Contract test for `GET /api/v1/me` and `PATCH /api/v1/me` in `tests/contract/api.v1.test.js` — assert response envelopes match `contracts/openapi.yaml` (AthleteProfile, AthleteProfilePatch, recompute summary).
-- [X] T012 [P] [US1] Integration test in `tests/integration/settings.profile.audit.test.js` — `PATCH /api/v1/me { current_weight_kg: 59 }` produces exactly one new row in `calculation_results` carrying the engine version, and the row's `resolved_constants` matches `resolveConstants(athleteOverride)` post-save.
-- [X] T013 [P] [US1] Integration test in `tests/integration/settings.profile.validation.test.js` — invalid bodies (age 200, weight −1, target_weight 200kg above current, start_date 5 years out) all return 400 `VALIDATION_FAILED` and persist nothing.
+- [x] T011 [P] [US1] Contract test for `GET /api/v1/me` and `PATCH /api/v1/me` in `tests/contract/api.v1.test.js` — assert response envelopes match `contracts/openapi.yaml` (AthleteProfile, AthleteProfilePatch, recompute summary).
+- [x] T012 [P] [US1] Integration test in `tests/integration/settings.profile.audit.test.js` — `PATCH /api/v1/me { current_weight_kg: 59 }` produces exactly one new row in `calculation_results` carrying the engine version, and the row's `resolved_constants` matches `resolveConstants(athleteOverride)` post-save.
+- [x] T013 [P] [US1] Integration test in `tests/integration/settings.profile.validation.test.js` — invalid bodies (age 200, weight −1, target_weight 200kg above current, start_date 5 years out) all return 400 `VALIDATION_FAILED` and persist nothing.
 
 ### Implementation for User Story 1
 
-- [X] T014 [P] [US1] Extend `services/dataAccess/athletes.dao.js` with `updateProfile(athleteId, patch)` — returns the updated row. Single Supabase `update().eq('id', athleteId).select().single()`. Validation lives upstream.
-- [X] T015 [P] [US1] Extend `controllers/athlete.controller.js` with the broadened `PATCH /me` handler. Steps in order: (a) zod-validate body against the AthleteProfilePatch schema (declared inline in the controller using zod); (b) call `athletes.dao.updateProfile`; (c) if any *calculator-input* field changed (height/weight/age/sex/morphotype/activity_level/sessions_per_week), call `programGenerator.regenerateForAthlete(athleteId, { reason: 'profile_save' })` which writes one audit row; (d) return `{ profile, recompute: { calculation_audit_id, engine_version } }`.
-- [X] T016 [US1] Wire `PATCH /me` in `routes/athlete.routes.js` to the new controller method. Confirm the existing `GET /me` is unchanged.
-- [X] T017 [US1] Confirm `services/programGenerator.js` already exposes a regeneration entry that writes through `services/engine/auditWriter.js`. If it doesn't accept a `reason` tag, extend the signature minimally (additive, no breaking change to Phase 1 callers).
-- [X] T018 [US1] Build `frontend/src/pages/settings/ProfileSettings.jsx` — controlled form bound to `GET /api/v1/me`, dirty-state guard, on-blur per-field validation matching the backend rules in `data-model.md`. Save button calls `apiPatch('/me', body)` and shows the recompute summary on success.
-- [X] T019 [P] [US1] Frontend smoke test in `tests/frontend/settings.profile.test.jsx` — renders the form, submits a valid change, asserts the recompute summary appears, asserts the unsaved-changes guard fires when navigating away mid-edit.
+- [x] T014 [P] [US1] Extend `services/dataAccess/athletes.dao.js` with `updateProfile(athleteId, patch)` — returns the updated row. Single Supabase `update().eq('id', athleteId).select().single()`. Validation lives upstream.
+- [x] T015 [P] [US1] Extend `controllers/athlete.controller.js` with the broadened `PATCH /me` handler. Steps in order: (a) zod-validate body against the AthleteProfilePatch schema (declared inline in the controller using zod); (b) call `athletes.dao.updateProfile`; (c) if any _calculator-input_ field changed (height/weight/age/sex/morphotype/activity_level/sessions_per_week), call `programGenerator.regenerateForAthlete(athleteId, { reason: 'profile_save' })` which writes one audit row; (d) return `{ profile, recompute: { calculation_audit_id, engine_version } }`.
+- [x] T016 [US1] Wire `PATCH /me` in `routes/athlete.routes.js` to the new controller method. Confirm the existing `GET /me` is unchanged.
+- [x] T017 [US1] Confirm `services/programGenerator.js` already exposes a regeneration entry that writes through `services/engine/auditWriter.js`. If it doesn't accept a `reason` tag, extend the signature minimally (additive, no breaking change to Phase 1 callers).
+- [x] T018 [US1] Build `frontend/src/pages/settings/ProfileSettings.jsx` — controlled form bound to `GET /api/v1/me`, dirty-state guard, on-blur per-field validation matching the backend rules in `data-model.md`. Save button calls `apiPatch('/me', body)` and shows the recompute summary on success.
+- [x] T019 [P] [US1] Frontend smoke test in `tests/frontend/settings.profile.test.jsx` — renders the form, submits a valid change, asserts the recompute summary appears, asserts the unsaved-changes guard fires when navigating away mid-edit.
 
 **Checkpoint**: US1 fully functional. Profile edits flow through the engine and produce an audit row. **MVP is shippable here.**
 
@@ -89,32 +88,32 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Migrations (run in order; foundational for US2 only)
 
-- [X] T020 [US2] Author `supabase/migrations/20260508000001_init_muscle_groups.sql` — creates the `muscle_groups` table per `data-model.md`, including the `unique (athlete_id, slug)` constraint, the two CHECK constraints (name length, hex color), the two indexes, and the `_select_own` + `_modify_own` RLS policies.
-- [X] T021 [US2] Author `supabase/migrations/20260508000002_extend_weekly_plan_slots_muscle_group_fk.sql` — adds nullable `muscle_group_id BIGINT` FK on `weekly_plan_slots` plus the index.
-- [X] T022 [US2] Author `supabase/migrations/20260508000003_backfill_weekly_plan_slots_muscle_group_id.sql` — pure SQL data migration per `data-model.md` (insert distinct catalogue rows per `(athlete_id, muscle_group)`, then update each slot). Idempotent and a no-op on a fresh DB.
-- [X] T023 [US2] Author `supabase/migrations/20260508000004_finalize_weekly_plan_slots_muscle_group_fk.sql` — `alter ... set not null` on `muscle_group_id` and `drop column muscle_group`.
-- [X] T024 [US2] Extend `seed/runSeed.js` to insert the seeded muscle-group catalogue on first run (Chest+Triceps, Back+Biceps, Legs-Quads, Shoulders+Traps, Legs-Hams+Glutes) with the Phase 0 palette colors. Idempotent (`on conflict do nothing` on `(athlete_id, slug)`).
+- [x] T020 [US2] Author `supabase/migrations/20260508000001_init_muscle_groups.sql` — creates the `muscle_groups` table per `data-model.md`, including the `unique (athlete_id, slug)` constraint, the two CHECK constraints (name length, hex color), the two indexes, and the `_select_own` + `_modify_own` RLS policies.
+- [x] T021 [US2] Author `supabase/migrations/20260508000002_extend_weekly_plan_slots_muscle_group_fk.sql` — adds nullable `muscle_group_id BIGINT` FK on `weekly_plan_slots` plus the index.
+- [x] T022 [US2] Author `supabase/migrations/20260508000003_backfill_weekly_plan_slots_muscle_group_id.sql` — pure SQL data migration per `data-model.md` (insert distinct catalogue rows per `(athlete_id, muscle_group)`, then update each slot). Idempotent and a no-op on a fresh DB.
+- [x] T023 [US2] Author `supabase/migrations/20260508000004_finalize_weekly_plan_slots_muscle_group_fk.sql` — `alter ... set not null` on `muscle_group_id` and `drop column muscle_group`.
+- [x] T024 [US2] Extend `seed/runSeed.js` to insert the seeded muscle-group catalogue on first run (Chest+Triceps, Back+Biceps, Legs-Quads, Shoulders+Traps, Legs-Hams+Glutes) with the Phase 0 palette colors. Idempotent (`on conflict do nothing` on `(athlete_id, slug)`).
 
 ### Tests for User Story 2 (TDD)
 
-- [X] T025 [P] [US2] Unit tests in `tests/unit/scheduleValidator.test.js` covering FR-008: zero active days rejects, duplicate `muscle_group_id` in same week rejects, name length > 40 rejects, day_of_week out of [1,7] rejects, valid inputs pass through. Tests fail until T030 lands.
-- [X] T026 [P] [US2] Contract tests in `tests/contract/api.v1.test.js` for the new paths: `GET/PUT /me/schedule`, `POST /me/schedule/slots/:id/exercises/reorder`, `GET/POST/PATCH/DELETE /muscle-groups`, `POST /muscle-groups/:id/merge`.
-- [X] T027 [P] [US2] Integration test `tests/integration/settings.schedule.replace.test.js` — full PUT replaces atomically (failure mid-write leaves prior schedule intact), `unique (athlete_id, day_of_week)` enforced, in-progress-session conflict returns 409 unless `?force=1`.
-- [X] T028 [P] [US2] Integration test `tests/integration/settings.muscleGroups.lifecycle.test.js` — create → rename (slot rows unchanged) → merge into another (slot rows repointed, source archived) → soft-archive when referenced → hard-delete when not referenced.
-- [X] T029 [P] [US2] Integration test `tests/integration/settings.muscleGroups.rls.test.js` — using a per-test JWT against the publishable-key client per the existing pattern in Phase 0's `rls.policies.test.js`, confirm cross-athlete reads/writes are blocked.
+- [x] T025 [P] [US2] Unit tests in `tests/unit/scheduleValidator.test.js` covering FR-008: zero active days rejects, duplicate `muscle_group_id` in same week rejects, name length > 40 rejects, day_of_week out of [1,7] rejects, valid inputs pass through. Tests fail until T030 lands.
+- [x] T026 [P] [US2] Contract tests in `tests/contract/api.v1.test.js` for the new paths: `GET/PUT /me/schedule`, `POST /me/schedule/slots/:id/exercises/reorder`, `GET/POST/PATCH/DELETE /muscle-groups`, `POST /muscle-groups/:id/merge`.
+- [x] T027 [P] [US2] Integration test `tests/integration/settings.schedule.replace.test.js` — full PUT replaces atomically (failure mid-write leaves prior schedule intact), `unique (athlete_id, day_of_week)` enforced, in-progress-session conflict returns 409 unless `?force=1`.
+- [x] T028 [P] [US2] Integration test `tests/integration/settings.muscleGroups.lifecycle.test.js` — create → rename (slot rows unchanged) → merge into another (slot rows repointed, source archived) → soft-archive when referenced → hard-delete when not referenced.
+- [x] T029 [P] [US2] Integration test `tests/integration/settings.muscleGroups.rls.test.js` — using a per-test JWT against the publishable-key client per the existing pattern in Phase 0's `rls.policies.test.js`, confirm cross-athlete reads/writes are blocked.
 
 ### Implementation for User Story 2
 
-- [X] T030 [P] [US2] Create `services/scheduleValidator.js` — pure module exporting `validateSchedule(payload)` returning `{ ok: true } | { ok: false, errors: [...] }`. No I/O. Used by both backend and frontend (the frontend imports from a shared spot — Phase 2 keeps the duplication minimal by re-exporting from `frontend/src/lib/`; alternative: dynamic import. Pick the lighter path during implementation.).
-- [X] T031 [P] [US2] Create `services/dataAccess/muscleGroups.dao.js` — methods: `listForAthlete(athleteId, { includeArchived })`, `create`, `patch`, `softArchive`, `hardDelete`, `merge(sourceId, targetId, athleteId)` (single Supabase RPC or transaction repointing slot references then archiving the source).
-- [X] T032 [US2] Create `controllers/muscleGroups.controller.js` — orchestrates the DAO; enforces ownership scope from `req.athleteId`; rejects merges when source and target are the same.
-- [X] T033 [US2] Create `routes/muscleGroups.routes.js` — mount the five paths from the OpenAPI under `/api/v1/muscle-groups/*`. Register in `app.js`.
-- [X] T034 [US2] Extend `services/dataAccess/weeklyPlan.dao.js` with `replaceSchedule(athleteId, payload)` — runs inside a single Supabase transaction (or staged buffer + swap if necessary): clear existing slots + exercises for the athlete, insert the new payload, return the resolved schedule. Validate via `scheduleValidator.validateSchedule` before any write.
-- [X] T035 [US2] Extend `controllers/weeklyPlan.controller.js` with the `getSchedule` and `replaceSchedule` handlers. The replace handler checks for an in-progress session on a deactivated day and returns 409 unless `req.query.force === '1'`.
-- [X] T036 [US2] Extend `routes/weeklyPlan.routes.js` to expose `GET /me/schedule`, `PUT /me/schedule`, and `POST /me/schedule/slots/:slotId/exercises/reorder`.
-- [X] T037 [US2] Add the reorder DAO method to `weeklyPlan.dao.js` — `reorderSlotExercises(slotId, athleteId, orderedExerciseIds)` updating `position` in one transaction.
-- [X] T038 [US2] Build `frontend/src/pages/settings/ScheduleSettings.jsx` — drag-and-drop day cards using `SortableList`, muscle-group picker pulling from `/muscle-groups`, inline catalogue editor (rename / merge / archive). Save button calls `apiPut('/me/schedule', body)`; conflict 409 surfaces a confirmation dialog.
-- [X] T039 [P] [US2] Frontend smoke test `tests/frontend/settings.schedule.test.jsx` — renders the screen, dispatches a reorder, hits Save, asserts the optimistic UI matches the GET response after success.
+- [x] T030 [P] [US2] Create `services/scheduleValidator.js` — pure module exporting `validateSchedule(payload)` returning `{ ok: true } | { ok: false, errors: [...] }`. No I/O. Used by both backend and frontend (the frontend imports from a shared spot — Phase 2 keeps the duplication minimal by re-exporting from `frontend/src/lib/`; alternative: dynamic import. Pick the lighter path during implementation.).
+- [x] T031 [P] [US2] Create `services/dataAccess/muscleGroups.dao.js` — methods: `listForAthlete(athleteId, { includeArchived })`, `create`, `patch`, `softArchive`, `hardDelete`, `merge(sourceId, targetId, athleteId)` (single Supabase RPC or transaction repointing slot references then archiving the source).
+- [x] T032 [US2] Create `controllers/muscleGroups.controller.js` — orchestrates the DAO; enforces ownership scope from `req.athleteId`; rejects merges when source and target are the same.
+- [x] T033 [US2] Create `routes/muscleGroups.routes.js` — mount the five paths from the OpenAPI under `/api/v1/muscle-groups/*`. Register in `app.js`.
+- [x] T034 [US2] Extend `services/dataAccess/weeklyPlan.dao.js` with `replaceSchedule(athleteId, payload)` — runs inside a single Supabase transaction (or staged buffer + swap if necessary): clear existing slots + exercises for the athlete, insert the new payload, return the resolved schedule. Validate via `scheduleValidator.validateSchedule` before any write.
+- [x] T035 [US2] Extend `controllers/weeklyPlan.controller.js` with the `getSchedule` and `replaceSchedule` handlers. The replace handler checks for an in-progress session on a deactivated day and returns 409 unless `req.query.force === '1'`.
+- [x] T036 [US2] Extend `routes/weeklyPlan.routes.js` to expose `GET /me/schedule`, `PUT /me/schedule`, and `POST /me/schedule/slots/:slotId/exercises/reorder`.
+- [x] T037 [US2] Add the reorder DAO method to `weeklyPlan.dao.js` — `reorderSlotExercises(slotId, athleteId, orderedExerciseIds)` updating `position` in one transaction.
+- [x] T038 [US2] Build `frontend/src/pages/settings/ScheduleSettings.jsx` — drag-and-drop day cards using `SortableList`, muscle-group picker pulling from `/muscle-groups`, inline catalogue editor (rename / merge / archive). Save button calls `apiPut('/me/schedule', body)`; conflict 409 surfaces a confirmation dialog.
+- [x] T039 [P] [US2] Frontend smoke test `tests/frontend/settings.schedule.test.jsx` — renders the screen, dispatches a reorder, hits Save, asserts the optimistic UI matches the GET response after success.
 
 **Checkpoint**: US2 fully functional. Schedule edits propagate through the system without rewriting historical session attribution.
 
@@ -128,20 +127,20 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Migration
 
-- [X] T040 [US3] Author `supabase/migrations/20260508000005_extend_exercises_is_active.sql` — adds `is_active boolean not null default true` and the partial index per `data-model.md`.
+- [x] T040 [US3] Author `supabase/migrations/20260508000005_extend_exercises_is_active.sql` — adds `is_active boolean not null default true` and the partial index per `data-model.md`.
 
 ### Tests for User Story 3 (TDD)
 
-- [X] T041 [P] [US3] Contract tests in `tests/contract/api.v1.test.js` for `GET /exercises?include_archived=`, `POST /exercises`, `PATCH /exercises/:id`, `DELETE /exercises/:id`.
-- [X] T042 [P] [US3] Integration test `tests/integration/settings.exercises.softDelete.test.js` — delete with historical session refs → row remains with `is_active=false`; delete without refs → row removed; archived rows hidden by default `GET`, returned with `?include_archived=1`.
+- [x] T041 [P] [US3] Contract tests in `tests/contract/api.v1.test.js` for `GET /exercises?include_archived=`, `POST /exercises`, `PATCH /exercises/:id`, `DELETE /exercises/:id`.
+- [x] T042 [P] [US3] Integration test `tests/integration/settings.exercises.softDelete.test.js` — delete with historical session refs → row remains with `is_active=false`; delete without refs → row removed; archived rows hidden by default `GET`, returned with `?include_archived=1`.
 
 ### Implementation for User Story 3
 
-- [X] T043 [P] [US3] Extend `services/dataAccess/exercises.dao.js` with `create`, `patch`, `softDelete`, `hardDeleteIfUnreferenced` and update `list` to filter `is_active=true` by default.
-- [X] T044 [US3] Extend `controllers/exercises.controller.js` with handlers for the four new operations. The DELETE handler decides between soft and hard based on a `countReferences` DAO call.
-- [X] T045 [US3] Extend `routes/exercises.routes.js` with the four paths.
-- [X] T046 [US3] Build `frontend/src/pages/settings/ExerciseManager.jsx` — table view of active exercises, "Show archived" toggle, create modal, edit modal, delete confirmation that surfaces "this will be soft-deleted because N historical sessions reference it" when `references > 0`.
-- [X] T047 [P] [US3] Frontend smoke test `tests/frontend/settings.exercises.test.jsx` — create / edit / delete happy path.
+- [x] T043 [P] [US3] Extend `services/dataAccess/exercises.dao.js` with `create`, `patch`, `softDelete`, `hardDeleteIfUnreferenced` and update `list` to filter `is_active=true` by default.
+- [x] T044 [US3] Extend `controllers/exercises.controller.js` with handlers for the four new operations. The DELETE handler decides between soft and hard based on a `countReferences` DAO call.
+- [x] T045 [US3] Extend `routes/exercises.routes.js` with the four paths.
+- [x] T046 [US3] Build `frontend/src/pages/settings/ExerciseManager.jsx` — table view of active exercises, "Show archived" toggle, create modal, edit modal, delete confirmation that surfaces "this will be soft-deleted because N historical sessions reference it" when `references > 0`.
+- [x] T047 [P] [US3] Frontend smoke test `tests/frontend/settings.exercises.test.jsx` — create / edit / delete happy path.
 
 **Checkpoint**: US3 fully functional. Exercise library is editable; history is preserved.
 
@@ -155,30 +154,30 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Migrations
 
-- [X] T048 [US4] Author `supabase/migrations/20260508000006_extend_app_config_notification_acks.sql` — adds `notification_acks jsonb not null default '{}'::jsonb`.
-- [X] T049 [US4] Author `supabase/migrations/20260508000007_drop_app_config_daily_kcal_override.sql` — drops the column per Decision D-3.
+- [x] T048 [US4] Author `supabase/migrations/20260508000006_extend_app_config_notification_acks.sql` — adds `notification_acks jsonb not null default '{}'::jsonb`.
+- [x] T049 [US4] Author `supabase/migrations/20260508000007_drop_app_config_daily_kcal_override.sql` — drops the column per Decision D-3.
 
 ### Tests for User Story 4 (TDD — Constitution V)
 
 > Engine-extension tests are RED-then-GREEN per Principle V; write before implementation.
 
-- [X] T050 [P] [US4] Extend `tests/unit/engine.macros.test.js` with the calorie-only override path (FR-017a): given a calorie override, macros recompute on the new total using existing rules; given an explicit per-macro override (FR-017b), that macro pins while siblings auto-derive; clearing returns engine values.
-- [X] T051 [P] [US4] Contract tests in `tests/contract/api.v1.test.js` for `GET/PATCH /me/preferences`, `GET/PUT/DELETE /me/nutrition-targets`.
-- [X] T052 [P] [US4] Integration test `tests/integration/settings.preferences.persist.test.js` — round-trip theme / units / sound; deep-merge of `notification_acks` (PATCH with one key updates only that key; null clears it).
-- [X] T053 [P] [US4] Integration test `tests/integration/settings.nutritionTargets.audit.test.js` — every PUT and DELETE produces exactly one `calculation_results` row carrying `reason ∈ {override_set, override_cleared}` and the engine version. Idempotent re-saves still emit a row each (FR-003a).
-- [X] T054 [P] [US4] Unit tests for `frontend/src/lib/units.js` in `tests/unit/lib.units.test.js` — round-trip kg ↔ lbs ↔ kg drift ≤ 0.05 kg across the plausible range (30–250 kg).
+- [x] T050 [P] [US4] Extend `tests/unit/engine.macros.test.js` with the calorie-only override path (FR-017a): given a calorie override, macros recompute on the new total using existing rules; given an explicit per-macro override (FR-017b), that macro pins while siblings auto-derive; clearing returns engine values.
+- [x] T051 [P] [US4] Contract tests in `tests/contract/api.v1.test.js` for `GET/PATCH /me/preferences`, `GET/PUT/DELETE /me/nutrition-targets`.
+- [x] T052 [P] [US4] Integration test `tests/integration/settings.preferences.persist.test.js` — round-trip theme / units / sound; deep-merge of `notification_acks` (PATCH with one key updates only that key; null clears it).
+- [x] T053 [P] [US4] Integration test `tests/integration/settings.nutritionTargets.audit.test.js` — every PUT and DELETE produces exactly one `calculation_results` row carrying `reason ∈ {override_set, override_cleared}` and the engine version. Idempotent re-saves still emit a row each (FR-003a).
+- [x] T054 [P] [US4] Unit tests for `frontend/src/lib/units.js` in `tests/unit/lib.units.test.js` — round-trip kg ↔ lbs ↔ kg drift ≤ 0.05 kg across the plausible range (30–250 kg).
 
 ### Implementation for User Story 4
 
-- [X] T055 [P] [US4] Extend `services/engine/macros.js` to accept an optional `override` argument carrying any subset of `{ daily_kcal, daily_protein_g, daily_carbs_g, daily_fat_g }`. Apply the FR-017a/b rules. Pure function; no I/O.
-- [X] T056 [P] [US4] Extend `services/engine/constants.js` to document the JSONB shape under `engine_overrides.nutrition.*` (comment block + a frozen example payload), so downstream readers see the contract.
-- [X] T057 [P] [US4] Extend `services/dataAccess/appConfig.dao.js` with `getPreferences(athleteId)`, `setPreferences(athleteId, patch)` (deep-merge `notification_acks`), `setNutritionOverride(athleteId, partial)`, `clearAllNutritionOverrides(athleteId)`. Each override mutation returns the post-write `engine_overrides` JSONB so the controller can call the audit writer with the resolved snapshot.
-- [X] T058 [US4] Create `controllers/preferences.controller.js` — GET returns `Preferences`; PATCH validates body via zod, writes via DAO, returns the new state.
-- [X] T059 [US4] Create `controllers/nutritionTargets.controller.js` — GET resolves and returns effective targets with `source` map; PUT writes the partial override, calls `services/engine/auditWriter.js` with `reason: 'override_set'` and the resolved snapshot, returns `{ targets, calculation_audit_id, reason }`; DELETE clears all four and writes one audit row with `reason: 'override_cleared'`.
-- [X] T060 [US4] Create `routes/preferences.routes.js` and `routes/nutritionTargets.routes.js`; register in `app.js`.
-- [X] T061 [US4] Extend `controllers/nutrition.controller.js` (or create a small helper module) so the existing Phase 1 nutrition surface reads through the resolver and surfaces a "custom" badge when any override is in force. Touch `frontend/src/pages/NutritionHome.jsx` to display the badge.
-- [X] T062 [US4] Build `frontend/src/pages/settings/PreferencesSettings.jsx` — theme/units/sound controls (auto-save on change), custom-nutrition section with four numeric fields each independently clearable, a "Recommendation changed" non-blocking notice when the engine value would have shifted (drives `notification_acks.nutrition_recommendation_changed`).
-- [X] T063 [P] [US4] Frontend smoke test `tests/frontend/settings.preferences.test.jsx` — toggle theme persists across reload (mock GET), unit switch updates a displayed weight, custom calorie save triggers a re-fetch of the effective targets.
+- [x] T055 [P] [US4] Extend `services/engine/macros.js` to accept an optional `override` argument carrying any subset of `{ daily_kcal, daily_protein_g, daily_carbs_g, daily_fat_g }`. Apply the FR-017a/b rules. Pure function; no I/O.
+- [x] T056 [P] [US4] Extend `services/engine/constants.js` to document the JSONB shape under `engine_overrides.nutrition.*` (comment block + a frozen example payload), so downstream readers see the contract.
+- [x] T057 [P] [US4] Extend `services/dataAccess/appConfig.dao.js` with `getPreferences(athleteId)`, `setPreferences(athleteId, patch)` (deep-merge `notification_acks`), `setNutritionOverride(athleteId, partial)`, `clearAllNutritionOverrides(athleteId)`. Each override mutation returns the post-write `engine_overrides` JSONB so the controller can call the audit writer with the resolved snapshot.
+- [x] T058 [US4] Create `controllers/preferences.controller.js` — GET returns `Preferences`; PATCH validates body via zod, writes via DAO, returns the new state.
+- [x] T059 [US4] Create `controllers/nutritionTargets.controller.js` — GET resolves and returns effective targets with `source` map; PUT writes the partial override, calls `services/engine/auditWriter.js` with `reason: 'override_set'` and the resolved snapshot, returns `{ targets, calculation_audit_id, reason }`; DELETE clears all four and writes one audit row with `reason: 'override_cleared'`.
+- [x] T060 [US4] Create `routes/preferences.routes.js` and `routes/nutritionTargets.routes.js`; register in `app.js`.
+- [x] T061 [US4] Extend `controllers/nutrition.controller.js` (or create a small helper module) so the existing Phase 1 nutrition surface reads through the resolver and surfaces a "custom" badge when any override is in force. Touch `frontend/src/pages/NutritionHome.jsx` to display the badge.
+- [x] T062 [US4] Build `frontend/src/pages/settings/PreferencesSettings.jsx` — theme/units/sound controls (auto-save on change), custom-nutrition section with four numeric fields each independently clearable, a "Recommendation changed" non-blocking notice when the engine value would have shifted (drives `notification_acks.nutrition_recommendation_changed`).
+- [x] T063 [P] [US4] Frontend smoke test `tests/frontend/settings.preferences.test.jsx` — toggle theme persists across reload (mock GET), unit switch updates a displayed weight, custom calorie save triggers a re-fetch of the effective targets.
 
 **Checkpoint**: US4 fully functional. Preferences and overrides ride the engine pipeline correctly.
 
@@ -192,22 +191,22 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Tests for User Story 5 (TDD)
 
-- [X] T064 [P] [US5] Unit tests in `tests/unit/dataManagement.exporter.test.js` — envelope shape, every athlete-owned collection present, no cross-athlete rows leak, no secret-tagged keys appear, idempotent for the same input.
-- [X] T065 [P] [US5] Unit tests in `tests/unit/dataManagement.csvSerializer.test.js` — header row always emitted; quoting per RFC 4180 (commas, quotes, newlines); UTF-8, `\n` line endings; empty-history case yields header-only.
-- [X] T066 [P] [US5] Unit tests in `tests/unit/dataManagement.backupSchema.test.js` — zod schema accepts a known-good envelope and rejects shapes missing `_export.schema_version`, `_export.athlete_id`, or any required collection.
-- [X] T067 [P] [US5] Contract tests in `tests/contract/api.v1.test.js` for `POST /data/export/json` and `GET /data/export/sessions.csv`.
-- [X] T068 [P] [US5] Integration test `tests/integration/data.export.fullJson.test.js` — exports a seeded athlete, asserts the envelope, asserts the timing budget on a 30-day fixture (SC-008).
-- [X] T069 [P] [US5] Integration test `tests/integration/data.export.csv.test.js` — header-only and populated cases.
+- [x] T064 [P] [US5] Unit tests in `tests/unit/dataManagement.exporter.test.js` — envelope shape, every athlete-owned collection present, no cross-athlete rows leak, no secret-tagged keys appear, idempotent for the same input.
+- [x] T065 [P] [US5] Unit tests in `tests/unit/dataManagement.csvSerializer.test.js` — header row always emitted; quoting per RFC 4180 (commas, quotes, newlines); UTF-8, `\n` line endings; empty-history case yields header-only.
+- [x] T066 [P] [US5] Unit tests in `tests/unit/dataManagement.backupSchema.test.js` — zod schema accepts a known-good envelope and rejects shapes missing `_export.schema_version`, `_export.athlete_id`, or any required collection.
+- [x] T067 [P] [US5] Contract tests in `tests/contract/api.v1.test.js` for `POST /data/export/json` and `GET /data/export/sessions.csv`.
+- [x] T068 [P] [US5] Integration test `tests/integration/data.export.fullJson.test.js` — exports a seeded athlete, asserts the envelope, asserts the timing budget on a 30-day fixture (SC-008).
+- [x] T069 [P] [US5] Integration test `tests/integration/data.export.csv.test.js` — header-only and populated cases.
 
 ### Implementation for User Story 5
 
-- [X] T070 [P] [US5] Create `services/dataManagement/backupSchema.js` — zod schema for the v1 envelope per `contracts/openapi.yaml#/components/schemas/BackupEnvelope`. Exports `BACKUP_SCHEMA_V1` and a `validateEnvelope(input)` helper.
-- [X] T071 [P] [US5] Create `services/dataAccess/exporters.dao.js` — read-only aggregator. Single method `readAllForAthlete(athleteId)` that fans out to every per-entity DAO and returns the assembled record set keyed by collection. Confined to data-access layer per Constitution II.
-- [X] T072 [P] [US5] Create `services/dataManagement/exporter.js` — pure function `buildEnvelope(records, { engineVersion, athleteId, exportedAt })` that returns the v1 envelope. No I/O. No Supabase imports.
-- [X] T073 [P] [US5] Create `services/dataManagement/csvSerializer.js` — pure function `serializeSessionsCsv(sessions, { separator })` returning a UTF-8 string. RFC 4180 quoting.
-- [X] T074 [US5] Create `controllers/dataManagement.controller.js` — `exportJson` handler orchestrates `exporters.dao.readAllForAthlete` → `exporter.buildEnvelope` → return; `exportCsv` handler reads sessions through the existing DAO → `csvSerializer.serializeSessionsCsv` → return with `Content-Type: text/csv`.
-- [X] T075 [US5] Create `routes/dataManagement.routes.js` — register `POST /data/export/json` and `GET /data/export/sessions.csv`. Mount in `app.js`.
-- [X] T076 [US5] Add the Export panel to `frontend/src/pages/settings/DataSettings.jsx` — two buttons that fetch via the new helpers and trigger a `Blob` download with a sensible filename (`masslab-backup-<date>.json` / `masslab-sessions-<date>.csv`).
+- [x] T070 [P] [US5] Create `services/dataManagement/backupSchema.js` — zod schema for the v1 envelope per `contracts/openapi.yaml#/components/schemas/BackupEnvelope`. Exports `BACKUP_SCHEMA_V1` and a `validateEnvelope(input)` helper.
+- [x] T071 [P] [US5] Create `services/dataAccess/exporters.dao.js` — read-only aggregator. Single method `readAllForAthlete(athleteId)` that fans out to every per-entity DAO and returns the assembled record set keyed by collection. Confined to data-access layer per Constitution II.
+- [x] T072 [P] [US5] Create `services/dataManagement/exporter.js` — pure function `buildEnvelope(records, { engineVersion, athleteId, exportedAt })` that returns the v1 envelope. No I/O. No Supabase imports.
+- [x] T073 [P] [US5] Create `services/dataManagement/csvSerializer.js` — pure function `serializeSessionsCsv(sessions, { separator })` returning a UTF-8 string. RFC 4180 quoting.
+- [x] T074 [US5] Create `controllers/dataManagement.controller.js` — `exportJson` handler orchestrates `exporters.dao.readAllForAthlete` → `exporter.buildEnvelope` → return; `exportCsv` handler reads sessions through the existing DAO → `csvSerializer.serializeSessionsCsv` → return with `Content-Type: text/csv`.
+- [x] T075 [US5] Create `routes/dataManagement.routes.js` — register `POST /data/export/json` and `GET /data/export/sessions.csv`. Mount in `app.js`.
+- [x] T076 [US5] Add the Export panel to `frontend/src/pages/settings/DataSettings.jsx` — two buttons that fetch via the new helpers and trigger a `Blob` download with a sensible filename (`masslab-backup-<date>.json` / `masslab-sessions-<date>.csv`).
 
 **Checkpoint**: US5 fully functional. Backups can be produced.
 
@@ -221,21 +220,21 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Tests for User Story 6 (TDD)
 
-- [X] T077 [P] [US6] Unit tests in `tests/unit/dataManagement.importer.test.js` — schema-newer rejects, missing-migrator rejects, ownership-mismatch rejects, oversize rejects, equal-version straight-through, older-version walks the chain. Each case asserts no DAO writes were issued (using a fake DAO).
-- [X] T078 [P] [US6] Contract test in `tests/contract/api.v1.test.js` for `POST /data/import` covering the response schemas and every documented error code.
-- [X] T079 [P] [US6] Integration test `tests/integration/data.import.roundTrip.test.js` — full export → mutate profile → import → field reverts byte-identical.
-- [X] T080 [P] [US6] Integration test `tests/integration/data.import.versionMismatch.test.js` — newer-than-current → 400 `IMPORT_VERSION_TOO_NEW`; older-with-missing-migrator → 400 `IMPORT_MISSING_MIGRATOR`; older-with-migrator (synthetic v0→v1 migrator added in this test only) → 200 with `schema_version_original=0, schema_version_applied=1`.
-- [X] T081 [P] [US6] Integration test `tests/integration/data.import.atomicRollback.test.js` — using a deliberately corrupted record in the middle of one collection, assert the import returns 500, and the athlete's row-set hash is identical pre/post (per SC-010).
+- [x] T077 [P] [US6] Unit tests in `tests/unit/dataManagement.importer.test.js` — schema-newer rejects, missing-migrator rejects, ownership-mismatch rejects, oversize rejects, equal-version straight-through, older-version walks the chain. Each case asserts no DAO writes were issued (using a fake DAO).
+- [x] T078 [P] [US6] Contract test in `tests/contract/api.v1.test.js` for `POST /data/import` covering the response schemas and every documented error code.
+- [x] T079 [P] [US6] Integration test `tests/integration/data.import.roundTrip.test.js` — full export → mutate profile → import → field reverts byte-identical.
+- [x] T080 [P] [US6] Integration test `tests/integration/data.import.versionMismatch.test.js` — newer-than-current → 400 `IMPORT_VERSION_TOO_NEW`; older-with-missing-migrator → 400 `IMPORT_MISSING_MIGRATOR`; older-with-migrator (synthetic v0→v1 migrator added in this test only) → 200 with `schema_version_original=0, schema_version_applied=1`.
+- [x] T081 [P] [US6] Integration test `tests/integration/data.import.atomicRollback.test.js` — using a deliberately corrupted record in the middle of one collection, assert the import returns 500, and the athlete's row-set hash is identical pre/post (per SC-010).
 
 ### Implementation for User Story 6
 
-- [X] T082 [P] [US6] Create `services/dataManagement/backupMigrators/README.md` — documents the convention: one file per `vN-to-vN+1` migrator, pure function `(oldEnvelope) => newEnvelope`, registered in a manifest.
-- [X] T083 [P] [US6] Create `services/dataManagement/backupMigrators/index.js` — manifest mapping `(from, to) → migratorFn`. Empty for Phase 2 (current schema is v1; no older versions exist yet) but exposes `migrateChain(envelope, { from, to })` that walks the chain and throws `MissingMigratorError` when a step is absent.
-- [X] T084 [P] [US6] Create `services/dataAccess/importers.dao.js` — single method `replaceAllForAthlete(athleteId, records)` that wraps DELETE+INSERT for every athlete-scoped collection in one transaction. Returns a count map. Confined to data-access per Constitution II.
-- [X] T085 [US6] Create `services/dataManagement/importer.js` — pure orchestrator `importBackup(buffer, { athleteId, sourceFilename, importMaxBytes, currentSchemaVersion, importersDao, migrators, schema })`. Steps: size check → JSON parse → envelope structural validation (zod) → ownership check → version compare → migrate chain (if older) → re-validate after migration → call `importersDao.replaceAllForAthlete` → return `ImportResult`. Throws typed errors that map 1:1 to the OpenAPI error codes.
-- [X] T086 [US6] Extend `controllers/dataManagement.controller.js` with the `importJson` handler — `multer.single('file')` middleware in memory mode bounded by `IMPORT_MAX_BYTES`, then call the orchestrator, then map typed errors to HTTP responses.
-- [X] T087 [US6] Register `POST /data/import` in `routes/dataManagement.routes.js` with the multer middleware attached.
-- [X] T088 [US6] Add the Import panel to `frontend/src/pages/settings/DataSettings.jsx` — file picker, parse-and-preview step (just shows envelope summary: schema_version, exported_at, counts per collection), `ConfirmDialog` typed-token confirmation before triggering the upload, error mapping for every documented code.
+- [x] T082 [P] [US6] Create `services/dataManagement/backupMigrators/README.md` — documents the convention: one file per `vN-to-vN+1` migrator, pure function `(oldEnvelope) => newEnvelope`, registered in a manifest.
+- [x] T083 [P] [US6] Create `services/dataManagement/backupMigrators/index.js` — manifest mapping `(from, to) → migratorFn`. Empty for Phase 2 (current schema is v1; no older versions exist yet) but exposes `migrateChain(envelope, { from, to })` that walks the chain and throws `MissingMigratorError` when a step is absent.
+- [x] T084 [P] [US6] Create `services/dataAccess/importers.dao.js` — single method `replaceAllForAthlete(athleteId, records)` that wraps DELETE+INSERT for every athlete-scoped collection in one transaction. Returns a count map. Confined to data-access per Constitution II.
+- [x] T085 [US6] Create `services/dataManagement/importer.js` — pure orchestrator `importBackup(buffer, { athleteId, sourceFilename, importMaxBytes, currentSchemaVersion, importersDao, migrators, schema })`. Steps: size check → JSON parse → envelope structural validation (zod) → ownership check → version compare → migrate chain (if older) → re-validate after migration → call `importersDao.replaceAllForAthlete` → return `ImportResult`. Throws typed errors that map 1:1 to the OpenAPI error codes.
+- [x] T086 [US6] Extend `controllers/dataManagement.controller.js` with the `importJson` handler — `multer.single('file')` middleware in memory mode bounded by `IMPORT_MAX_BYTES`, then call the orchestrator, then map typed errors to HTTP responses.
+- [x] T087 [US6] Register `POST /data/import` in `routes/dataManagement.routes.js` with the multer middleware attached.
+- [x] T088 [US6] Add the Import panel to `frontend/src/pages/settings/DataSettings.jsx` — file picker, parse-and-preview step (just shows envelope summary: schema_version, exported_at, counts per collection), `ConfirmDialog` typed-token confirmation before triggering the upload, error mapping for every documented code.
 
 **Checkpoint**: US6 fully functional. Backups can be restored safely.
 
@@ -249,18 +248,18 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 ### Tests for User Story 7 (TDD)
 
-- [X] T089 [P] [US7] Unit tests in `tests/unit/dataManagement.resetter.test.js` — per-module scope (sessions deletes only sessions, etc.), full reset preserves the profile row and resets preferences + engine_overrides to documented defaults, idempotent on a no-op (already empty) state.
-- [X] T090 [P] [US7] Contract test in `tests/contract/api.v1.test.js` for `POST /data/reset` covering valid and `RESET_TOKEN_MISMATCH` responses.
-- [X] T091 [P] [US7] Integration test `tests/integration/data.reset.scopes.test.js` — eight scenarios, one per `module` enum value plus the `all` case; assert the deleted-counts map matches reality and unaffected modules are untouched.
+- [x] T089 [P] [US7] Unit tests in `tests/unit/dataManagement.resetter.test.js` — per-module scope (sessions deletes only sessions, etc.), full reset preserves the profile row and resets preferences + engine_overrides to documented defaults, idempotent on a no-op (already empty) state.
+- [x] T090 [P] [US7] Contract test in `tests/contract/api.v1.test.js` for `POST /data/reset` covering valid and `RESET_TOKEN_MISMATCH` responses.
+- [x] T091 [P] [US7] Integration test `tests/integration/data.reset.scopes.test.js` — eight scenarios, one per `module` enum value plus the `all` case; assert the deleted-counts map matches reality and unaffected modules are untouched.
 
 ### Implementation for User Story 7
 
-- [X] T092 [P] [US7] Create `services/dataAccess/reset.dao.js` — methods: `deleteSessions(athleteId)`, `deleteBodyMeasurements(athleteId)`, ... one per module, plus `deleteAllExceptProfile(athleteId)` and `resetPreferencesAndOverrides(athleteId)`. Each returns a `{ count }` summary.
-- [X] T093 [P] [US7] Create `services/dataManagement/resetter.js` — pure orchestrator `resetModule(athleteId, { module, exportFirst, exporter, importerOptional }, deps)` returning `ResetResult`. The `exportFirst` path calls the exporter, persists the file (or returns it inline; backend returns a one-time URL), then proceeds; if export fails the destructive step is blocked.
-- [X] T094 [US7] Extend `controllers/dataManagement.controller.js` with the `reset` handler — server-side check `req.body.confirm_token === config.RESET_CONFIRM_TOKEN`, otherwise 400 `RESET_TOKEN_MISMATCH`; then call the orchestrator.
-- [X] T095 [US7] Register `POST /data/reset` in `routes/dataManagement.routes.js`.
-- [X] T096 [US7] Add the Reset panel to `frontend/src/pages/settings/DataSettings.jsx` — module picker, "Export first" checkbox for the full-reset case, two confirmation steps (initial confirm + typed-token via `ConfirmDialog`).
-- [X] T097 [P] [US7] Frontend smoke test `tests/frontend/settings.data.test.jsx` — confirms the typed-token gate (closing dialog cancels; wrong token blocks the network call), asserts the Export panel and Import panel from US5/US6 still render alongside.
+- [x] T092 [P] [US7] Create `services/dataAccess/reset.dao.js` — methods: `deleteSessions(athleteId)`, `deleteBodyMeasurements(athleteId)`, ... one per module, plus `deleteAllExceptProfile(athleteId)` and `resetPreferencesAndOverrides(athleteId)`. Each returns a `{ count }` summary.
+- [x] T093 [P] [US7] Create `services/dataManagement/resetter.js` — pure orchestrator `resetModule(athleteId, { module, exportFirst, exporter, importerOptional }, deps)` returning `ResetResult`. The `exportFirst` path calls the exporter, persists the file (or returns it inline; backend returns a one-time URL), then proceeds; if export fails the destructive step is blocked.
+- [x] T094 [US7] Extend `controllers/dataManagement.controller.js` with the `reset` handler — server-side check `req.body.confirm_token === config.RESET_CONFIRM_TOKEN`, otherwise 400 `RESET_TOKEN_MISMATCH`; then call the orchestrator.
+- [x] T095 [US7] Register `POST /data/reset` in `routes/dataManagement.routes.js`.
+- [x] T096 [US7] Add the Reset panel to `frontend/src/pages/settings/DataSettings.jsx` — module picker, "Export first" checkbox for the full-reset case, two confirmation steps (initial confirm + typed-token via `ConfirmDialog`).
+- [x] T097 [P] [US7] Frontend smoke test `tests/frontend/settings.data.test.jsx` — confirms the typed-token gate (closing dialog cancels; wrong token blocks the network call), asserts the Export panel and Import panel from US5/US6 still render alongside.
 
 **Checkpoint**: US7 fully functional. Reset is safe and complete. **All seven user stories now usable independently.**
 
@@ -270,13 +269,13 @@ Phase 2 follows the Phase 0/1 web-app layout: backend at repository root (`route
 
 **Purpose**: Cross-story polish that only makes sense once all the surfaces ship.
 
-- [ ] T098 [P] Run the full quickstart walkthrough in `specs/003-phase2-settings-data/quickstart.md` end-to-end against the dev stack and capture any drift between docs and reality. Update the docs only — no code change here.
-- [ ] T099 [P] Run `npm run lint && npm run format` and resolve any new findings introduced by Phase 2 files.
-- [ ] T100 [P] Audit Phase 2 source for `console.log` (Constitution Operational Standards) and replace with the existing pino logger pattern if any slipped in.
-- [ ] T101 [P] Cross-check that no file under `services/dataManagement/` or `services/engine/` imports `@supabase/supabase-js` (Constitution II).
-- [ ] T102 [P] Cross-check that every new domain table (the single addition `muscle_groups`) ships RLS in the same migration (Constitution I + Operational Standards).
-- [ ] T103 [P] Capture a Phase-2 compliance entry in the team's running compliance log (the constitution requires one per implementation phase milestone).
-- [ ] T104 Verify all 12 Success Criteria from `spec.md` (SC-001 … SC-012) by mapping each to the integration test that exercises it; add a one-line cross-reference table at the end of `tests/integration/README.md` (or create the file if absent).
+- [x] T098 [P] Run the full quickstart walkthrough in `specs/003-phase2-settings-data/quickstart.md` end-to-end against the dev stack and capture any drift between docs and reality. Update the docs only — no code change here.
+- [x] T099 [P] Run `npm run lint && npm run format` and resolve any new findings introduced by Phase 2 files.
+- [x] T100 [P] Audit Phase 2 source for `console.log` (Constitution Operational Standards) and replace with the existing pino logger pattern if any slipped in.
+- [x] T101 [P] Cross-check that no file under `services/dataManagement/` or `services/engine/` imports `@supabase/supabase-js` (Constitution II).
+- [x] T102 [P] Cross-check that every new domain table (the single addition `muscle_groups`) ships RLS in the same migration (Constitution I + Operational Standards).
+- [x] T103 [P] Capture a Phase-2 compliance entry in the team's running compliance log (the constitution requires one per implementation phase milestone).
+- [x] T104 Verify all 12 Success Criteria from `spec.md` (SC-001 … SC-012) by mapping each to the integration test that exercises it; add a one-line cross-reference table at the end of `tests/integration/README.md` (or create the file if absent).
 
 ---
 
@@ -362,6 +361,7 @@ Task: "Extend services/dataAccess/appConfig.dao.js with preferences + override m
 ### Parallel team strategy
 
 After Foundational lands:
+
 - Developer A: US1 → US4 (one developer can chain MVP into nutrition/prefs).
 - Developer B: US2 → US3 (schedule + exercises share UX patterns and the SortableList).
 - Developer C: US5 → US6 → US7 (data-management chain has the strongest internal dependency).

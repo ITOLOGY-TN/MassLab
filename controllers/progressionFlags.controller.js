@@ -36,7 +36,9 @@ export function progressionFlagsController({ daos }) {
           // Body segment is derived from the muscle_group slug; the seeded
           // exercises don't carry it explicitly, so we infer from prefix.
           const lowerKeywords = ['legs', 'lower'];
-          const segment = lowerKeywords.some((k) => e.slug.includes(k) || (e.targeted_muscles || []).some((m) => k.includes(m)))
+          const segment = lowerKeywords.some(
+            (k) => e.slug.includes(k) || (e.targeted_muscles || []).some((m) => k.includes(m)),
+          )
             ? 'lower'
             : 'upper';
           exercisesById[e.id] = {

@@ -148,7 +148,19 @@ components:
 
     TrainingPhase:
       type: object
-      required: [id, slug, locale, name, description, weeks, rest_seconds, intensity_pct_min, intensity_pct_max, display_order]
+      required:
+        [
+          id,
+          slug,
+          locale,
+          name,
+          description,
+          weeks,
+          rest_seconds,
+          intensity_pct_min,
+          intensity_pct_max,
+          display_order,
+        ]
       properties:
         id: { type: integer }
         slug: { type: string }
@@ -163,7 +175,8 @@ components:
 
     NutritionTemplateMeal:
       type: object
-      required: [id, slot, display_order, target_kcal, target_protein_g, target_carbs_g, target_fat_g]
+      required:
+        [id, slot, display_order, target_kcal, target_protein_g, target_carbs_g, target_fat_g]
       properties:
         id: { type: integer }
         slot: { type: string }
@@ -188,7 +201,18 @@ components:
 
     Food:
       type: object
-      required: [id, slug, locale, name, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category]
+      required:
+        [
+          id,
+          slug,
+          locale,
+          name,
+          kcal_per_100g,
+          protein_per_100g,
+          carbs_per_100g,
+          fat_per_100g,
+          category,
+        ]
       properties:
         id: { type: integer }
         slug: { type: string }
@@ -402,4 +426,4 @@ paths:
 
 security:
   - SupabaseBearer: []
-  - {}  # empty array == no auth required (single-user mode)
+  - {} # empty array == no auth required (single-user mode)

@@ -3,11 +3,13 @@
 // Fallback: Deurenberg BMI-based estimate.
 
 function navyMale(waist_cm, neck_cm, height_cm) {
-  return 86.010 * Math.log10(waist_cm - neck_cm) - 70.041 * Math.log10(height_cm) + 36.76;
+  return 86.01 * Math.log10(waist_cm - neck_cm) - 70.041 * Math.log10(height_cm) + 36.76;
 }
 
 function navyFemale(waist_cm, hip_cm, neck_cm, height_cm) {
-  return 163.205 * Math.log10(waist_cm + hip_cm - neck_cm) - 97.684 * Math.log10(height_cm) - 78.387;
+  return (
+    163.205 * Math.log10(waist_cm + hip_cm - neck_cm) - 97.684 * Math.log10(height_cm) - 78.387
+  );
 }
 
 function bmiFallback(weight_kg, height_cm, age, sexFactor) {

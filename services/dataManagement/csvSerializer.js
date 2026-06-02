@@ -32,9 +32,7 @@ export function serializeSessionsCsv(sessions = [], { separator = ',' } = {}) {
   const sep = separator || ',';
   const headerLine = HEADER.join(sep);
   if (!sessions.length) return `${headerLine}\n`;
-  const lines = sessions.map((row) =>
-    HEADER.map((col) => quote(row[col], sep)).join(sep),
-  );
+  const lines = sessions.map((row) => HEADER.map((col) => quote(row[col], sep)).join(sep));
   return [headerLine, ...lines].join('\n') + '\n';
 }
 

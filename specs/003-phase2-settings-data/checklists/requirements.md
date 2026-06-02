@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Spec stays within Phase 2 scope as defined in `PLAN.md` (lines 120–128) and consciously *does not* extend into Phase 3 (program browsing) or Phase 4 (session logging) even where those modules are referenced as consumers of the schedule and exercise changes.
+- Spec stays within Phase 2 scope as defined in `PLAN.md` (lines 120–128) and consciously _does not_ extend into Phase 3 (program browsing) or Phase 4 (session logging) even where those modules are referenced as consumers of the schedule and exercise changes.
 - A small number of references to Phase 0 / Phase 1 architectural primitives (`athlete_id`, `app_config.engine_overrides`, calculation audit log, `/api/v1/`, single-user middleware) are unavoidable because Phase 2 must integrate with them; they are kept at the level of "what" rather than "how" and are tagged as Assumptions or cross-cutting requirements rather than design choices being made here.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.

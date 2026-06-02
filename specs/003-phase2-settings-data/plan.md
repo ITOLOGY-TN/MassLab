@@ -12,6 +12,7 @@ Phase 2 turns MassLab into a self-serviceable app. On top of the Phase 0 foundat
 **Language/Version**: Node.js 20+ (project runs on 22.17 in dev), JavaScript ES2022 ESM. React 18.3 for the frontend.
 
 **Primary Dependencies** (all already installed in Phase 0/1 unless noted):
+
 - Backend: `express`, `@supabase/supabase-js`, `pino`, `pino-http`, `dotenv`, `zod`, `uuid`, `cors`. **New runtime dependency**: `multer@^1.4` for the JSON-import upload endpoint (multipart-parsing only; bounded by a hard size limit declared in config). No other runtime additions — the export, the CSV serializer, and the forward-migrator chain are pure JavaScript.
 - Frontend: `react`, `react-dom`, `vite`, `tailwindcss`, `react-router-dom@^6` (already added in Phase 1). **New dev dependency**: `@dnd-kit/core@^6` + `@dnd-kit/sortable@^8` for the weekly-plan and exercise-list reorder UX (drag handles must remain large enough for the Frontend Design skill's hit-target standard). No runtime backend impact.
 - Tooling: `vitest` for unit + integration + contract suites, `@testing-library/react@^15` for the Settings smoke tests, `supertest` for contract.
@@ -25,13 +26,15 @@ Phase 2 turns MassLab into a self-serviceable app. On top of the Phase 0 foundat
 **Project Type**: Web application — same layout as Phase 0/1 (`/routes`, `/controllers`, `/services`, `/middleware`, `/config`, `/frontend`). Phase 2 introduces one new top-level service sub-directory: `services/dataManagement/` (export, import, reset, csv, backup-migrators). All Supabase imports continue to be confined to `services/dataAccess/` per Constitution Principle II.
 
 **Performance Goals** (from Success Criteria):
+
 - SC-001: profile save → every dependent target visible on the next opened screen ≤ 2 s.
 - SC-008: full JSON export of an athlete with ≥ 30 days of logged data ≤ 5 s click-to-file.
 - New implicit: schedule replace round-trip (PUT → GET) ≤ 500 ms; exercise reorder save ≤ 300 ms.
 
 **Constraints**:
+
 - Determinism inside the engine remains absolute. The custom-nutrition override path (FR-017a/b) writes into `engine_overrides` and reads back through the existing `resolveConstants` helper; no new time-dependent code is added under `services/engine/`.
-- Engine-version pinning continues. Every override save / clear emits exactly one audit row per FR-003a, and the row carries the engine version + the resolved-constants snapshot *after* applying the change (Constitution III + Phase 1 invariant).
+- Engine-version pinning continues. Every override save / clear emits exactly one audit row per FR-003a, and the row carries the engine version + the resolved-constants snapshot _after_ applying the change (Constitution III + Phase 1 invariant).
 - All new domain rows continue to carry `athlete_id` and ship RLS in the same migration (Constitution I).
 - No `@supabase/supabase-js` import outside `services/dataAccess/*` (Constitution II).
 - No backend code under `services/engine/` or `services/programGenerator.js` may import from `services/dataManagement/` — the dependency direction is one-way: `dataManagement → dataAccess + engine`.
@@ -42,7 +45,7 @@ Phase 2 turns MassLab into a self-serviceable app. On top of the Phase 0 foundat
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 Reviewed against `.specify/memory/constitution.md` v1.1.1:
 
@@ -64,7 +67,7 @@ Reviewed against `.specify/memory/constitution.md` v1.1.1:
   - No new `.env` keys are introduced — the Phase 0 six-key set remains sufficient.
   - No athlete data lives in source.
 
-- **IV. Versioned API Contract** — **PASS**. All new endpoints live under `/api/v1/` (see `contracts/openapi.yaml`). Response envelopes use the existing `{ data: ... }` shape and the canonical error envelope from Phase 0; new fields are additive within v1. Deletes return 204 with no body. The export envelope itself carries an internal `_export.schema_version` (the *backup* schema version, distinct from the API version) so the import path can detect old files — the API URL stays `/api/v1/data/export/json` regardless of backup-schema bumps.
+- **IV. Versioned API Contract** — **PASS**. All new endpoints live under `/api/v1/` (see `contracts/openapi.yaml`). Response envelopes use the existing `{ data: ... }` shape and the canonical error envelope from Phase 0; new fields are additive within v1. Deletes return 204 with no body. The export envelope itself carries an internal `_export.schema_version` (the _backup_ schema version, distinct from the API version) so the import path can detect old files — the API URL stays `/api/v1/data/export/json` regardless of backup-schema bumps.
 
 - **V. Test-First for Domain Logic (NON-NEGOTIABLE)** — **PASS**. Phase 2's domain logic is tested before implementation. Specifically:
   - `services/engine/macros.js` — extended unit tests for the calorie-only override path (FR-017a) and per-macro override precedence (FR-017b).
@@ -83,6 +86,7 @@ Reviewed against `.specify/memory/constitution.md` v1.1.1:
   - The Settings surface auto-saves on blur for low-risk fields (theme, sound, single-field profile edits) and uses an explicit Save button for multi-field forms (full schedule replace, full profile form). This is consistent with the Phase 4 journal auto-save discipline.
 
 **Post-design re-check (after Phase 1 artifacts of this plan)**: still **PASS** —
+
 - `data-model.md` enumerates the new `muscle_groups` table + the column changes on `weekly_plan_slots`, `exercises`, and `app_config`; every domain table carries `athlete_id` and ships RLS in the same migration.
 - `contracts/openapi.yaml` keeps every new path under `/api/v1/` with the `{ data }` envelope; the error envelope from Phase 0 is reused unchanged.
 - The proposed source layout keeps Supabase imports inside `services/dataAccess/*`; engine input math lives inside `services/engine/`; orchestration and serialization live in the new `services/dataManagement/` boundary; no `models/` directory is introduced.

@@ -17,7 +17,10 @@ function stripSecrets(row) {
  * @param {{ engineVersion: string, athleteId: string, exportedAt?: string,
  *           schemaVersion?: number }} meta
  */
-export function buildEnvelope(records, { engineVersion, athleteId, exportedAt, schemaVersion = 1 }) {
+export function buildEnvelope(
+  records,
+  { engineVersion, athleteId, exportedAt, schemaVersion = 1 },
+) {
   if (!engineVersion) throw new Error('engineVersion is required');
   if (!athleteId) throw new Error('athleteId is required');
 

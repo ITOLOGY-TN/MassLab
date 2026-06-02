@@ -1,13 +1,15 @@
 import { HttpError } from '../../middleware/errorHandler.js';
 
 function deriveSlug(name) {
-  return String(name)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'exercise';
+  return (
+    String(name)
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'exercise'
+  );
 }
 
 export function exercisesDao(supabase) {

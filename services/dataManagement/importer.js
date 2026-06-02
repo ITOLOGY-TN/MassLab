@@ -29,12 +29,10 @@ export async function importBackup(
 ) {
   // 1. Size guard.
   if (importMaxBytes && buffer.length > importMaxBytes) {
-    throw new ImportError(
-      'IMPORT_TOO_LARGE',
-      `Backup exceeds ${importMaxBytes} bytes.`,
-      400,
-      { size: buffer.length, max: importMaxBytes },
-    );
+    throw new ImportError('IMPORT_TOO_LARGE', `Backup exceeds ${importMaxBytes} bytes.`, 400, {
+      size: buffer.length,
+      max: importMaxBytes,
+    });
   }
 
   // 2. JSON parse.
@@ -60,10 +58,7 @@ export async function importBackup(
 
   // 4. Ownership.
   if (parsed._export.athlete_id !== athleteId) {
-    throw new ImportError(
-      'IMPORT_OWNERSHIP_MISMATCH',
-      'Backup belongs to a different athlete.',
-    );
+    throw new ImportError('IMPORT_OWNERSHIP_MISMATCH', 'Backup belongs to a different athlete.');
   }
 
   // 5. Version compare.
@@ -84,12 +79,10 @@ export async function importBackup(
     } catch (err) {
       if (err instanceof ImportError) throw err;
       if (err?.code === 'IMPORT_MISSING_MIGRATOR') {
-        throw new ImportError(
-          'IMPORT_MISSING_MIGRATOR',
-          err.message,
-          400,
-          { from: err.from, to: err.to },
-        );
+        throw new ImportError('IMPORT_MISSING_MIGRATOR', err.message, 400, {
+          from: err.from,
+          to: err.to,
+        });
       }
       throw err;
     }

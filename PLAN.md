@@ -6,7 +6,7 @@ MassLab is a local web application for tracking a 5-month muscle-building progra
 
 The app currently serves one athlete: 29 years old, 173cm, 58kg, ectomorph, intermediate lifter, 5 sessions/week, goal of +6 to +8kg of muscle in 5 months. Every screen must answer a real question the athlete has before, during, or after a session.
 
-**Design:**  Use the **Frontend Design skill** for all UI work — the result must feel premium and sport-focused, never generic.
+**Design:** Use the **Frontend Design skill** for all UI work — the result must feel premium and sport-focused, never generic.
 
 **Architecture philosophy — built to scale:** The app is local-first today, but the architecture must be written as if it will go online tomorrow and serve multiple users. This is non-negotiable. The future vision is a SaaS platform where any user can sign up, enter their personal data (age, weight, morphotype, goals, schedule, equipment), and receive a fully generated program (training, nutrition, supplements, recovery) tailored to their profile — exactly like the one built for the current athlete. Every architectural decision made now must support that future without a full rewrite. AI is a long-term enhancement only: the core product must first be powered by deterministic calculators, rule-based program generation, and clean athlete-owned data.
 
@@ -17,6 +17,7 @@ The app currently serves one athlete: 29 years old, 173cm, 58kg, ectomorph, inte
 Set up the full project structure, database schema, and seed all initial data so every subsequent phase has something real to work with.
 
 **Architecture constraints — mandatory, not optional:**
+
 - **Every database table must have an `athlete_id` foreign key** from day one — even in single-user mode. Data is never global. This is the single most important decision for future multi-user support.
 - **Authentication layer stubbed in** — even if no login screen exists yet, the middleware slot must exist and be bypassable via a config flag (`SINGLE_USER_MODE=true` in `.env`). When multi-user is needed, only that flag changes and the middleware activates.
 - **All business logic in controllers/services, never in routes** — routes are thin, just HTTP. This makes the API reusable for a future mobile app or third-party client.
@@ -25,12 +26,14 @@ Set up the full project structure, database schema, and seed all initial data so
 - **No hardcoded athlete data anywhere in the codebase** — the current athlete's data lives in the database seed only, injected through the program generator.
 
 **AI boundary — important:**
+
 - No AI generation in Phase 0–11.
 - The app must generate programs and nutrition using deterministic services first.
 - Future AI must plug into `/services/aiCoach.js` or a separate FastAPI microservice later, but it must not replace calculators or core program rules.
 - Current priority: clean data model, reliable calculators, reproducible program generation, and scalable API design.
 
 **What gets built in this phase:**
+
 - React + Vite frontend, Node.js + Express API, strict MVC/service architecture (`/routes`, `/controllers`, `/services`, `/middleware`, `/config`, `/frontend`)
 - All API routes under `/api/v1/`
 - Complete Supabase PostgreSQL schema with `athlete_id` on every table: athlete profiles, exercises, weekly plan, training phases, session journal, sets logged, body weight, measurements, nutrition log, food database, supplements, recovery log, app config, quotes
@@ -53,6 +56,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 **Architecture note:** Phase 1 is the real engine of MassLab. Build the calculators and rule engines before any AI. AI can later explain, summarize, or adapt recommendations, but formulas and core decisions remain deterministic and testable.
 
 **1. BMR — Basal Metabolic Rate**
+
 - Formula: Mifflin-St Jeor (most accurate for general population)
   - Men: `(10 × weight_kg) + (6.25 × height_cm) − (5 × age) + 5`
   - Women: `(10 × weight_kg) + (6.25 × height_cm) − (5 × age) − 161`
@@ -60,6 +64,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - Output: kcal/day at complete rest
 
 **2. TDEE — Total Daily Energy Expenditure**
+
 - Formula: `BMR × activity multiplier`
 - Activity levels selectable by the athlete:
   - Sedentary (desk job, no exercise): × 1.2
@@ -72,6 +77,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - Calorie target stored in athlete profile and used as the goal in the Nutrition module
 
 **3. Macronutrient Calculator**
+
 - Calculated from total calorie target, adjusted by goal (bulk / cut / maintain) and morphotype:
   - Protein: 2.2g × lean body mass (kg) — prioritized first, never compromised
   - Fat: minimum 25% of total calories for hormonal health
@@ -83,6 +89,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - Outputs: daily targets for protein (g), carbs (g), fat (g) — stored in athlete profile, used as goals in the Nutrition module
 
 **4. One-Rep Max (1RM) Calculator**
+
 - Multiple formulas calculated and displayed side by side, averaged into one result:
   - Epley: `weight × (1 + reps / 30)`
   - Brzycki: `weight × (36 / (37 − reps))`
@@ -94,6 +101,7 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - Used automatically in Phase 4 (Load Tracking) after every logged session
 
 **5. Progressive Overload Rule Engine**
+
 - Runs automatically in the background after every logged session — not a manual calculator:
   - **Double progression:** all sets completed at top of rep range for 2 consecutive sessions → flag exercise as "ready to add load" (+2.5 kg upper body / +5 kg lower body, configurable)
   - **Volume stagnation:** weekly volume per muscle group (sets × reps × load) unchanged for 3 weeks → flag stagnation
@@ -102,11 +110,13 @@ The scientific backbone of the entire app. These calculators feed directly into 
 - All flags surface as smart alerts on the Dashboard (Phase 2) and in the Load Tracking module (Phase 5)
 
 **6. Body Composition Estimator**
+
 - Estimates body fat % from available measurements using the US Navy formula (if waist + neck + height available) or a BMI-based fallback
 - Derives lean body mass (kg) — used by the Macronutrient Calculator to set protein targets more precisely
 - Recalculated automatically every time a new weight or measurement entry is logged
 
 **7. Program Auto-Generator (ties all calculators together)**
+
 - Lives in `/services/programGenerator.js`
 - Inputs: complete athlete profile (age, sex, weight, height, morphotype, goal, activity level, sessions per week, available equipment, any injuries)
 - Process: runs BMR → TDEE → macros → estimates initial 1RM ranges per exercise category based on experience level → selects appropriate training split → sets phase parameters
@@ -258,6 +268,7 @@ Full transformation overview with PDF export.
 This phase is intentionally postponed until the core app is stable, tested, and useful without AI. AI must enhance the existing system, not replace it.
 
 **What AI may do later:**
+
 - Explain why a program, calorie target, or progression decision was generated
 - Generate weekly coaching summaries from logged training, nutrition, and recovery data
 - Suggest exercise substitutions based on equipment, fatigue, soreness, or injury constraints
@@ -266,12 +277,14 @@ This phase is intentionally postponed until the core app is stable, tested, and 
 - Help the athlete understand plateaus and propose safe adjustments
 
 **What AI must not do:**
+
 - Replace `/services/calculators.js` formulas
 - Invent calories, macros, 1RM estimates, or overload rules without the deterministic engine
 - Directly write to the database without passing through existing services
 - Generate programs that bypass `/services/programGenerator.js`
 
 **Recommended implementation path when ready:**
+
 - Start with `/services/aiCoach.js` in the existing Node backend
 - Feed AI only structured outputs from calculators, programGenerator, nutritionGenerator, progressionEngine, and recovery logs
 - Store AI outputs as athlete-owned records with `athlete_id`

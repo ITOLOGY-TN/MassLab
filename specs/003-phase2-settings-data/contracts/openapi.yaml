@@ -70,18 +70,37 @@ components:
           properties:
             code:
               type: string
-              examples: [VALIDATION_FAILED, NOT_FOUND, CONFLICT, ATOMIC_ROLLBACK,
-                         IMPORT_VERSION_TOO_NEW, IMPORT_MISSING_MIGRATOR,
-                         IMPORT_OWNERSHIP_MISMATCH, IMPORT_TOO_LARGE, RESET_TOKEN_MISMATCH]
+              examples:
+                [
+                  VALIDATION_FAILED,
+                  NOT_FOUND,
+                  CONFLICT,
+                  ATOMIC_ROLLBACK,
+                  IMPORT_VERSION_TOO_NEW,
+                  IMPORT_MISSING_MIGRATOR,
+                  IMPORT_OWNERSHIP_MISMATCH,
+                  IMPORT_TOO_LARGE,
+                  RESET_TOKEN_MISMATCH,
+                ]
             message: { type: string }
             details: { type: object, additionalProperties: true }
 
     AthleteProfile:
       type: object
       required:
-        [id, display_name, biological_sex, age, height_cm, current_weight_kg,
-         target_weight_kg, program_start_date, morphotype, activity_level,
-         sessions_per_week]
+        [
+          id,
+          display_name,
+          biological_sex,
+          age,
+          height_cm,
+          current_weight_kg,
+          target_weight_kg,
+          program_start_date,
+          morphotype,
+          activity_level,
+          sessions_per_week,
+        ]
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
@@ -126,7 +145,7 @@ components:
         id: { type: integer }
         slug: { type: string }
         name: { type: string, maxLength: 40 }
-        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        display_color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
         is_active: { type: boolean }
         sort_order: { type: integer }
         archived_at: { type: string, format: date-time, nullable: true }
@@ -136,7 +155,7 @@ components:
       required: [name]
       properties:
         name: { type: string, maxLength: 40 }
-        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        display_color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
         sort_order: { type: integer }
 
     MuscleGroupPatch:
@@ -144,14 +163,15 @@ components:
       additionalProperties: false
       properties:
         name: { type: string, maxLength: 40 }
-        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        display_color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
         sort_order: { type: integer }
 
     MuscleGroupMerge:
       type: object
       required: [target_id]
       properties:
-        target_id: { type: integer, description: "id of the catalogue row that absorbs the merged-from" }
+        target_id:
+          { type: integer, description: 'id of the catalogue row that absorbs the merged-from' }
 
     Exercise:
       type: object
@@ -173,7 +193,7 @@ components:
       required: [name, targeted_muscles, instructions]
       properties:
         name: { type: string }
-        locale: { type: string, default: "fr" }
+        locale: { type: string, default: 'fr' }
         targeted_muscles: { type: array, items: { type: string }, minItems: 1 }
         instructions: { type: string }
         technique_points: { type: array, items: { type: string } }
@@ -198,7 +218,7 @@ components:
         day_of_week: { type: integer, minimum: 1, maximum: 7 }
         muscle_group_id: { type: integer }
         display_order: { type: integer }
-        display_color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        display_color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
         exercises:
           type: array
           items:
@@ -222,7 +242,7 @@ components:
           description: Number of training days (1–7)
         slots:
           type: array
-          items: { $ref: "#/components/schemas/WeeklyScheduleSlot" }
+          items: { $ref: '#/components/schemas/WeeklyScheduleSlot' }
 
     ReorderRequest:
       type: object
@@ -254,7 +274,7 @@ components:
         notification_acks:
           type: object
           additionalProperties: { type: string, format: date-time, nullable: true }
-          description: "Deep-merged with current state; null clears a key."
+          description: 'Deep-merged with current state; null clears a key.'
 
     NutritionTargets:
       type: object
@@ -293,7 +313,16 @@ components:
 
     BackupEnvelope:
       type: object
-      required: [_export, athletes, app_config, exercises, muscle_groups, weekly_plan_slots, weekly_plan_exercises]
+      required:
+        [
+          _export,
+          athletes,
+          app_config,
+          exercises,
+          muscle_groups,
+          weekly_plan_slots,
+          weekly_plan_exercises,
+        ]
       additionalProperties: true
       properties:
         _export:
@@ -321,7 +350,17 @@ components:
       properties:
         module:
           type: string
-          enum: [sessions, body_measurements, nutrition_logs, supplements, recovery, calculator_results, preferences, all]
+          enum:
+            [
+              sessions,
+              body_measurements,
+              nutrition_logs,
+              supplements,
+              recovery,
+              calculator_results,
+              preferences,
+              all,
+            ]
         confirm_token: { type: string }
         export_first: { type: boolean, default: false }
 
@@ -337,27 +376,26 @@ components:
         export_url:
           type: string
           format: uri
-          description: "Present only when export_first=true was set and succeeded."
+          description: 'Present only when export_first=true was set and succeeded.'
 
 security:
   - SupabaseBearer: []
 
 paths:
-
   /me:
     get:
       tags: [profile]
       summary: Read the authenticated athlete's profile.
       responses:
-        "200":
+        '200':
           description: OK
-          headers: { X-Request-Id: { $ref: "#/components/headers/XRequestId" } }
+          headers: { X-Request-Id: { $ref: '#/components/headers/XRequestId' } }
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/AthleteProfile" } }
+                properties: { data: { $ref: '#/components/schemas/AthleteProfile' } }
     patch:
       tags: [profile]
       summary: Partial profile update; triggers engine recompute + audit row when calculator inputs change.
@@ -365,9 +403,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/AthleteProfilePatch" }
+            schema: { $ref: '#/components/schemas/AthleteProfilePatch' }
       responses:
-        "200":
+        '200':
           description: OK; body includes the new profile and a recompute summary.
           content:
             application/json:
@@ -379,29 +417,29 @@ paths:
                     type: object
                     required: [profile]
                     properties:
-                      profile: { $ref: "#/components/schemas/AthleteProfile" }
+                      profile: { $ref: '#/components/schemas/AthleteProfile' }
                       recompute:
                         type: object
                         properties:
                           calculation_audit_id: { type: integer }
                           engine_version: { type: string }
-        "400":
+        '400':
           description: Validation failed
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 
   /me/schedule:
     get:
       tags: [schedule]
       summary: Read the current weekly schedule.
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/WeeklySchedule" } }
+                properties: { data: { $ref: '#/components/schemas/WeeklySchedule' } }
     put:
       tags: [schedule]
       summary: Replace the weekly schedule atomically.
@@ -409,22 +447,22 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/WeeklySchedule" }
+            schema: { $ref: '#/components/schemas/WeeklySchedule' }
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/WeeklySchedule" } }
-        "400":
+                properties: { data: { $ref: '#/components/schemas/WeeklySchedule' } }
+        '400':
           description: Schedule validation failed (zero days, duplicate muscle group, etc.)
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
-        "409":
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '409':
           description: In-progress session conflict; resend with `?force=1` to confirm.
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 
   /me/schedule/slots/{slotId}/exercises/reorder:
     post:
@@ -439,25 +477,25 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ReorderRequest" }
+            schema: { $ref: '#/components/schemas/ReorderRequest' }
       responses:
-        "200":
+        '200':
           description: OK; returns the slot with reordered exercises.
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/WeeklyScheduleSlot" } }
+                properties: { data: { $ref: '#/components/schemas/WeeklyScheduleSlot' } }
 
   /muscle-groups:
     get:
       tags: [muscle-groups]
       summary: List the athlete's muscle-group catalogue.
       parameters:
-        - $ref: "#/components/parameters/IncludeArchived"
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -467,7 +505,7 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: "#/components/schemas/MuscleGroup" }
+                    items: { $ref: '#/components/schemas/MuscleGroup' }
     post:
       tags: [muscle-groups]
       summary: Create a new muscle group.
@@ -475,16 +513,16 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/MuscleGroupCreate" }
+            schema: { $ref: '#/components/schemas/MuscleGroupCreate' }
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+                properties: { data: { $ref: '#/components/schemas/MuscleGroup' } }
 
   /muscle-groups/{id}:
     patch:
@@ -496,23 +534,23 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/MuscleGroupPatch" }
+            schema: { $ref: '#/components/schemas/MuscleGroupPatch' }
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+                properties: { data: { $ref: '#/components/schemas/MuscleGroup' } }
     delete:
       tags: [muscle-groups]
       summary: Soft-archive (when referenced) or hard-delete (when not referenced).
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
-        "204": { description: Hard-deleted (no references) or soft-archived (had references). }
+        '204': { description: Hard-deleted (no references) or soft-archived (had references). }
 
   /muscle-groups/{id}/merge:
     post:
@@ -524,25 +562,25 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/MuscleGroupMerge" }
+            schema: { $ref: '#/components/schemas/MuscleGroupMerge' }
       responses:
-        "200":
+        '200':
           description: OK; returns the surviving target row.
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/MuscleGroup" } }
+                properties: { data: { $ref: '#/components/schemas/MuscleGroup' } }
 
   /exercises:
     get:
       tags: [exercises]
       summary: List exercises (active by default; pass include_archived to include soft-deleted).
       parameters:
-        - $ref: "#/components/parameters/IncludeArchived"
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -552,7 +590,7 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: "#/components/schemas/Exercise" }
+                    items: { $ref: '#/components/schemas/Exercise' }
     post:
       tags: [exercises]
       summary: Create a new exercise.
@@ -560,16 +598,16 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ExerciseCreate" }
+            schema: { $ref: '#/components/schemas/ExerciseCreate' }
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/Exercise" } }
+                properties: { data: { $ref: '#/components/schemas/Exercise' } }
 
   /exercises/{id}:
     patch:
@@ -581,37 +619,37 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ExercisePatch" }
+            schema: { $ref: '#/components/schemas/ExercisePatch' }
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/Exercise" } }
+                properties: { data: { $ref: '#/components/schemas/Exercise' } }
     delete:
       tags: [exercises]
       summary: Soft-delete (when referenced by historical sessions) or hard-delete (when not referenced).
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
-        "204": { description: Deleted or archived. }
+        '204': { description: Deleted or archived. }
 
   /me/preferences:
     get:
       tags: [preferences]
       summary: Read theme / units / sound / notification acknowledgements.
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/Preferences" } }
+                properties: { data: { $ref: '#/components/schemas/Preferences' } }
     patch:
       tags: [preferences]
       summary: Partial preferences update; deep-merges notification_acks.
@@ -619,30 +657,30 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/PreferencesPatch" }
+            schema: { $ref: '#/components/schemas/PreferencesPatch' }
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/Preferences" } }
+                properties: { data: { $ref: '#/components/schemas/Preferences' } }
 
   /me/nutrition-targets:
     get:
       tags: [nutrition-targets]
       summary: Effective daily targets (engine ⊕ override ⊕ auto-derived per FR-017a/b).
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/NutritionTargets" } }
+                properties: { data: { $ref: '#/components/schemas/NutritionTargets' } }
     put:
       tags: [nutrition-targets]
       summary: Set or clear individual nutrition overrides; emits a calculation_results audit row per save.
@@ -650,9 +688,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/NutritionTargetsPut" }
+            schema: { $ref: '#/components/schemas/NutritionTargetsPut' }
       responses:
-        "200":
+        '200':
           description: OK; effective targets after applying the change.
           content:
             application/json:
@@ -664,14 +702,14 @@ paths:
                     type: object
                     required: [targets, calculation_audit_id]
                     properties:
-                      targets: { $ref: "#/components/schemas/NutritionTargets" }
+                      targets: { $ref: '#/components/schemas/NutritionTargets' }
                       calculation_audit_id: { type: integer }
                       reason: { type: string, enum: [override_set, override_cleared] }
     delete:
       tags: [nutrition-targets]
       summary: Clear all four nutrition overrides; emits one audit row.
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -683,7 +721,7 @@ paths:
                     type: object
                     required: [targets, calculation_audit_id]
                     properties:
-                      targets: { $ref: "#/components/schemas/NutritionTargets" }
+                      targets: { $ref: '#/components/schemas/NutritionTargets' }
                       calculation_audit_id: { type: integer }
                       reason: { type: string, enum: [override_cleared] }
 
@@ -692,21 +730,21 @@ paths:
       tags: [data-management]
       summary: Generate a full JSON backup envelope for the authenticated athlete.
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/BackupEnvelope" } }
+                properties: { data: { $ref: '#/components/schemas/BackupEnvelope' } }
 
   /data/export/sessions.csv:
     get:
       tags: [data-management]
       summary: Sessions-only CSV (header row even when zero sessions).
       responses:
-        "200":
+        '200':
           description: OK
           content:
             text/csv:
@@ -727,23 +765,23 @@ paths:
                 file: { type: string, format: binary }
                 source_filename: { type: string }
       responses:
-        "200":
+        '200':
           description: Restore complete.
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/ImportResult" } }
-        "400":
+                properties: { data: { $ref: '#/components/schemas/ImportResult' } }
+        '400':
           description: |
             Validation failure. Possible `error.code` values:
             VALIDATION_FAILED, IMPORT_VERSION_TOO_NEW, IMPORT_MISSING_MIGRATOR,
             IMPORT_OWNERSHIP_MISMATCH, IMPORT_TOO_LARGE.
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
-        "500":
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '500':
           description: Mid-write failure; transaction rolled back.
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 
   /data/reset:
     post:
@@ -753,18 +791,18 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ResetRequest" }
+            schema: { $ref: '#/components/schemas/ResetRequest' }
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
-                properties: { data: { $ref: "#/components/schemas/ResetResult" } }
-        "400":
+                properties: { data: { $ref: '#/components/schemas/ResetResult' } }
+        '400':
           description: |
             `error.code` is RESET_TOKEN_MISMATCH when the confirmation token does
             not match the server-side configured value.
-          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

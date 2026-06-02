@@ -1,8 +1,35 @@
 {
   "locale": "fr-FR",
   "phases": [
-    { "slug": "hypertrophy-foundation", "name": "Hypertrophie — fondations", "description": "Volume modéré, focus technique et progression linéaire.", "weeks": 6, "rest_seconds": 90, "intensity_pct_min": 65, "intensity_pct_max": 75, "display_order": 1 },
-    { "slug": "hypertrophy-overload", "name": "Hypertrophie — surcharge", "description": "Augmentation du volume, techniques d’intensification.", "weeks": 6, "rest_seconds": 75, "intensity_pct_min": 70, "intensity_pct_max": 80, "display_order": 2 },
-    { "slug": "strength-peak", "name": "Force — pic", "description": "Charges lourdes, séries plus courtes, pause active.", "weeks": 4, "rest_seconds": 150, "intensity_pct_min": 80, "intensity_pct_max": 90, "display_order": 3 }
+    {
+      "slug": "hypertrophy-foundation",
+      "name": "Hypertrophie — fondations",
+      "description": "Volume modéré, focus technique et progression linéaire.",
+      "weeks": 6,
+      "rest_seconds": 90,
+      "intensity_pct_min": 65,
+      "intensity_pct_max": 75,
+      "display_order": 1
+    },
+    {
+      "slug": "hypertrophy-overload",
+      "name": "Hypertrophie — surcharge",
+      "description": "Augmentation du volume, techniques d’intensification.",
+      "weeks": 6,
+      "rest_seconds": 75,
+      "intensity_pct_min": 70,
+      "intensity_pct_max": 80,
+      "display_order": 2
+    },
+    {
+      "slug": "strength-peak",
+      "name": "Force — pic",
+      "description": "Charges lourdes, séries plus courtes, pause active.",
+      "weeks": 4,
+      "rest_seconds": 150,
+      "intensity_pct_min": 80,
+      "intensity_pct_max": 90,
+      "display_order": 3
+    }
   ]
 }

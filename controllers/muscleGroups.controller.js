@@ -41,7 +41,8 @@ export function muscleGroupsController({ daos }) {
   return {
     async list(req, res, next) {
       try {
-        const includeArchived = String(req.query.include_archived ?? '').toLowerCase() === 'true' ||
+        const includeArchived =
+          String(req.query.include_archived ?? '').toLowerCase() === 'true' ||
           req.query.include_archived === '1';
         const data = await dao.listForAthlete(req.athleteId, { includeArchived });
         res.json({ data });

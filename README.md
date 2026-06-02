@@ -50,12 +50,12 @@ tests/                 # unit · integration · contract · frontend
 
 ## Scripts
 
-| Script                  | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| `npm start`             | API + Vite dev server in parallel.                   |
-| `npm run seed`          | Idempotent athlete + program seed.                   |
-| `npm run db:reset`      | `supabase db reset` then re-seed. **Destructive.**   |
-| `npm test`              | All unit / integration / contract tests via Vitest.  |
-| `npm run test:contract` | Just the OpenAPI contract suite.                     |
-| `npm run lint`          | ESLint over the backend (frontend has its own).      |
-| `npm run format`        | Prettier across the workspace.                       |
+| Script                  | Purpose                                             |
+| ----------------------- | --------------------------------------------------- |
+| `npm start`             | API + Vite dev server in parallel.                  |
+| `npm run seed`          | Idempotent athlete + program seed.                  |
+| `npm run db:reset`      | `supabase db reset` then re-seed. **Destructive.**  |
+| `npm test`              | All unit / integration / contract tests via Vitest. |
+| `npm run test:contract` | Just the OpenAPI contract suite.                    |
+| `npm run lint`          | ESLint over the backend (frontend has its own).     |
+| `npm run format`        | Prettier across the workspace.                      |

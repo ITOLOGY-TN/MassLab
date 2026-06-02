@@ -27,7 +27,7 @@ describe('validateSchedule', () => {
 
   it('rejects more than seven days', () => {
     const slots = Array.from({ length: 8 }, (_, i) => ({
-      day_of_week: ((i % 7) + 1),
+      day_of_week: (i % 7) + 1,
       muscle_group_id: i + 100,
     }));
     const result = validateSchedule({ slots });

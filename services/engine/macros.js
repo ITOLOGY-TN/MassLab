@@ -34,12 +34,9 @@ export function macros({
   const daily_kcal = override?.daily_kcal != null ? override.daily_kcal : engine_kcal;
 
   const engine_protein_g = Math.round(lbm * c.protein_g_per_kg_lbm);
-  const morphFatBoost =
-    morphotype === 'endomorph' ? 1.18 : morphotype === 'ectomorph' ? 0.95 : 1.0;
+  const morphFatBoost = morphotype === 'endomorph' ? 1.18 : morphotype === 'ectomorph' ? 0.95 : 1.0;
   const fatPct = Math.max(c.fat_floor_pct, c.fat_floor_pct * morphFatBoost);
   const engine_fat_g = Math.round((daily_kcal * fatPct) / 9);
-  const engine_remaining = daily_kcal - engine_protein_g * 4 - engine_fat_g * 9;
-  const engine_carbs_g = Math.max(0, Math.round(engine_remaining / 4));
 
   // FR-017b: each macro override pins independently; the others auto-derive
   // from the resulting calorie/protein/fat budget.

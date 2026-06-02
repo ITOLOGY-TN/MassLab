@@ -60,21 +60,73 @@ export default function MacrosCalculator() {
     <main className="min-h-full p-lg max-w-2xl mx-auto">
       <h1 className="text-3xl font-semibold mb-lg">Macros</h1>
       <form onSubmit={onSubmit} className="grid grid-cols-2 gap-md mb-lg">
-        <NumberField label="Poids (kg)" name="weight_kg" value={form.weight_kg} onChange={set('weight_kg')} step={0.1} required />
-        <NumberField label="Taille (cm)" name="height_cm" value={form.height_cm} onChange={set('height_cm')} step={0.1} required />
+        <NumberField
+          label="Poids (kg)"
+          name="weight_kg"
+          value={form.weight_kg}
+          onChange={set('weight_kg')}
+          step={0.1}
+          required
+        />
+        <NumberField
+          label="Taille (cm)"
+          name="height_cm"
+          value={form.height_cm}
+          onChange={set('height_cm')}
+          step={0.1}
+          required
+        />
         <NumberField label="Âge" name="age" value={form.age} onChange={set('age')} required />
-        <SelectField label="Sexe" name="biological_sex" value={form.biological_sex} onChange={set('biological_sex')} options={SEX_OPTIONS} required />
-        <SelectField label="Activité" name="activity_level" value={form.activity_level} onChange={set('activity_level')} options={ACTIVITY_OPTIONS} required />
-        <SelectField label="Morphotype" name="morphotype" value={form.morphotype} onChange={set('morphotype')} options={MORPHOTYPE_OPTIONS} required />
-        <SelectField label="Objectif" name="goal" value={form.goal} onChange={set('goal')} options={GOAL_OPTIONS} required />
-        <NumberField label="Masse maigre (kg, optionnel)" name="lean_body_mass_kg" value={form.lean_body_mass_kg} onChange={set('lean_body_mass_kg')} step={0.1} />
+        <SelectField
+          label="Sexe"
+          name="biological_sex"
+          value={form.biological_sex}
+          onChange={set('biological_sex')}
+          options={SEX_OPTIONS}
+          required
+        />
+        <SelectField
+          label="Activité"
+          name="activity_level"
+          value={form.activity_level}
+          onChange={set('activity_level')}
+          options={ACTIVITY_OPTIONS}
+          required
+        />
+        <SelectField
+          label="Morphotype"
+          name="morphotype"
+          value={form.morphotype}
+          onChange={set('morphotype')}
+          options={MORPHOTYPE_OPTIONS}
+          required
+        />
+        <SelectField
+          label="Objectif"
+          name="goal"
+          value={form.goal}
+          onChange={set('goal')}
+          options={GOAL_OPTIONS}
+          required
+        />
+        <NumberField
+          label="Masse maigre (kg, optionnel)"
+          name="lean_body_mass_kg"
+          value={form.lean_body_mass_kg}
+          onChange={set('lean_body_mass_kg')}
+          step={0.1}
+        />
         <div className="col-span-2">
           <button type="submit" className="bg-accent text-bg rounded-md px-lg py-sm font-semibold">
             Calculer
           </button>
         </div>
       </form>
-      {error ? <ResultCard title="Erreur"><p className="text-danger">{error}</p></ResultCard> : null}
+      {error ? (
+        <ResultCard title="Erreur">
+          <p className="text-danger">{error}</p>
+        </ResultCard>
+      ) : null}
       {result ? (
         <ResultCard title="Résultat">
           <dl className="grid grid-cols-2 gap-sm">

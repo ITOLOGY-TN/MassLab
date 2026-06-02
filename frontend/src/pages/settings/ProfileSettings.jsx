@@ -145,7 +145,14 @@ export default function ProfileSettings() {
       </label>
 
       <div className="grid grid-cols-2 gap-md">
-        <NumberField label="Âge" name="age" value={form.age} onChange={(v) => patchField('age', v)} min={13} max={100} />
+        <NumberField
+          label="Âge"
+          name="age"
+          value={form.age}
+          onChange={(v) => patchField('age', v)}
+          min={13}
+          max={100}
+        />
         <SelectField
           label="Sexe biologique"
           name="biological_sex"
@@ -220,7 +227,8 @@ export default function ProfileSettings() {
       ) : null}
       {recompute ? (
         <p role="status" className="text-success text-sm">
-          Programme recalculé · audit #{recompute.calculation_audit_id} · moteur {recompute.engine_version}
+          Programme recalculé · audit #{recompute.calculation_audit_id} · moteur{' '}
+          {recompute.engine_version}
         </p>
       ) : null}
 

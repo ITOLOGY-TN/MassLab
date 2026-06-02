@@ -13,13 +13,13 @@
 
 ### Session 2026-04-27
 
-- Q: Which identity columns must exist on the `athletes` table from the first migration? → A: Email (unique, non-null) + password_hash (nullable) + display_name (optional). Standard email/password login activates when single-user mode is disabled. *(Superseded by the 2026-04-28 clarification above: `password_hash` is replaced by `auth_user_id` under Supabase Auth.)*
+- Q: Which identity columns must exist on the `athletes` table from the first migration? → A: Email (unique, non-null) + password_hash (nullable) + display_name (optional). Standard email/password login activates when single-user mode is disabled. _(Superseded by the 2026-04-28 clarification above: `password_hash` is replaced by `auth_user_id` under Supabase Auth.)_
 - Q: How should secret-vs-config separation be handled in Phase 0? → A: `.env` gitignored + `.env.example` committed; configuration schema marks every key as secret or non-secret (used for log redaction); loader sits behind an adapter interface so the default `.env` reader can later be swapped for an external secret manager without touching call sites.
 - Q: How much observability machinery must Phase 0 ship? → A: Structured per-request log entries (method, path, status, duration, request_id, athlete_id when authenticated) plus a correlation-ID middleware that sits before authentication so rejected requests still carry a `request_id`. `/health` and `/ready` endpoints and a pluggable logger transport adapter are deferred to a later phase.
 - Q: How much of the localization seam must be wired in Phase 0? → A: DB schema only — translatable seed tables (quotes, exercises, foods, supplements, training phases) carry a `locale` column from the first migration, populated `fr-FR` for the seeded content. A code-level i18n catalog (e.g. `t(key, locale)`) is deferred to the phase where UI strings actually ship.
 - Q: What persistence shape do sensitive-data tables and photo storage take in Phase 0? → A: Photos go through a `photo_storage` adapter interface (default writes to local filesystem under `/data/photos/<athlete_id>/`; never stored as DB blobs); body weight and measurement columns stored as plaintext numeric values to preserve aggregate query performance; column-level encryption-at-rest deferred until going-online preparation.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — First Launch Is Ready to Use (Priority: P1)
 
@@ -95,7 +95,7 @@ A new operator (initially the athlete's developer self, later a teammate or a de
 - **Operator changes the configured port**: When the configured port is changed, the application MUST bind to the new port on the next start with no further changes required.
 - **Mode flag flipped at runtime**: A runtime toggle is out of scope; mode change requires an application restart. This MUST be stated in the startup error/warning if a flip is attempted.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -122,7 +122,7 @@ A new operator (initially the athlete's developer self, later a teammate or a de
 - **FR-021**: Photo storage MUST go through a `photo_storage` adapter interface. The default adapter MUST persist image files to the local filesystem under `/data/photos/<athlete_id>/`, MUST NOT store image binaries inside the application database, and MUST expose only stable opaque references (relative paths or storage keys) to controllers and services. Replacing the default adapter with an external object-storage adapter MUST be achievable through configuration alone, with no changes to controllers or services.
 - **FR-022**: Body weight and body measurement columns MUST be stored as plaintext numeric values in Phase 0 so that aggregate trend queries (deltas, charts, projections) require no per-row decryption. Column-level encryption-at-rest is explicitly out of scope for this phase but MUST be in place before any production multi-user rollout.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Athlete Profile**: The person being tracked. Holds email (unique, non-null), auth_user_id (nullable UUID, FK to `auth.users(id)`; populated only when the athlete signs up via Supabase Auth, null while the seeded single-user mode is in use), display_name (optional), age, biological sex, height, starting weight, target weight, morphotype, goal, weekly session count, available equipment, known injuries, program start date. Owns every other domain record via the tenant identifier. Credential storage and password hashing are delegated to Supabase Auth and live outside the application's tables.
 - **Exercise**: A movement in the library. Holds name, targeted muscles, instructions, technique points, optional media references. Reusable across athletes.
@@ -136,7 +136,7 @@ A new operator (initially the athlete's developer self, later a teammate or a de
 - **Athlete Photo**: A photographic record of an athlete's body at a given date. Image binary lives outside the application database via the `photo_storage` adapter (default = local filesystem); only the storage reference, the date, and optional metadata (e.g. weight overlay) live in the database.
 - **Application Configuration**: Environment-driven values (single-user-mode flag, network port, data-store location, feature flags, future authentication secrets) loaded at startup through an adapter-backed loader. Each key is tagged in the schema as `secret` or non-secret; the default adapter reads from a `.env` file, and alternative adapters (e.g. external secret manager) can be plugged in later without changes to call sites.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

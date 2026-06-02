@@ -29,9 +29,7 @@ export default function NutritionHome() {
         <p className="text-muted text-sm mb-xs">MassLab</p>
         <h1 className="text-3xl font-semibold">
           Nutrition{' '}
-          {hasOverride ? (
-            <span className="text-sm text-accent align-middle">(custom)</span>
-          ) : null}
+          {hasOverride ? <span className="text-sm text-accent align-middle">(custom)</span> : null}
         </h1>
       </header>
 

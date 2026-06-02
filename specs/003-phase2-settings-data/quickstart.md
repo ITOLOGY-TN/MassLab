@@ -20,21 +20,20 @@ This is the operator's guide to the Phase 2 surface. It assumes the Phase 0 foun
 
 Five sub-surfaces under one Settings page, plus a Data Management surface:
 
-| Sub-surface | Frontend route | Primary endpoints |
-|-------------|----------------|--------------------|
-| Profile | `/settings/profile` | `GET /api/v1/me`, `PATCH /api/v1/me` |
-| Schedule | `/settings/schedule` | `GET/PUT /api/v1/me/schedule`, `POST .../slots/:id/exercises/reorder`, `*/api/v1/muscle-groups/*` |
-| Exercises | `/settings/exercises` | `GET/POST/PATCH/DELETE /api/v1/exercises` |
-| Preferences | `/settings/preferences` | `GET/PATCH /api/v1/me/preferences`, `GET/PUT/DELETE /api/v1/me/nutrition-targets` |
-| Data | `/settings/data` | `POST /api/v1/data/export/json`, `GET /api/v1/data/export/sessions.csv`, `POST /api/v1/data/import`, `POST /api/v1/data/reset` |
+| Sub-surface | Frontend route          | Primary endpoints                                                                                                              |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Profile     | `/settings/profile`     | `GET /api/v1/me`, `PATCH /api/v1/me`                                                                                           |
+| Schedule    | `/settings/schedule`    | `GET/PUT /api/v1/me/schedule`, `POST .../slots/:id/exercises/reorder`, `*/api/v1/muscle-groups/*`                              |
+| Exercises   | `/settings/exercises`   | `GET/POST/PATCH/DELETE /api/v1/exercises`                                                                                      |
+| Preferences | `/settings/preferences` | `GET/PATCH /api/v1/me/preferences`, `GET/PUT/DELETE /api/v1/me/nutrition-targets`                                              |
+| Data        | `/settings/data`        | `POST /api/v1/data/export/json`, `GET /api/v1/data/export/sessions.csv`, `POST /api/v1/data/import`, `POST /api/v1/data/reset` |
 
 ## First-time setup after pulling the branch
 
-1. Install the new dependencies:
+1. Install the new dependencies. The repo is an npm workspace, so the root install also hydrates `frontend/`:
 
    ```bash
-   npm install                       # picks up multer at the root
-   npm --prefix frontend install     # picks up @dnd-kit/core + @dnd-kit/sortable
+   npm install                       # picks up multer + workspace deps (@dnd-kit/* in frontend)
    ```
 
 2. Apply the Phase 2 migrations. They're forward-only and idempotent:
@@ -75,12 +74,7 @@ curl -s -X PATCH http://localhost:3000/api/v1/me \
      -d '{ "current_weight_kg": 59 }' | jq .
 ```
 
-Expect a 200 with `data.profile.current_weight_kg = 59` and `data.recompute.calculation_audit_id` populated. Confirm one new row exists in `calculation_results`:
-
-```bash
-psql "$SUPABASE_DB_URL" -c \
-  "select id, reason, engine_version from calculation_results order by id desc limit 1;"
-```
+Expect a 200 with `data.profile.current_weight_kg = 59` and `data.recompute.calculation_audit_id` populated. The `calculation_results` row is asserted in `tests/integration/settings.profile.audit.test.js`; you can also tail the API logs (every PATCH that triggers a recompute logs `program_id` and `calculation_audit_id`).
 
 ### US2 — Schedule replace, in-progress session guard
 
@@ -178,26 +172,28 @@ curl -s -X POST http://localhost:3000/api/v1/data/reset \
 
 Three new keys in `config/schema.js`, all with sensible defaults; override only when needed via `.env`:
 
-| Key | Default | When to override |
-|-----|---------|-------------------|
-| `BACKUP_SCHEMA_VERSION` | `1` | Bumped *only* when shipping a new backup migrator + matching SQL migration. |
-| `IMPORT_MAX_BYTES` | `26214400` (25 MiB) | Raise for athletes with ~years of session history; the realistic Phase 2 maximum is ~2 MiB. |
-| `CSV_SEPARATOR` | `,` | Set to `;` for spreadsheets that default to that separator in `fr-FR` locales. |
-| `RESET_CONFIRM_TOKEN` | `RESET-MASSLAB` | Customise per environment if you want different tokens for dev vs staging. |
+| Key                     | Default             | When to override                                                                            |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------------------- |
+| `BACKUP_SCHEMA_VERSION` | `1`                 | Bumped _only_ when shipping a new backup migrator + matching SQL migration.                 |
+| `IMPORT_MAX_BYTES`      | `26214400` (25 MiB) | Raise for athletes with ~years of session history; the realistic Phase 2 maximum is ~2 MiB. |
+| `CSV_SEPARATOR`         | `,`                 | Set to `;` for spreadsheets that default to that separator in `fr-FR` locales.              |
+| `RESET_CONFIRM_TOKEN`   | `RESET-MASSLAB`     | Customise per environment if you want different tokens for dev vs staging.                  |
 
 ## Test commands
 
 ```bash
 npm test                              # all suites
 npm run test:contract                 # OpenAPI contract pass
-npx vitest run tests/integration/data.import.atomicRollback.test.js
+npx vitest run tests/integration/data.export.test.js
 npx vitest run tests/unit/dataManagement.exporter.test.js
-npx vitest run --project frontend tests/frontend/settings.profile.test.jsx
+npx vitest run tests/unit/dataManagement.importer.test.js
+npm --prefix frontend run test        # frontend smoke suite
 ```
 
 ## Operational notes
 
 - The single source of truth for the engine version is `services/engine/constants.js`. Bumping `ENGINE_VERSION` does NOT bump `BACKUP_SCHEMA_VERSION` — they version different things.
-- The `services/dataManagement/backupMigrators/` directory ships with a `README.md` only. The first real migrator (`v1-to-v2.js`) lands the day a Phase 3+ feature changes the backup-envelope shape; that PR also bumps `BACKUP_SCHEMA_VERSION` and updates the export path to emit `_export.schema_version = 2`.
+- The `services/dataManagement/backupMigrators/` directory ships with `index.js` (an empty manifest plus the `migrateChain` walker) and `README.md` (the contribution convention). The first real migrator (`v1-to-v2.js`) lands the day a Phase 3+ feature changes the backup-envelope shape; that PR also bumps `BACKUP_SCHEMA_VERSION` and updates the export path to emit `_export.schema_version = 2`.
 - Imports are bounded by `IMPORT_MAX_BYTES`; `multer` is configured to memory storage, so no temporary files touch disk.
+- The restore is atomic. `services/dataAccess/importers.dao.replaceAllForAthlete` delegates to the `public.replace_athlete_dataset(uuid, jsonb)` Postgres function, which wraps the wipe + reinsert in a single `plpgsql` transaction — any RAISE / runtime error rolls the whole restore back. Migration: `supabase/migrations/20260508170123_init_replace_athlete_dataset_fn.sql`.
 - The reset endpoint always re-checks the `confirm_token` server-side. The frontend's typed-token dialog is UX, not security.

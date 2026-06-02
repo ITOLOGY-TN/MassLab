@@ -11,7 +11,10 @@ const empty = {
 };
 
 function fromForm(form) {
-  const split = (s) => String(s).split(/\s*,\s*/).filter(Boolean);
+  const split = (s) =>
+    String(s)
+      .split(/\s*,\s*/)
+      .filter(Boolean);
   const body = {
     name: form.name.trim(),
     targeted_muscles: split(form.targeted_muscles),
@@ -42,9 +45,7 @@ export default function ExerciseManager() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const res = await apiGet(
-      `/api/v1/exercises${includeArchived ? '?include_archived=1' : ''}`,
-    );
+    const res = await apiGet(`/api/v1/exercises${includeArchived ? '?include_archived=1' : ''}`);
     setExercises(res.data);
   }
 
@@ -145,9 +146,7 @@ export default function ExerciseManager() {
             <div className="flex-1">
               <p className="font-semibold">
                 {ex.name}{' '}
-                {!ex.is_active ? (
-                  <span className="text-xs text-muted">(archivé)</span>
-                ) : null}
+                {!ex.is_active ? <span className="text-xs text-muted">(archivé)</span> : null}
               </p>
               <p className="text-sm text-muted">{(ex.targeted_muscles ?? []).join(', ')}</p>
             </div>
@@ -175,9 +174,7 @@ export default function ExerciseManager() {
           editing={editing}
           busy={busy}
           onCancel={() => setEditing(null)}
-          onSubmit={(form) =>
-            editing.kind === 'new' ? onCreate(form) : onPatch(editing.id, form)
-          }
+          onSubmit={(form) => (editing.kind === 'new' ? onCreate(form) : onPatch(editing.id, form))}
         />
       ) : null}
     </div>
@@ -195,7 +192,7 @@ function ExerciseEditor({ editing, busy, onCancel, onSubmit }) {
       className="bg-bg border border-muted/30 rounded-md p-md grid gap-sm"
     >
       <h3 className="text-xl font-semibold">
-        {editing.kind === 'new' ? 'Nouvel exercice' : 'Modifier l\'exercice'}
+        {editing.kind === 'new' ? 'Nouvel exercice' : "Modifier l'exercice"}
       </h3>
       <label className="block">
         <span className="block text-sm text-muted mb-xs">Nom</span>
@@ -207,7 +204,9 @@ function ExerciseEditor({ editing, busy, onCancel, onSubmit }) {
         />
       </label>
       <label className="block">
-        <span className="block text-sm text-muted mb-xs">Muscles ciblés (séparés par des virgules)</span>
+        <span className="block text-sm text-muted mb-xs">
+          Muscles ciblés (séparés par des virgules)
+        </span>
         <input
           required
           value={form.targeted_muscles}
@@ -226,7 +225,9 @@ function ExerciseEditor({ editing, busy, onCancel, onSubmit }) {
         />
       </label>
       <label className="block">
-        <span className="block text-sm text-muted mb-xs">Points de technique (séparés par des virgules)</span>
+        <span className="block text-sm text-muted mb-xs">
+          Points de technique (séparés par des virgules)
+        </span>
         <input
           value={form.technique_points}
           onChange={(e) => setForm({ ...form, technique_points: e.target.value })}

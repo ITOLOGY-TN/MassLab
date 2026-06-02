@@ -29,20 +29,24 @@ describe('config schema', () => {
     );
   });
 
-  it.each(['SINGLE_USER_MODE', 'PORT', 'SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'SUPABASE_PUBLISHABLE_KEY', 'CORS_ORIGIN'])(
-    'fails fast when %s is missing',
-    (key) => {
-      const broken = { ...valid };
-      delete broken[key];
-      try {
-        validate(broken);
-        throw new Error('expected throw');
-      } catch (err) {
-        expect(err).toBeInstanceOf(ConfigError);
-        expect(err.missingKey).toBe(key);
-      }
-    },
-  );
+  it.each([
+    'SINGLE_USER_MODE',
+    'PORT',
+    'SUPABASE_URL',
+    'SUPABASE_SECRET_KEY',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'CORS_ORIGIN',
+  ])('fails fast when %s is missing', (key) => {
+    const broken = { ...valid };
+    delete broken[key];
+    try {
+      validate(broken);
+      throw new Error('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      expect(err.missingKey).toBe(key);
+    }
+  });
 
   it('rejects malformed key prefixes', () => {
     expect(() => validate({ ...valid, SUPABASE_SECRET_KEY: 'service_role_xxx' })).toThrow(

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { validate, ConfigError } from '../../config/schema.js';
 import { _resetSupabaseCache, getSupabase } from '../../services/dataAccess/supabaseClient.js';
-import { athletesDao } from '../../services/dataAccess/athletes.dao.js';
 import { buildApp } from '../../app.js';
 
 const baseEnv = {

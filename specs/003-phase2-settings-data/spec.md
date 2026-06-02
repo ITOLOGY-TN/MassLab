@@ -15,7 +15,7 @@
 - Q: JSON import — older-schema backup policy? → A: Forward-migrate older backups through a chain of one-step migrators committed alongside each schema migration; reject newer-than-current. Each successful import is recorded with both the original and the post-migration schema versions.
 - Q: Audit-log on engine-override edits (custom nutrition targets)? → A: Yes — every override save or clear emits exactly one calculation-audit row carrying the engine version, the resolved constants snapshot after applying the change, and a reason tag (`override_set` / `override_cleared`).
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 Phase 2 turns MassLab from a seeded-only app into one the athlete can shape. It is the control panel: athlete profile, weekly training schedule, app preferences, exercise library management, and the safety net for the athlete's accumulated data (export, import, reset). Stories below are prioritised so each one ships independent value; together they make the app self-serviceable without touching the database.
 
@@ -150,7 +150,7 @@ The athlete chooses to wipe data from a single module (e.g., clear all session j
 - The athlete clears a custom nutrition target while the engine has since changed its recommended value (e.g., due to weight changes) — the new engine value is adopted immediately and the change is visible on the next Nutrition view.
 - The full reset is triggered but the export-first option fails to produce a file — the destructive step is blocked and the athlete is asked whether to retry the export or cancel.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -159,7 +159,7 @@ The athlete chooses to wipe data from a single module (e.g., clear all session j
 - **FR-001**: Settings MUST allow the athlete to view and edit their full profile: display name, biological sex, age, height (cm), current weight (kg), program start date, target weight (kg), morphotype, activity level, sessions per week, available equipment, and known injuries.
 - **FR-002**: Saving a profile change MUST recompute every dependent calculator output (BMR, TDEE, macro targets, body composition, derived load guidance) by calling the engine layer that already exists in Phase 1.
 - **FR-003**: Each persisted recomputation triggered by a profile save MUST be appended to the calculation audit log with the current engine version and resolved constants snapshot.
-- **FR-003a**: Each save or clear of an engine override (custom nutrition targets, including the auto-derived macro recompute path in FR-017a) MUST append exactly one row to the calculation audit log carrying the current engine version, the resolved constants snapshot computed *after* the override change, and a reason tag (`override_set` for any save, `override_cleared` for any clear). Idempotent re-saves and no-op clears MUST still emit one row each so the override history reads linearly.
+- **FR-003a**: Each save or clear of an engine override (custom nutrition targets, including the auto-derived macro recompute path in FR-017a) MUST append exactly one row to the calculation audit log carrying the current engine version, the resolved constants snapshot computed _after_ the override change, and a reason tag (`override_set` for any save, `override_cleared` for any clear). Idempotent re-saves and no-op clears MUST still emit one row each so the override history reads linearly.
 - **FR-004**: Profile inputs MUST be validated at the boundary: numeric ranges (age 13–100, height 100–250 cm, weight 30–250 kg, target weight differs from current weight by no more than ±50 kg, start date within ±12 months of today), and required fields MUST block save with field-level messages when violated.
 - **FR-005**: All profile fields MUST be scoped to a single `athlete_id` row even in single-user mode and MUST never be writeable across athlete boundaries.
 
@@ -186,7 +186,7 @@ The athlete chooses to wipe data from a single module (e.g., clear all session j
 - **FR-015**: The athlete MUST be able to toggle theme (light / dark), rest-timer sounds (on / off), and unit system (kg / lbs).
 - **FR-016**: The unit system MUST affect input controls and display only; canonical storage MUST remain in kilograms, and round-trip conversions MUST not introduce drift greater than 0.1 kg.
 - **FR-017**: The athlete MUST be able to set custom daily calorie, protein, carbohydrate, and fat targets that override the engine-computed values for the Nutrition module; these overrides MUST be written into the existing `app_config.engine_overrides` JSONB so the Phase 1 engine resolver (defaults ⊕ override) remains the single source of truth. Clearing a custom target MUST restore the engine value.
-- **FR-017a**: When the athlete sets a custom *calorie* target without explicit macro overrides, the macro calculator MUST re-run on the new calorie total using the engine's standard rules (protein floor 2.2 g/kg LBM, fat floor 25 % of calories, carbs fill the remainder, morphotype adjustment); the resulting protein/carbs/fat targets MUST be treated as engine-derived (not as athlete overrides) so clearing the calorie override fully reverts to the original engine values.
+- **FR-017a**: When the athlete sets a custom _calorie_ target without explicit macro overrides, the macro calculator MUST re-run on the new calorie total using the engine's standard rules (protein floor 2.2 g/kg LBM, fat floor 25 % of calories, carbs fill the remainder, morphotype adjustment); the resulting protein/carbs/fat targets MUST be treated as engine-derived (not as athlete overrides) so clearing the calorie override fully reverts to the original engine values.
 - **FR-017b**: When the athlete explicitly sets a per-macro override (protein, carbs, or fat) it MUST take precedence over the auto-derived value for that single macro; the other macros MUST continue to be auto-derived from the prevailing calorie target. Setting all three macro overrides effectively pins the entire split.
 - **FR-018**: When a custom target override is in force and the engine's recommended value subsequently changes (due to a profile change), the system MUST keep the override active and surface a non-blocking notice exactly once that the recommendation has changed; acknowledgement of that notice MUST be recorded in `athlete_preferences` so the same notice is not re-shown for the same recommendation delta.
 - **FR-019**: UI/UX preferences (theme, units, sounds, notification acknowledgements) MUST be persisted in a new per-athlete `athlete_preferences` table (one row per athlete, scoped by `athlete_id`, with its own RLS shipped in the same migration). They MUST NOT be co-mingled with `engine_overrides` so the calculator engine has no dependency on UI state.
@@ -217,7 +217,7 @@ The athlete chooses to wipe data from a single module (e.g., clear all session j
 - **FR-031**: Every Settings mutation MUST be available through a versioned HTTP endpoint under `/api/v1/` and MUST flow through the existing controller / service layering — no `@supabase/supabase-js` import outside the data-access layer.
 - **FR-032**: All Settings reads and writes MUST be scoped by the resolved `athlete_id` from the auth/single-user middleware; the system MUST refuse any request that resolves to no athlete.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Athlete profile**: The single row per athlete representing identity, physical inputs, goal inputs, lifestyle inputs, and the current/target program horizon. Source of truth for every calculator input.
 - **Weekly schedule**: Per-athlete configuration describing day count (1–7), the active set of calendar days, and the muscle-group reference assigned to each active day. Consumed by every training-related module.
@@ -229,7 +229,7 @@ The athlete chooses to wipe data from a single module (e.g., clear all session j
 - **Backup envelope**: The structured JSON payload produced by export and consumed by import; carries schema version, engine version, timestamp, athlete id, and one collection per athlete-owned entity.
 - **Audit entry**: A row appended to the calculator audit log every time a profile change triggers a recomputation; carries engine version and resolved constants. Already defined in Phase 1.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

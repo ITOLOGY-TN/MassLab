@@ -58,25 +58,25 @@ After step D's last call, `GET /api/v1/program/history` returns at least two row
 
 ## What changed since Phase 0
 
-| Area | Phase 0 | Phase 1 |
-|---|---|---|
-| Migrations | 14 | +7 (`20260507000001`–`20260507000007`) |
-| Domain tables | 14 | +5 typed (`generated_programs`, `progression_flags`, `one_rep_max_records`, `body_composition_results`, plus the `calculation_results` audit log) |
-| Profile fields | weekly_session_count | + `activity_level` (default `moderately_active`) |
-| `app_config` | base config | + `engine_overrides` JSONB (defaults to `{}`) |
-| Endpoints | 9 read endpoints | + 14 (program / nutrition targets / calculators / 1RM records / progression flags / body composition) |
-| Frontend pages | 1 (scaffold) | + 2 (`/calculators`, `/nutrition`) plus 5 calculator sub-pages |
+| Area           | Phase 0              | Phase 1                                                                                                                                           |
+| -------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migrations     | 14                   | +7 (`20260507000001`–`20260507000007`)                                                                                                            |
+| Domain tables  | 14                   | +5 typed (`generated_programs`, `progression_flags`, `one_rep_max_records`, `body_composition_results`, plus the `calculation_results` audit log) |
+| Profile fields | weekly_session_count | + `activity_level` (default `moderately_active`)                                                                                                  |
+| `app_config`   | base config          | + `engine_overrides` JSONB (defaults to `{}`)                                                                                                     |
+| Endpoints      | 9 read endpoints     | + 14 (program / nutrition targets / calculators / 1RM records / progression flags / body composition)                                             |
+| Frontend pages | 1 (scaffold)         | + 2 (`/calculators`, `/nutrition`) plus 5 calculator sub-pages                                                                                    |
 
 ## Useful scripts (Phase 1)
 
-| Script | What it does |
-|---|---|
-| `npm start` | Boot API + Vite together. |
-| `npm run seed` | Re-run the seed including the initial active program write. Idempotent. |
-| `npm test` | Full Vitest suite (unit + integration + contract). |
-| `npm run test:contract` | Just the OpenAPI contract suite. |
-| `supabase db push` | **Cloud.** Apply pending migrations. |
-| `supabase db reset` | **Local stack only.** Re-apply all migrations from scratch (destructive). |
+| Script                  | What it does                                                              |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `npm start`             | Boot API + Vite together.                                                 |
+| `npm run seed`          | Re-run the seed including the initial active program write. Idempotent.   |
+| `npm test`              | Full Vitest suite (unit + integration + contract).                        |
+| `npm run test:contract` | Just the OpenAPI contract suite.                                          |
+| `supabase db push`      | **Cloud.** Apply pending migrations.                                      |
+| `supabase db reset`     | **Local stack only.** Re-apply all migrations from scratch (destructive). |
 
 ## Verifying the principles
 

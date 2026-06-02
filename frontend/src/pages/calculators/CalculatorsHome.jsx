@@ -2,7 +2,11 @@ import { Link } from 'react-router-dom';
 
 const CALCULATORS = [
   { slug: 'bmr', label: 'BMR', description: 'Métabolisme basal (Mifflin–St Jeor).' },
-  { slug: 'tdee', label: 'TDEE', description: 'Dépense énergétique totale, par niveau d’activité.' },
+  {
+    slug: 'tdee',
+    label: 'TDEE',
+    description: 'Dépense énergétique totale, par niveau d’activité.',
+  },
   { slug: 'macros', label: 'Macros', description: 'Calories + protéines / glucides / lipides.' },
   { slug: 'one-rep-max', label: '1RM', description: 'Estimation du 1RM et table de pourcentages.' },
   {

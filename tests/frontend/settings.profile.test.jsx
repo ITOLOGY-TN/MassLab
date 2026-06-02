@@ -78,9 +78,7 @@ describe('ProfileSettings (US1 smoke)', () => {
     await waitFor(() => expect(screen.getByLabelText(/Poids actuel/i)).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText(/Poids actuel/i), { target: { value: '59' } });
     fireEvent.click(screen.getByRole('button', { name: /Enregistrer/i }));
-    await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent(/audit #42/i),
-    );
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/audit #42/i));
     expect(lastPatchBody).toEqual({ current_weight_kg: 59 });
   });
 });

@@ -11,11 +11,12 @@ This document resolves the open design questions Phase 2 raised that were not al
 
 **Decision**: Use the Phase 0 `app_config` table as the storage location for the spec's "Athlete preferences" entity. Add the missing column (`notification_acks JSONB NOT NULL DEFAULT '{}'::jsonb`) on top of the existing `theme`, `units`, `rest_timer_sound`, and `engine_overrides` columns. **Drop** the now-obsolete `daily_kcal_override` column (see D-3). Do not create a new `athlete_preferences` table.
 
-**Rationale**: The Phase 0 `app_config` already implements the clarification's two-stores-by-purpose pattern: `theme/units/rest_timer_sound` are UI-side scalar columns and `engine_overrides` is the calculator-input JSONB sibling. Introducing a parallel `athlete_preferences` table would duplicate the same per-athlete-1:1 pattern that `app_config` already encodes (PK = `athlete_id`), and would force a migration to move the existing `theme/units/rest_timer_sound` columns out — for no functional benefit. The clarification's intent (UI prefs and engine overrides do not co-mingle) is already satisfied because they live in different *columns* of the same row.
+**Rationale**: The Phase 0 `app_config` already implements the clarification's two-stores-by-purpose pattern: `theme/units/rest_timer_sound` are UI-side scalar columns and `engine_overrides` is the calculator-input JSONB sibling. Introducing a parallel `athlete_preferences` table would duplicate the same per-athlete-1:1 pattern that `app_config` already encodes (PK = `athlete_id`), and would force a migration to move the existing `theme/units/rest_timer_sound` columns out — for no functional benefit. The clarification's intent (UI prefs and engine overrides do not co-mingle) is already satisfied because they live in different _columns_ of the same row.
 
 **Alternatives considered**:
-- *Create a new `athlete_preferences` table and migrate the three existing columns into it*: rejected. Pure rename; ships a destructive migration with no behavioural change; doubles the per-athlete row count for zero benefit.
-- *Move the new `notification_acks` into `engine_overrides`*: rejected. Acknowledgement state is UI-side metadata, not a calculator input. Keeping it out of `engine_overrides` preserves the engine's invariant that the JSONB content is consumed by `resolveConstants` and only by `resolveConstants`.
+
+- _Create a new `athlete_preferences` table and migrate the three existing columns into it_: rejected. Pure rename; ships a destructive migration with no behavioural change; doubles the per-athlete row count for zero benefit.
+- _Move the new `notification_acks` into `engine_overrides`_: rejected. Acknowledgement state is UI-side metadata, not a calculator input. Keeping it out of `engine_overrides` preserves the engine's invariant that the JSONB content is consumed by `resolveConstants` and only by `resolveConstants`.
 
 **Spec impact**: Spec FR-019 wording remains correct in spirit — the entity is per-athlete, scoped by `athlete_id`, with its own RLS, persisted independently of the engine override store. The data-model.md describes the entity as backed by `app_config`. This is the only spec-to-implementation translation note for Phase 2.
 
@@ -28,9 +29,10 @@ This document resolves the open design questions Phase 2 raised that were not al
 **Rationale**: Renames must propagate without rewriting historical rows; merges must be a first-class operation; soft-archive must preserve historical session attribution. A FK to a stable id row delivers all three. Storing free text would silently fragment "Chest+Triceps" vs "Chest + Triceps" in the Phase 5 load-tracking aggregations and the Phase 11 statistics radar.
 
 **Alternatives considered**:
-- *Single global catalogue*: rejected by the spec clarification — athletes must be able to add and rename.
-- *Free text + a normalisation function*: rejected — fragile and impossible to enforce a merge.
-- *Single migration that adds the FK, backfills, and drops the column in one file*: rejected. The Constitution requires forward-only replayable migrations; splitting into three keeps each step idempotent and the backfill migration becomes a clean no-op on a fresh database.
+
+- _Single global catalogue_: rejected by the spec clarification — athletes must be able to add and rename.
+- _Free text + a normalisation function_: rejected — fragile and impossible to enforce a merge.
+- _Single migration that adds the FK, backfills, and drops the column in one file_: rejected. The Constitution requires forward-only replayable migrations; splitting into three keeps each step idempotent and the backfill migration becomes a clean no-op on a fresh database.
 
 **Spec impact**: FR-006 / FR-006a / FR-006b / FR-006c are honoured exactly. The `muscle_groups` row id is the immutable reference; renames update the row, not the slot.
 
@@ -43,8 +45,9 @@ This document resolves the open design questions Phase 2 raised that were not al
 **Rationale**: The Q2 clarification was explicit — custom nutrition targets are calculator-affecting overrides and stay in `engine_overrides` so the engine resolver remains the single source of truth. Keeping a parallel scalar column path would create two writeable surfaces for the same value (the column and the JSONB key), which inevitably drifts. The audit-row invariant from Q5 / FR-003a also demands that every override save passes through the engine's audit writer — a path that already exists for JSONB-shaped overrides.
 
 **Alternatives considered**:
-- *Keep `daily_kcal_override` as a column and add three sibling columns (`daily_protein_g_override`, `daily_carbs_g_override`, `daily_fat_g_override`)*: rejected. Two stores for the same concept; doubles the audit-write logic; the resolver would have to merge two sources.
-- *New table `athlete_nutrition_targets` with one row per override*: rejected — overkill for four values that are written together and read together.
+
+- _Keep `daily_kcal_override` as a column and add three sibling columns (`daily_protein_g_override`, `daily_carbs_g_override`, `daily_fat_g_override`)_: rejected. Two stores for the same concept; doubles the audit-write logic; the resolver would have to merge two sources.
+- _New table `athlete_nutrition_targets` with one row per override_: rejected — overkill for four values that are written together and read together.
 
 **Spec impact**: FR-017 / FR-017a / FR-017b describe the JSONB path. The data-model.md documents the JSONB shape exactly, including the absence of a key meaning "use engine default".
 
@@ -57,9 +60,10 @@ This document resolves the open design questions Phase 2 raised that were not al
 **Rationale**: FR-024 (atomic restore) and FR-025 (failure leaves state unchanged) require all-or-nothing semantics. The cleanest implementation uses a real DB transaction. Buffer-then-swap is the safe pattern even when the transaction is logically nested: if a forward-migrator throws, no SQL has run yet; if a write fails, the transaction rolls back; if validation fails, no SQL has been issued. The athlete-scoped predicate on every DELETE/INSERT prevents cross-athlete contamination by construction.
 
 **Alternatives considered**:
-- *No transaction, sequential DELETE+INSERT, log failures*: rejected — violates FR-024.
-- *Stage to a shadow schema and rename in*: rejected — operationally heavy, out of scope for single-user mode and a future-multi-user concern that can be revisited if SaaS-scale imports become a thing.
-- *Background job with status polling*: rejected — adds a job runner just for an athlete-initiated, sub-5-second operation.
+
+- _No transaction, sequential DELETE+INSERT, log failures_: rejected — violates FR-024.
+- _Stage to a shadow schema and rename in_: rejected — operationally heavy, out of scope for single-user mode and a future-multi-user concern that can be revisited if SaaS-scale imports become a thing.
+- _Background job with status polling_: rejected — adds a job runner just for an athlete-initiated, sub-5-second operation.
 
 **Spec impact**: FR-023 / FR-024 / FR-025 / FR-026 are implementable as written. The operator-facing error messages enumerate the validation step that failed (size, schema-newer, ownership, missing migrator, structural, mid-write).
 
@@ -68,18 +72,20 @@ This document resolves the open design questions Phase 2 raised that were not al
 ## D-5. Forward-migrator chain for older backups: one file per `vN-to-vN+1` step, registered in a manifest
 
 **Decision**: Backups carry an `_export.schema_version` integer (starts at 1). The current app pins `BACKUP_SCHEMA_VERSION` in `config/schema.js`. On import:
+
 - If `backup.version > current` → reject (FR-023a).
 - If `backup.version === current` → straight-through to the validator + writer.
 - If `backup.version < current` → walk a manifest of one-step migrators (`services/dataManagement/backupMigrators/v<from>-to-v<to>.js`) from `backup.version` to `current`. If a step is missing, reject with a "missing migrator vX → vX+1" message — never partially migrate.
 
-Each migrator is a pure function `(oldEnvelope) => newEnvelope`. It is committed *in the same change-set as the SQL migration that bumps the schema*. Phase 2 ships at v1 with no migrators yet; the directory contains a `README.md` documenting the convention and an example skeleton.
+Each migrator is a pure function `(oldEnvelope) => newEnvelope`. It is committed _in the same change-set as the SQL migration that bumps the schema_. Phase 2 ships at v1 with no migrators yet; the directory contains a `README.md` documenting the convention and an example skeleton.
 
 **Rationale**: Q4 chose forward-migration over strict-reject. A chain of small one-step migrators is the canonical implementation: each step is independently testable, the chain is composable, and the discipline of writing the migrator at the moment the schema bumps prevents the chain from ever falling behind. Importantly, every successful import is recorded with both the original and the post-migration version (FR-026), so the audit story stays clean across upgrades.
 
 **Alternatives considered**:
-- *Direct N→current migrators*: rejected. Combinatorial blowup as the version count grows.
-- *Best-effort import with field-skip*: rejected by Q4 — silent data loss is the worst failure mode for a backup tool.
-- *External migration tool*: rejected — unnecessary surface area; the migrators are tiny pure JS functions.
+
+- _Direct N→current migrators_: rejected. Combinatorial blowup as the version count grows.
+- _Best-effort import with field-skip_: rejected by Q4 — silent data loss is the worst failure mode for a backup tool.
+- _External migration tool_: rejected — unnecessary surface area; the migrators are tiny pure JS functions.
 
 **Spec impact**: FR-023a / FR-026 describe this exactly. The `backupMigrators/README.md` codifies the convention so any future schema bump knows the discipline.
 

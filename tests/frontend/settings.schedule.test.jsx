@@ -35,7 +35,13 @@ const SCHEDULE = {
 };
 
 const GROUPS = [
-  { id: 6, slug: 'chest_triceps', name: 'Pectoraux + Triceps', is_active: true, display_color: '#ff6b6b' },
+  {
+    id: 6,
+    slug: 'chest_triceps',
+    name: 'Pectoraux + Triceps',
+    is_active: true,
+    display_color: '#ff6b6b',
+  },
   { id: 7, slug: 'back_biceps', name: 'Dos + Biceps', is_active: true, display_color: '#4ecdc4' },
   { id: 4, slug: 'legs', name: 'Jambes', is_active: true, display_color: '#ffd166' },
   { id: 9, slug: 'shoulders_traps', name: 'Épaules', is_active: true, display_color: '#9b8cff' },
@@ -51,7 +57,9 @@ beforeEach(() => {
     if (init?.method === 'PUT' && path.endsWith('/api/v1/me/schedule')) {
       lastPutBody = JSON.parse(init.body);
       return new Response(
-        JSON.stringify({ data: { active_days: lastPutBody.slots.length, slots: lastPutBody.slots } }),
+        JSON.stringify({
+          data: { active_days: lastPutBody.slots.length, slots: lastPutBody.slots },
+        }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
     }

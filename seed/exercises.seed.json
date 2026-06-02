@@ -1,31 +1,191 @@
 {
   "locale": "fr-FR",
   "exercises": [
-    { "slug": "bench-press", "name": "Développé couché", "targeted_muscles": ["chest", "triceps", "front_delts"], "instructions": "Allongé sur un banc plat, descendre la barre au sternum puis pousser jusqu’à extension complète.", "technique_points": ["Pieds ancrés au sol", "Omoplates serrées", "Poignets alignés sur les coudes"] },
-    { "slug": "incline-dumbbell-press", "name": "Développé incliné haltères", "targeted_muscles": ["upper_chest", "front_delts", "triceps"], "instructions": "Banc à 30°, descendre les haltères au niveau de la poitrine, contrôler la phase négative.", "technique_points": ["Coudes 45°", "Pas de rebond", "Tempo 2-1-2"] },
-    { "slug": "cable-fly", "name": "Écarté à la poulie", "targeted_muscles": ["chest"], "instructions": "Bras légèrement fléchis, ramener les poulies devant soi en serrant les pectoraux.", "technique_points": ["Léger angle vers le bas", "Étirement contrôlé"] },
-    { "slug": "triceps-pushdown", "name": "Extension triceps à la poulie", "targeted_muscles": ["triceps"], "instructions": "Coudes près du corps, pousser la corde vers le bas jusqu’à extension.", "technique_points": ["Pas de balancement", "Contraction au point bas"] },
-    { "slug": "overhead-triceps-extension", "name": "Extension triceps verticale", "targeted_muscles": ["triceps_long_head"], "instructions": "Halter ou corde derrière la nuque, étendre les coudes vers le haut.", "technique_points": ["Coudes proches", "Étirement du long chef"] },
-    { "slug": "deadlift", "name": "Soulevé de terre", "targeted_muscles": ["hamstrings", "glutes", "lats", "erector_spinae"], "instructions": "Barre au-dessus du milieu du pied, dos neutre, pousser le sol pour se redresser.", "technique_points": ["Bras tendus", "Hanches et genoux ensemble", "Lats engagés"] },
-    { "slug": "pull-up", "name": "Tractions", "targeted_muscles": ["lats", "biceps", "rear_delts"], "instructions": "Pendu prise pronation, tirer le menton au-dessus de la barre.", "technique_points": ["Épaules basses", "Coudes vers les hanches"] },
-    { "slug": "barbell-row", "name": "Rowing barre", "targeted_muscles": ["lats", "rhomboids", "rear_delts"], "instructions": "Buste à 45°, tirer la barre vers le bas-ventre.", "technique_points": ["Dos neutre", "Coudes près du corps"] },
-    { "slug": "seated-cable-row", "name": "Rowing assis poulie", "targeted_muscles": ["mid_back", "rhomboids"], "instructions": "Tirer la poignée vers le nombril, serrer les omoplates.", "technique_points": ["Buste droit", "Pause à la contraction"] },
-    { "slug": "barbell-curl", "name": "Curl barre", "targeted_muscles": ["biceps"], "instructions": "Coudes fixes, fléchir les avant-bras pour amener la barre aux épaules.", "technique_points": ["Pas de balancement", "Descente contrôlée"] },
-    { "slug": "hammer-curl", "name": "Curl marteau", "targeted_muscles": ["biceps_brachialis"], "instructions": "Prise neutre, fléchir les coudes en gardant les pouces vers le haut.", "technique_points": ["Tempo 2-1-2"] },
-    { "slug": "back-squat", "name": "Squat barre", "targeted_muscles": ["quads", "glutes", "core"], "instructions": "Barre sur les trapèzes, descendre en gardant le dos neutre, remonter en poussant le sol.", "technique_points": ["Genoux dans l’axe des pieds", "Cuisses parallèles ou plus bas"] },
-    { "slug": "romanian-deadlift", "name": "Soulevé de terre roumain", "targeted_muscles": ["hamstrings", "glutes"], "instructions": "Hanches en arrière, descendre la barre le long des cuisses jusqu’à étirement.", "technique_points": ["Légère flexion des genoux", "Dos neutre"] },
-    { "slug": "leg-press", "name": "Presse à cuisses", "targeted_muscles": ["quads", "glutes"], "instructions": "Pieds largeur épaules, pousser la plateforme jusqu’à quasi-extension.", "technique_points": ["Pas de verrouillage des genoux"] },
-    { "slug": "leg-curl", "name": "Leg curl", "targeted_muscles": ["hamstrings"], "instructions": "Allongé, fléchir les genoux pour amener les talons aux fesses.", "technique_points": ["Bassin plaqué", "Contraction au sommet"] },
-    { "slug": "standing-calf-raise", "name": "Mollets debout", "targeted_muscles": ["calves"], "instructions": "Sur la pointe des pieds, monter et descendre lentement.", "technique_points": ["Amplitude complète", "Pause en haut"] },
-    { "slug": "overhead-press", "name": "Développé militaire", "targeted_muscles": ["delts", "triceps"], "instructions": "Barre au-dessus des clavicules, pousser à la verticale.", "technique_points": ["Gainage abdominal", "Tête traverse la fenêtre"] },
-    { "slug": "lateral-raise", "name": "Élévations latérales", "targeted_muscles": ["lateral_delts"], "instructions": "Bras légèrement fléchis, monter les haltères jusqu’à hauteur d’épaule.", "technique_points": ["Coudes plus haut que les poignets", "Pas de balancement"] },
-    { "slug": "rear-delt-fly", "name": "Oiseau", "targeted_muscles": ["rear_delts"], "instructions": "Buste penché, écarter les bras vers l’arrière.", "technique_points": ["Léger angle de coude", "Contraction au sommet"] },
-    { "slug": "face-pull", "name": "Face pull", "targeted_muscles": ["rear_delts", "rotator_cuff"], "instructions": "Tirer la corde vers le visage, mains en rotation externe.", "technique_points": ["Coudes hauts", "Pause à la contraction"] },
-    { "slug": "shrug", "name": "Shrug", "targeted_muscles": ["traps"], "instructions": "Hausser les épaules vers les oreilles avec une charge.", "technique_points": ["Pas de rotation", "Tempo lent"] },
-    { "slug": "close-grip-bench", "name": "Développé couché prise serrée", "targeted_muscles": ["triceps", "chest"], "instructions": "Mains à largeur d’épaules, descendre au bas du sternum.", "technique_points": ["Coudes proches", "Trajectoire verticale"] },
-    { "slug": "preacher-curl", "name": "Curl pupitre", "targeted_muscles": ["biceps"], "instructions": "Bras posés sur le pupitre, fléchir les avant-bras lentement.", "technique_points": ["Pas de balancement", "Tempo 3-1-2"] },
-    { "slug": "plank", "name": "Planche", "targeted_muscles": ["core"], "instructions": "Maintenir la position gainée, alignement bassin-épaules.", "technique_points": ["Respiration régulière", "Glutes serrés"] },
-    { "slug": "hanging-leg-raise", "name": "Relevé de jambes suspendu", "targeted_muscles": ["abs", "hip_flexors"], "instructions": "Pendu à la barre, monter les jambes tendues à 90°.", "technique_points": ["Pas de balancement", "Contraction abdo"] },
-    { "slug": "cable-crunch", "name": "Crunch poulie", "targeted_muscles": ["abs"], "instructions": "À genoux, fléchir le tronc en tirant la corde vers les genoux.", "technique_points": ["Hanches fixes", "Flexion de la colonne"] }
+    {
+      "slug": "bench-press",
+      "name": "Développé couché",
+      "targeted_muscles": ["chest", "triceps", "front_delts"],
+      "instructions": "Allongé sur un banc plat, descendre la barre au sternum puis pousser jusqu’à extension complète.",
+      "technique_points": [
+        "Pieds ancrés au sol",
+        "Omoplates serrées",
+        "Poignets alignés sur les coudes"
+      ]
+    },
+    {
+      "slug": "incline-dumbbell-press",
+      "name": "Développé incliné haltères",
+      "targeted_muscles": ["upper_chest", "front_delts", "triceps"],
+      "instructions": "Banc à 30°, descendre les haltères au niveau de la poitrine, contrôler la phase négative.",
+      "technique_points": ["Coudes 45°", "Pas de rebond", "Tempo 2-1-2"]
+    },
+    {
+      "slug": "cable-fly",
+      "name": "Écarté à la poulie",
+      "targeted_muscles": ["chest"],
+      "instructions": "Bras légèrement fléchis, ramener les poulies devant soi en serrant les pectoraux.",
+      "technique_points": ["Léger angle vers le bas", "Étirement contrôlé"]
+    },
+    {
+      "slug": "triceps-pushdown",
+      "name": "Extension triceps à la poulie",
+      "targeted_muscles": ["triceps"],
+      "instructions": "Coudes près du corps, pousser la corde vers le bas jusqu’à extension.",
+      "technique_points": ["Pas de balancement", "Contraction au point bas"]
+    },
+    {
+      "slug": "overhead-triceps-extension",
+      "name": "Extension triceps verticale",
+      "targeted_muscles": ["triceps_long_head"],
+      "instructions": "Halter ou corde derrière la nuque, étendre les coudes vers le haut.",
+      "technique_points": ["Coudes proches", "Étirement du long chef"]
+    },
+    {
+      "slug": "deadlift",
+      "name": "Soulevé de terre",
+      "targeted_muscles": ["hamstrings", "glutes", "lats", "erector_spinae"],
+      "instructions": "Barre au-dessus du milieu du pied, dos neutre, pousser le sol pour se redresser.",
+      "technique_points": ["Bras tendus", "Hanches et genoux ensemble", "Lats engagés"]
+    },
+    {
+      "slug": "pull-up",
+      "name": "Tractions",
+      "targeted_muscles": ["lats", "biceps", "rear_delts"],
+      "instructions": "Pendu prise pronation, tirer le menton au-dessus de la barre.",
+      "technique_points": ["Épaules basses", "Coudes vers les hanches"]
+    },
+    {
+      "slug": "barbell-row",
+      "name": "Rowing barre",
+      "targeted_muscles": ["lats", "rhomboids", "rear_delts"],
+      "instructions": "Buste à 45°, tirer la barre vers le bas-ventre.",
+      "technique_points": ["Dos neutre", "Coudes près du corps"]
+    },
+    {
+      "slug": "seated-cable-row",
+      "name": "Rowing assis poulie",
+      "targeted_muscles": ["mid_back", "rhomboids"],
+      "instructions": "Tirer la poignée vers le nombril, serrer les omoplates.",
+      "technique_points": ["Buste droit", "Pause à la contraction"]
+    },
+    {
+      "slug": "barbell-curl",
+      "name": "Curl barre",
+      "targeted_muscles": ["biceps"],
+      "instructions": "Coudes fixes, fléchir les avant-bras pour amener la barre aux épaules.",
+      "technique_points": ["Pas de balancement", "Descente contrôlée"]
+    },
+    {
+      "slug": "hammer-curl",
+      "name": "Curl marteau",
+      "targeted_muscles": ["biceps_brachialis"],
+      "instructions": "Prise neutre, fléchir les coudes en gardant les pouces vers le haut.",
+      "technique_points": ["Tempo 2-1-2"]
+    },
+    {
+      "slug": "back-squat",
+      "name": "Squat barre",
+      "targeted_muscles": ["quads", "glutes", "core"],
+      "instructions": "Barre sur les trapèzes, descendre en gardant le dos neutre, remonter en poussant le sol.",
+      "technique_points": ["Genoux dans l’axe des pieds", "Cuisses parallèles ou plus bas"]
+    },
+    {
+      "slug": "romanian-deadlift",
+      "name": "Soulevé de terre roumain",
+      "targeted_muscles": ["hamstrings", "glutes"],
+      "instructions": "Hanches en arrière, descendre la barre le long des cuisses jusqu’à étirement.",
+      "technique_points": ["Légère flexion des genoux", "Dos neutre"]
+    },
+    {
+      "slug": "leg-press",
+      "name": "Presse à cuisses",
+      "targeted_muscles": ["quads", "glutes"],
+      "instructions": "Pieds largeur épaules, pousser la plateforme jusqu’à quasi-extension.",
+      "technique_points": ["Pas de verrouillage des genoux"]
+    },
+    {
+      "slug": "leg-curl",
+      "name": "Leg curl",
+      "targeted_muscles": ["hamstrings"],
+      "instructions": "Allongé, fléchir les genoux pour amener les talons aux fesses.",
+      "technique_points": ["Bassin plaqué", "Contraction au sommet"]
+    },
+    {
+      "slug": "standing-calf-raise",
+      "name": "Mollets debout",
+      "targeted_muscles": ["calves"],
+      "instructions": "Sur la pointe des pieds, monter et descendre lentement.",
+      "technique_points": ["Amplitude complète", "Pause en haut"]
+    },
+    {
+      "slug": "overhead-press",
+      "name": "Développé militaire",
+      "targeted_muscles": ["delts", "triceps"],
+      "instructions": "Barre au-dessus des clavicules, pousser à la verticale.",
+      "technique_points": ["Gainage abdominal", "Tête traverse la fenêtre"]
+    },
+    {
+      "slug": "lateral-raise",
+      "name": "Élévations latérales",
+      "targeted_muscles": ["lateral_delts"],
+      "instructions": "Bras légèrement fléchis, monter les haltères jusqu’à hauteur d’épaule.",
+      "technique_points": ["Coudes plus haut que les poignets", "Pas de balancement"]
+    },
+    {
+      "slug": "rear-delt-fly",
+      "name": "Oiseau",
+      "targeted_muscles": ["rear_delts"],
+      "instructions": "Buste penché, écarter les bras vers l’arrière.",
+      "technique_points": ["Léger angle de coude", "Contraction au sommet"]
+    },
+    {
+      "slug": "face-pull",
+      "name": "Face pull",
+      "targeted_muscles": ["rear_delts", "rotator_cuff"],
+      "instructions": "Tirer la corde vers le visage, mains en rotation externe.",
+      "technique_points": ["Coudes hauts", "Pause à la contraction"]
+    },
+    {
+      "slug": "shrug",
+      "name": "Shrug",
+      "targeted_muscles": ["traps"],
+      "instructions": "Hausser les épaules vers les oreilles avec une charge.",
+      "technique_points": ["Pas de rotation", "Tempo lent"]
+    },
+    {
+      "slug": "close-grip-bench",
+      "name": "Développé couché prise serrée",
+      "targeted_muscles": ["triceps", "chest"],
+      "instructions": "Mains à largeur d’épaules, descendre au bas du sternum.",
+      "technique_points": ["Coudes proches", "Trajectoire verticale"]
+    },
+    {
+      "slug": "preacher-curl",
+      "name": "Curl pupitre",
+      "targeted_muscles": ["biceps"],
+      "instructions": "Bras posés sur le pupitre, fléchir les avant-bras lentement.",
+      "technique_points": ["Pas de balancement", "Tempo 3-1-2"]
+    },
+    {
+      "slug": "plank",
+      "name": "Planche",
+      "targeted_muscles": ["core"],
+      "instructions": "Maintenir la position gainée, alignement bassin-épaules.",
+      "technique_points": ["Respiration régulière", "Glutes serrés"]
+    },
+    {
+      "slug": "hanging-leg-raise",
+      "name": "Relevé de jambes suspendu",
+      "targeted_muscles": ["abs", "hip_flexors"],
+      "instructions": "Pendu à la barre, monter les jambes tendues à 90°.",
+      "technique_points": ["Pas de balancement", "Contraction abdo"]
+    },
+    {
+      "slug": "cable-crunch",
+      "name": "Crunch poulie",
+      "targeted_muscles": ["abs"],
+      "instructions": "À genoux, fléchir le tronc en tirant la corde vers les genoux.",
+      "technique_points": ["Hanches fixes", "Flexion de la colonne"]
+    }
   ]
 }

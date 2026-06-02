@@ -49,9 +49,7 @@ describe('US4 — nutrition overrides emit audit rows', () => {
     const me = await request(app).get('/api/v1/me');
     const athleteId = me.body.data.id;
     const before = await countAuditRowsByReason(athleteId, 'override_set');
-    const res = await request(app)
-      .put('/api/v1/me/nutrition-targets')
-      .send({ daily_kcal: 3500 });
+    const res = await request(app).put('/api/v1/me/nutrition-targets').send({ daily_kcal: 3500 });
     expect(res.status).toBe(200);
     expect(res.body.data.targets.daily_kcal).toBe(3500);
     expect(res.body.data.reason).toBe('override_set');

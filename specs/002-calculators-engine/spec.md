@@ -15,7 +15,7 @@
 - Q: How is the "Calculation result" audit log stored? → A: Single shared `calculation_results` audit table; written on persisted runs only (not Calculators-page ad-hoc runs). Typed tables stay the primary read path; the audit table is replay-only.
 - Q: Which UI surfaces ship in Phase 1? → A: The Calculators page (US6) plus a minimal read-only Nutrition view of the persisted daily targets and macros. Dashboard, Load Tracking, and Statistics remain deferred to their owning phases.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — Personalized Daily Nutrition Targets From the Profile (Priority: P1)
 
@@ -58,7 +58,7 @@ After the athlete logs a single set on an exercise (a weight and a rep count), t
 
 Once a session is saved, the system evaluates each exercise in it against four progression rules and produces a per-exercise decision: "ready to add load", "maintain", "stagnation", "regression", or "deload suggested". The athlete does not run any calculator manually; the decision is ready by the time they look at their Dashboard or Load Tracking screen.
 
-**Why this priority**: The whole point of MassLab beyond logging is telling the athlete *what to do next*. Manual decisions on when to add weight, when to hold, and when to back off are noisy and inconsistent. A deterministic rule engine produces the same answer every time and frees the athlete from having to remember last week's reps. P2 only because the underlying calculators (User Stories 1 and 2) must exist first.
+**Why this priority**: The whole point of MassLab beyond logging is telling the athlete _what to do next_. Manual decisions on when to add weight, when to hold, and when to back off are noisy and inconsistent. A deterministic rule engine produces the same answer every time and frees the athlete from having to remember last week's reps. P2 only because the underlying calculators (User Stories 1 and 2) must exist first.
 
 **Independent Test**: Replay a sequence of logged sessions for one exercise — two sessions at top of rep range across all sets — and confirm the next decision flips to "ready to add load". Replay a sequence with three flat weeks of identical volume and confirm the decision flips to "stagnation". Replay a week with average RPE ≥ 9 and confirm a deload is suggested. No request from the athlete is required between sessions and the decision; saving the session is enough.
 
@@ -87,7 +87,7 @@ From a single complete athlete profile, the system produces a full ready-to-use 
 2. **Given** a previously generated program, **When** the profile's weight, goal, activity level, morphotype, or sessions-per-week is updated and a regeneration is requested, **Then** the new program reflects the change and supersedes the previous program.
 3. **Given** the same profile is submitted twice without changes, **When** generation is run twice, **Then** the two programs are identical in their numerical outputs.
 4. **Given** a generated program, **When** any later view (Dashboard, Nutrition, Training, Statistics) reads its values, **Then** they read the same numbers stored at generation time without recomputing.
-5. **Given** profile fields that do not affect program output change (e.g. display name), **When** regeneration is *not* requested, **Then** the persisted program is left unchanged.
+5. **Given** profile fields that do not affect program output change (e.g. display name), **When** regeneration is _not_ requested, **Then** the persisted program is left unchanged.
 
 ---
 
@@ -137,7 +137,7 @@ The athlete can open a "Calculators" section in the app and run any single calcu
 - **Activity level change for the week (e.g. illness rest week)**: targets recompute on the next profile save; the athlete is not forced to update mid-week if they prefer to keep targets stable.
 - **Athlete deletes their last body-weight entry**: the most recent prior weight is used; if no weight history remains, the profile's starting weight is used.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -191,7 +191,7 @@ The athlete can open a "Calculators" section in the app and run any single calcu
 - **FR-029**: The Calculators surface MUST produce results numerically identical to the engine-internal calculations on the same inputs. Runs initiated from the Calculators surface MUST NOT write to the `calculation_results` audit table or to any typed calculation table; they are read-only with respect to persisted state.
 - **FR-030**: All calculator inputs entering through any surface (profile save, session save, Calculators page) MUST be validated against documented ranges before any computation runs, and validation failures MUST return a clear, actionable message without partial writes.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Athlete profile inputs (existing)**: age, biological sex, weight (kg), height (cm), morphotype, goal (bulk/cut/maintain), activity level, sessions per week, available equipment, injuries. The single source of truth that every calculator reads from.
 - **Body measurement entry (existing)**: athlete-scoped record of weight (kg) and optional measurements (waist, neck, arm, chest, thighs, shoulders) at a date, used to refine lean-body-mass and body-fat estimates.
@@ -200,7 +200,7 @@ The athlete can open a "Calculators" section in the app and run any single calcu
 - **Progression flag**: athlete- and exercise- (or muscle-group-) scoped record with a flag type ("add-load" / "maintain" / "stagnation" / "regression" / "deload-suggested"), the rule that produced it, the suggested adjustment, `created_at`, `superseded_at` (nullable), and `is_active` (boolean). At most one row per (athlete, scope) is active; the next rule evaluation for the same scope soft-supersedes the prior row. Consumed by Dashboard and Load Tracking views in later phases via an "active flags" query that filters on `is_active = true`.
 - **Generated program**: athlete-scoped composite record bundling the training plan, daily nutrition targets, supplement list, and recovery guidelines produced by one generation run. Carries `generated_at`, `superseded_at` (nullable), and `is_active` (boolean). At most one row per athlete is active; regeneration soft-archives the prior row (`superseded_at = now()`, `is_active = false`) before inserting the new active row. All archived rows remain readable for history.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

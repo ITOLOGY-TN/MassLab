@@ -24,15 +24,34 @@ export default function OneRepMaxCalculator() {
     <main className="min-h-full p-lg max-w-2xl mx-auto">
       <h1 className="text-3xl font-semibold mb-lg">1RM — Estimation</h1>
       <form onSubmit={onSubmit} className="grid grid-cols-2 gap-md mb-lg">
-        <NumberField label="Charge (kg)" name="weight_kg" value={form.weight_kg} onChange={set('weight_kg')} step={0.5} required />
-        <NumberField label="Répétitions" name="reps" value={form.reps} onChange={set('reps')} min={1} max={30} required />
+        <NumberField
+          label="Charge (kg)"
+          name="weight_kg"
+          value={form.weight_kg}
+          onChange={set('weight_kg')}
+          step={0.5}
+          required
+        />
+        <NumberField
+          label="Répétitions"
+          name="reps"
+          value={form.reps}
+          onChange={set('reps')}
+          min={1}
+          max={30}
+          required
+        />
         <div className="col-span-2">
           <button type="submit" className="bg-accent text-bg rounded-md px-lg py-sm font-semibold">
             Calculer
           </button>
         </div>
       </form>
-      {error ? <ResultCard title="Erreur"><p className="text-danger">{error}</p></ResultCard> : null}
+      {error ? (
+        <ResultCard title="Erreur">
+          <p className="text-danger">{error}</p>
+        </ResultCard>
+      ) : null}
       {result ? (
         <>
           <ResultCard
@@ -41,10 +60,14 @@ export default function OneRepMaxCalculator() {
           >
             <p className="text-3xl font-semibold mb-md">{result.primary_estimate_kg} kg</p>
             <dl className="grid grid-cols-2 gap-sm text-sm">
-              <dt className="text-muted">Epley</dt><dd>{result.epley_kg} kg</dd>
-              <dt className="text-muted">Brzycki</dt><dd>{result.brzycki_kg} kg</dd>
-              <dt className="text-muted">Lander</dt><dd>{result.lander_kg} kg</dd>
-              <dt className="text-muted">Lombardi</dt><dd>{result.lombardi_kg} kg</dd>
+              <dt className="text-muted">Epley</dt>
+              <dd>{result.epley_kg} kg</dd>
+              <dt className="text-muted">Brzycki</dt>
+              <dd>{result.brzycki_kg} kg</dd>
+              <dt className="text-muted">Lander</dt>
+              <dd>{result.lander_kg} kg</dd>
+              <dt className="text-muted">Lombardi</dt>
+              <dd>{result.lombardi_kg} kg</dd>
             </dl>
           </ResultCard>
           <div className="mt-lg">
@@ -62,7 +85,9 @@ export default function OneRepMaxCalculator() {
                     <tr key={row.pct} className="border-t border-muted/20">
                       <td className="py-xs">{row.pct} %</td>
                       <td className="py-xs">{row.load_kg} kg</td>
-                      <td className="py-xs">{row.reps_low}–{row.reps_high}</td>
+                      <td className="py-xs">
+                        {row.reps_low}–{row.reps_high}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { evaluateForAthlete } from '../../services/progressionEngine.js';
 import { DEFAULTS } from '../../services/engine/constants.js';
 
-const exerciseBench = { id: 1, slug: 'bench-press', muscle_group: 'chest_triceps', body_segment: 'upper' };
+const exerciseBench = {
+  id: 1,
+  slug: 'bench-press',
+  muscle_group: 'chest_triceps',
+  body_segment: 'upper',
+};
 const exerciseSquat = { id: 2, slug: 'back-squat', muscle_group: 'legs', body_segment: 'lower' };
 
 const weeklyPlan = [
@@ -141,12 +146,22 @@ describe('progressionEngine', () => {
   });
 
   it('is deterministic — same input ⇒ same output', () => {
-    const sessions = [{ id: 60, started_at: dt(7) }, { id: 61, started_at: dt(0) }];
+    const sessions = [
+      { id: 60, started_at: dt(7) },
+      { id: 61, started_at: dt(0) },
+    ];
     const sets = [
       { session_id: 60, exercise_id: 1, set_number: 1, weight_kg: 80, reps: 10 },
       { session_id: 61, exercise_id: 1, set_number: 1, weight_kg: 80, reps: 10 },
     ];
-    const args = { sessions, sets, weeklyPlan, exercisesById: { 1: exerciseBench }, constants: DEFAULTS, now: NOW };
+    const args = {
+      sessions,
+      sets,
+      weeklyPlan,
+      exercisesById: { 1: exerciseBench },
+      constants: DEFAULTS,
+      now: NOW,
+    };
     expect(JSON.stringify(evaluateForAthlete(args))).toBe(JSON.stringify(evaluateForAthlete(args)));
   });
 });

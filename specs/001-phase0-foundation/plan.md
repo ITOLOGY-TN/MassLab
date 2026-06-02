@@ -12,6 +12,7 @@ Build the project skeleton, schema, seed, middleware seams, and frontend scaffol
 **Language/Version**: Node.js 20.x LTS, JavaScript (ES2022+, ESM modules). React 18.x for the frontend. PostgreSQL 15.x via Supabase.
 
 **Primary Dependencies**:
+
 - Backend: `express` 4.x (HTTP), `@supabase/supabase-js` 2.x (Supabase JS client), `pino` (structured logging), `dotenv` (env loader), `zod` (config + request schema validation), `uuid` (request-id), Vitest + Supertest (tests).
 - Frontend: `react`, `react-dom`, `vite`, `tailwindcss`, `postcss`, `autoprefixer`. Vitest + `@testing-library/react` for smoke tests.
 - Tooling: `concurrently` to boot backend + frontend with a single `npm start`. `supabase` CLI (developer machine prerequisite, not an npm dep) for the local Supabase stack and migrations.
@@ -25,11 +26,13 @@ Build the project skeleton, schema, seed, middleware seams, and frontend scaffol
 **Project Type**: Web application — backend Node web service at the repo root, frontend React/Vite/Tailwind app under `/frontend`. This matches PLAN.md's named layout (`/routes`, `/controllers`, `/services`, `/middleware`, `/config`, `/frontend`). No `/models` directory: per constitution Principle II, Supabase client calls live behind data-access modules colocated with the services that own them.
 
 **Performance Goals**:
+
 - Cold start (Supabase already up) ≤ 10 s including any pending migrations + first-run seed.
 - Warm start ≤ 5 s.
 - Per-request HTTP handling ≤ 50 ms median for the read endpoints in this phase against the local Supabase stack.
 
 **Constraints**:
+
 - Local-dev does not require any external network beyond the local Supabase stack (which itself runs on the operator's machine via Docker). No third-party APIs are reached during Phase 0 execution.
 - Idempotent seed (re-runnable safely; uses upserts keyed on stable natural keys).
 - Every domain query MUST be scoped by `athlete_id`. Every domain table MUST ship its RLS policy in the same migration as the table.
@@ -40,7 +43,7 @@ Build the project skeleton, schema, seed, middleware seams, and frontend scaffol
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 Reviewed against `.specify/memory/constitution.md` v1.1.1:
 
