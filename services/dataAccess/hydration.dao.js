@@ -19,7 +19,13 @@ export function hydrationDao(supabase) {
       const { data, error } = await supabase
         .from('hydration_log')
         .upsert(
-          { athlete_id: athleteId, logged_on: loggedOn, total_ml: next },
+          {
+            athlete_id: athleteId,
+            logged_on: loggedOn,
+            total_ml: next,
+            // Refresh on the UPDATE path too — the column default only fires on INSERT.
+            updated_at: new Date().toISOString(),
+          },
           { onConflict: 'athlete_id,logged_on' },
         )
         .select('*')

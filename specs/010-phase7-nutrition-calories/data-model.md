@@ -1,4 +1,4 @@
-# Phase 1 Data Model — Nutrition & Calories (Phase 7)
+# Phase 7 Data Model — Nutrition & Calories
 
 **Feature**: `010-phase7-nutrition-calories` · **Date**: 2026-06-03
 

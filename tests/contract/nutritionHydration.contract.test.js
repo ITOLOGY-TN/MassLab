@@ -42,6 +42,9 @@ beforeAll(async () => {
   }
   app = buildApp({ config, supabase });
   live = true;
+  // Clear any sentinel row left by a previously interrupted run so the
+  // accumulation assertions (total_ml) start from a known-zero baseline.
+  await supabase.from('hydration_log').delete().eq('logged_on', SENTINEL_DATE);
 });
 
 afterAll(async () => {

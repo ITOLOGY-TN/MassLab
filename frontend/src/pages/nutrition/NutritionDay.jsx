@@ -297,6 +297,7 @@ function AddFood({ slot, date, onLogged, onError }) {
   }, [query, open]);
 
   function resetAndClose() {
+    setBusy(false);
     setOpen(false);
     setQuery('');
     setResults([]);

@@ -78,7 +78,7 @@ Returns `calories.points` (daily kcal over `NUTRITION_TREND_DAYS`, with `goalKca
 
 ## Config (`.env`, all defaulted)
 
-```
+```ini
 HYDRATION_GOAL_ML=3000           # daily hydration goal (system default)
 NUTRITION_TREND_DAYS=30          # calories-trend window
 NUTRITION_LOCALE=fr-FR           # food search + custom-food locale
@@ -103,7 +103,7 @@ npm run test:frontend             # /nutrition day + trends smoke (bars, load-pl
 
 **Three, forward-only** (apply before the live tests pass):
 
-```
+```text
 supabase/migrations/20260603000001_init_nutrition_logs.sql
 supabase/migrations/20260603000002_init_hydration_log.sql
 supabase/migrations/20260603000003_init_nutrition_template_meal_items.sql

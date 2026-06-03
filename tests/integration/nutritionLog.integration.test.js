@@ -275,44 +275,47 @@ describe('nutrition logging lifecycle (Phase 7)', () => {
       .eq('id', entryBefore.food_id)
       .single();
     const newKcal = Number(food.kcal_per_100g) + 500;
-    const up = await supabase
-      .from('foods')
-      .update({
-        kcal_per_100g: newKcal,
-        protein_per_100g: Number(food.protein_per_100g) + 50,
-        carbs_per_100g: Number(food.carbs_per_100g) + 50,
-        fat_per_100g: Number(food.fat_per_100g) + 50,
-      })
-      .eq('athlete_id', testAthleteId)
-      .eq('id', food.id)
-      .select('*')
-      .single();
-    expect(up.error).toBeFalsy();
-    expect(Number(up.data.kcal_per_100g)).toBeCloseTo(newKcal, 2);
+    try {
+      const up = await supabase
+        .from('foods')
+        .update({
+          kcal_per_100g: newKcal,
+          protein_per_100g: Number(food.protein_per_100g) + 50,
+          carbs_per_100g: Number(food.carbs_per_100g) + 50,
+          fat_per_100g: Number(food.fat_per_100g) + 50,
+        })
+        .eq('athlete_id', testAthleteId)
+        .eq('id', food.id)
+        .select('*')
+        .single();
+      expect(up.error).toBeFalsy();
+      expect(Number(up.data.kcal_per_100g)).toBeCloseTo(newKcal, 2);
 
-    // The stored snapshot on the prior entry is unchanged.
-    const after = await request(app).get('/api/v1/nutrition/day').query({ date: SENTINEL_DATE });
-    const entryAfter = after.body.data.slots
-      .flatMap((s) => s.entries)
-      .find((e) => e.id === entryId);
-    expect(entryAfter.kcal).toBeCloseTo(entryBefore.kcal, 2);
-    expect(entryAfter.protein_g).toBeCloseTo(entryBefore.protein_g, 2);
-    expect(entryAfter.carbs_g).toBeCloseTo(entryBefore.carbs_g, 2);
-    expect(entryAfter.fat_g).toBeCloseTo(entryBefore.fat_g, 2);
-    // And the day total is unchanged.
-    expect(after.body.data.totals.kcal).toBeCloseTo(dayTotalBefore, 2);
-
-    // Restore the catalogue food's macros so re-running the suite is idempotent.
-    await supabase
-      .from('foods')
-      .update({
-        kcal_per_100g: food.kcal_per_100g,
-        protein_per_100g: food.protein_per_100g,
-        carbs_per_100g: food.carbs_per_100g,
-        fat_per_100g: food.fat_per_100g,
-      })
-      .eq('athlete_id', testAthleteId)
-      .eq('id', food.id);
+      // The stored snapshot on the prior entry is unchanged.
+      const after = await request(app).get('/api/v1/nutrition/day').query({ date: SENTINEL_DATE });
+      const entryAfter = after.body.data.slots
+        .flatMap((s) => s.entries)
+        .find((e) => e.id === entryId);
+      expect(entryAfter.kcal).toBeCloseTo(entryBefore.kcal, 2);
+      expect(entryAfter.protein_g).toBeCloseTo(entryBefore.protein_g, 2);
+      expect(entryAfter.carbs_g).toBeCloseTo(entryBefore.carbs_g, 2);
+      expect(entryAfter.fat_g).toBeCloseTo(entryBefore.fat_g, 2);
+      // And the day total is unchanged.
+      expect(after.body.data.totals.kcal).toBeCloseTo(dayTotalBefore, 2);
+    } finally {
+      // Always restore the catalogue food's macros — even if an assertion above
+      // throws — so a failure can't leave the seeded catalogue mutated.
+      await supabase
+        .from('foods')
+        .update({
+          kcal_per_100g: food.kcal_per_100g,
+          protein_per_100g: food.protein_per_100g,
+          carbs_per_100g: food.carbs_per_100g,
+          fat_per_100g: food.fat_per_100g,
+        })
+        .eq('athlete_id', testAthleteId)
+        .eq('id', food.id);
+    }
   });
 
   it('RLS — the publishable-key client cannot read nutrition_logs', async () => {

@@ -89,6 +89,21 @@ function isoDayMinus(isoDate, n) {
   return d.toISOString().slice(0, 10);
 }
 
+// Resolve a read endpoint's ?date= query param: default to today when absent,
+// else require a real YYYY-MM-DD. Guards isoDayMinus/DAO queries from a bad
+// string (e.g. "foo") that would otherwise throw a RangeError / 500.
+function resolveDateParam(raw, now) {
+  if (raw == null || raw === '') return isoDay(now());
+  if (
+    typeof raw !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(raw) ||
+    Number.isNaN(Date.parse(`${raw}T00:00:00.000Z`))
+  ) {
+    throw new HttpError(400, 'VALIDATION_FAILED', 'date must be a valid YYYY-MM-DD');
+  }
+  return raw;
+}
+
 export function nutritionController({ daos, config, now = () => new Date() }) {
   // Compose the canonical day view (shared by getDay + loadPlan): resolved
   // targets + the day's entries + the hydration counter (with override goal).
@@ -150,7 +165,7 @@ export function nutritionController({ daos, config, now = () => new Date() }) {
     // hydration. `date` defaults to the server's current day.
     async getDay(req, res, next) {
       try {
-        const date = req.query.date || isoDay(now());
+        const date = resolveDateParam(req.query.date, now);
         const data = await buildDay(req.athleteId, date);
         res.json({ data });
       } catch (err) {
@@ -264,7 +279,7 @@ export function nutritionController({ daos, config, now = () => new Date() }) {
     // beyond reading the resolved daily_kcal goal.
     async getTrends(req, res, next) {
       try {
-        const date = req.query.date || isoDay(now());
+        const date = resolveDateParam(req.query.date, now);
         const days = config.NUTRITION_TREND_DAYS;
         const from = isoDayMinus(date, days - 1);
         const [rangeEntries, { targets }] = await Promise.all([

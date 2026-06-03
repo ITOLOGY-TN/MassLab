@@ -81,7 +81,7 @@ This list is authored for **ultracode** execution (multi-agent `Workflow` orches
 
 ### Tests for User Story 1 (write first)
 
-- [X] T015 [P] [US1] FAILING unit test `tests/unit/dayView.test.js` for `services/nutrition/dayView.js`: assembles slots (all 5 present, ordered) + per-slot subtotals + day totals + 4 bars + hydration passthrough; empty-day shape (zeros, bars with null/zero, no error, FR-009/FR-027).
+- [X] T015 [P] [US1] FAILING unit test `tests/unit/dayView.test.js` for `services/nutrition/dayView.js`: assembles slots (all 5 present, ordered) + per-slot subtotals + day totals + 4 bars + hydration passthrough; empty-day shape (zeros, bars with null/zero, no error, FR-009).
 - [X] T016 [P] [US1] Contract test `tests/contract/nutritionDay.contract.test.js` covering `GET /nutrition/day`, `POST/PATCH/DELETE /nutrition/log`, `GET/POST /foods` against `contracts/openapi.yaml` (live-gated; **probe for `nutrition_logs`, skip if absent**).
 - [X] T017 [P] [US1] Integration test `tests/integration/nutritionLog.integration.test.js`: log catalogue food + custom food → day totals; edit qty + delete → recompute; `quantity_g ≤ 0`/oversized → 400; future `logged_on` → 400; custom-food persists + is found by `GET /foods?q=`; duplicate custom name reconciles (no dup); **SC-008 stability: after logging an entry, edit the referenced catalogue food's reference macros (foods upsert) and assert the prior entry's stored `kcal/protein_g/carbs_g/fat_g` and the day total are unchanged**; RLS probe on `nutrition_logs`; cleans up by created ids.
 
@@ -251,7 +251,7 @@ US1 (MVP) → US2 (load plan) → US3 (hydration) → US4 (trends). Each adds va
 ### Notes
 
 - `[P]` = different files, no incomplete-task dependency.
-- Targets are READ (`resolveTargets`); never recompute, never write the calculation audit log for logging (D-3/FR-029).
+- Targets are READ (`resolveTargets`); never recompute, never write the calculation audit log for logging (D-3; mirrors the Phase 1 calculators' FR-029 audit boundary).
 - Every log entry snapshots its macros (FR-003/SC-008); editing a catalogue food must not move past totals — verify (T062).
 - Every read/write is `req.athleteId`-scoped; no endpoint trusts a body/query tenant id (Constitution I).
 - Commit after each task or logical group; the optional auto-commit hook may handle this.

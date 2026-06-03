@@ -43,6 +43,10 @@ export function foodsController({ daos, config }) {
     async create(req, res, next) {
       try {
         const body = parse(createSchema, req.body);
+        // Resolve the locale the same way list() does so a custom food is
+        // persisted under — and therefore searchable in — the caller's locale
+        // (the DAO upsert key is athlete_id,slug,locale).
+        const locale = req.query.locale ?? defaultLocale;
         const food = await foodsDao.createForAthlete({
           athleteId: req.athleteId,
           name: body.name,
@@ -50,7 +54,7 @@ export function foodsController({ daos, config }) {
           proteinPer100g: body.protein_per_100g,
           carbsPer100g: body.carbs_per_100g,
           fatPer100g: body.fat_per_100g,
-          locale: defaultLocale,
+          locale,
           category: 'custom',
         });
         res.status(201).json({ data: food });
