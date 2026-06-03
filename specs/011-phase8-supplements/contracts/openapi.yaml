@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Supplements (Phase 8)
+  version: 1.0.0
+  description: >
+    Supplement adherence tracking: a daily taken/not-taken checklist with per-supplement
+    streaks (creatine most prominent), a weekly taken/missed/upcoming grid, and a weekly
+    four-dimension self-assessment (energy, recovery, sleep quality, strength) with a trend.
+    The supplements catalogue is READ-ONLY here (editing it is a Phase 2 concern). Supplement
+    logging runs NO calculator/progression/audit engine — it is pure adherence recording.
+    New in Phase 8: the supplement_intake_log and supplement_weekly_assessment tables. All
+    paths under /api/v1. Auth: bearer token in non-single-user mode; the athlete id is taken
+    from the auth context, never from the request body or query. The editable window is the
+    current ISO week (Monday–Sunday); streaks count from the athlete's program_start_date.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_FAILED }
+            message: { type: string }
+            requestId: { type: string }
+    Supplement:
+      type: object
+      properties:
+        id: { type: integer }
+        slug: { type: string, example: creatine-monohydrate }
+        name: { type: string, example: Créatine monohydrate }
+        dosage: { type: string, example: 5 g }
+        recommended_time: { type: string, example: morning }
+        notes: { type: string, nullable: true }
+        display_order: { type: integer }
+    ChecklistItem:
+      type: object
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        dosage: { type: string }
+        recommended_time: { type: string }
+        taken: { type: boolean }
+        streak: { type: integer, description: consecutive taken days ending at the most recent applicable day, anchored at program_start_date }
+        is_primary: { type: boolean, description: true for the SUPPLEMENT_PRIMARY_SLUG supplement (creatine) }
+    Checklist:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        supplements:
+          type: array
+          items: { $ref: '#/components/schemas/ChecklistItem' }
+    GridCell:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        status: { type: string, enum: [taken, missed, upcoming] }
+    GridRow:
+      type: object
+      properties:
+        supplement_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        cells:
+          type: array
+          items: { $ref: '#/components/schemas/GridCell' }
+    WeekGrid:
+      type: object
+      properties:
+        week_start: { type: string, format: date, description: ISO week Monday }
+        days:
+          type: array
+          items: { type: string, format: date }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/GridRow' }
+    Assessment:
+      type: object
+      required: [energy, recovery, sleep_quality, strength]
+      properties:
+        week_start: { type: string, format: date }
+        energy: { type: integer, minimum: 1, maximum: 5 }
+        recovery: { type: integer, minimum: 1, maximum: 5 }
+        sleep_quality: { type: integer, minimum: 1, maximum: 5 }
+        strength: { type: integer, minimum: 1, maximum: 5 }
+    AssessmentBundle:
+      type: object
+      properties:
+        current:
+          oneOf:
+            - $ref: '#/components/schemas/Assessment'
+            - type: 'null'
+        editable: { type: boolean }
+        trend:
+          type: array
+          items: { $ref: '#/components/schemas/Assessment' }
+    IntakeRequest:
+      type: object
+      required: [supplement_id, logged_on, taken]
+      properties:
+        supplement_id: { type: integer }
+        logged_on: { type: string, format: date }
+        taken: { type: boolean }
+    IntakeResult:
+      type: object
+      properties:
+        supplement_id: { type: integer }
+        logged_on: { type: string, format: date }
+        taken: { type: boolean }
+    AssessmentRequest:
+      type: object
+      required: [energy, recovery, sleep_quality, strength]
+      properties:
+        energy: { type: integer, minimum: 1, maximum: 5 }
+        recovery: { type: integer, minimum: 1, maximum: 5 }
+        sleep_quality: { type: integer, minimum: 1, maximum: 5 }
+        strength: { type: integer, minimum: 1, maximum: 5 }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /supplements:
+    get:
+      summary: List the athlete's supplement catalogue (existing, unchanged)
+      parameters:
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+      responses:
+        '200':
+          description: The catalogue in display order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Supplement' }
+
+  /supplements/checklist:
+    get:
+      summary: Daily checklist — cards with taken-state and per-supplement streak
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Defaults to today (server local day) when omitted.
+      responses:
+        '200':
+          description: The day's checklist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Checklist' }
+        '400':
+          description: Invalid date
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /supplements/intake:
+    post:
+      summary: Toggle a supplement's taken state for a day (current ISO week only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntakeRequest' }
+      responses:
+        '200':
+          description: New taken state (idempotent — at most one record per supplement per day)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/IntakeResult' }
+        '400':
+          description: Validation failed (malformed body/date)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: supplement_id not in the athlete's catalogue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: >
+            logged_on is a future date (FUTURE_DATE) or outside the current ISO week
+            (OUTSIDE_EDIT_WINDOW) — prior weeks are read-only.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /supplements/grid:
+    get:
+      summary: Weekly grid — supplements × 7 days, each cell taken/missed/upcoming
+      parameters:
+        - in: query
+          name: week
+          schema: { type: string, format: date }
+          description: >
+            Any date in the desired week; the server snaps it to the ISO Monday.
+            Defaults to the current week when omitted. Future weeks render entirely upcoming.
+      responses:
+        '200':
+          description: The week's grid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/WeekGrid' }
+        '400':
+          description: Invalid week date
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /supplements/assessments:
+    get:
+      summary: Current-week self-assessment plus the trend window
+      responses:
+        '200':
+          description: Current assessment (or null) + editable flag + chronological trend
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AssessmentBundle' }
+
+  /supplements/assessment:
+    put:
+      summary: Save the current ISO week's self-assessment (upsert; current week only)
+      description: >
+        The week is always the current ISO week, derived from the server clock — the client
+        cannot target another week, so elapsed weeks are read-only. Re-saving updates the
+        existing row rather than creating a duplicate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssessmentRequest' }
+      responses:
+        '200':
+          description: The saved assessment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Assessment' }
+        '400':
+          description: A rating is outside 1–5 or a dimension is missing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

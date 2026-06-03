@@ -7,7 +7,9 @@ const MODULE_TABLES = Object.freeze({
   sessions: ['session_journal', 'session_sets'],
   body_measurements: ['body_measurements'],
   nutrition_logs: ['nutrition_logs', 'hydration_log'],
-  supplements: ['supplements'],
+  // Phase 8: children precede `supplements` (supplement_id FK cascades, but explicit
+  // deletion yields accurate counts and is robust if the FK rule ever changes).
+  supplements: ['supplement_intake_log', 'supplement_weekly_assessment', 'supplements'],
   recovery: ['recovery_log'],
   calculator_results: ['calculation_results'],
   preferences: [], // handled specially by resetPreferencesAndOverrides
@@ -39,6 +41,10 @@ const FULL_WIPE_ORDER = Object.freeze([
   'nutrition_logs',
   'nutrition_template_meal_items',
   'hydration_log',
+  // Phase 8: supplement adherence children MUST precede `supplements` (supplement_id
+  // FK is ON DELETE CASCADE; explicit ordering keeps counts accurate).
+  'supplement_intake_log',
+  'supplement_weekly_assessment',
   'supplements',
   'foods',
   'quotes',

@@ -96,6 +96,13 @@ export const baseSchema = z.object({
     .refine((n) => n > 0, 'NUTRITION_TREND_DAYS must be > 0'),
   // Locale for nutrition number/date formatting.
   NUTRITION_LOCALE: z.string().min(1).default('fr-FR'),
+  // Phase 8 (supplements). The supplement whose streak is shown most prominently
+  // (the "most critical" supplement is athlete/program data, not a code literal).
+  SUPPLEMENT_PRIMARY_SLUG: z.string().min(1).default('creatine-monohydrate'),
+  // Rolling window (weeks) for the supplement self-assessment trend; must be > 0.
+  SUPPLEMENT_ASSESSMENT_TREND_WEEKS: intFromString('SUPPLEMENT_ASSESSMENT_TREND_WEEKS')
+    .default(12)
+    .refine((n) => n > 0, 'SUPPLEMENT_ASSESSMENT_TREND_WEEKS must be > 0'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */
