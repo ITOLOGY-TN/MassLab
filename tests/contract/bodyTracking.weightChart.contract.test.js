@@ -44,8 +44,8 @@ describe('contract: GET /api/v1/body-tracking/weight-chart', () => {
     expect(Array.isArray(data.points)).toBe(true);
     expect(Array.isArray(data.phaseMarkers)).toBe(true);
     expect(typeof data.hasTrend).toBe('boolean');
-    // goalKg / zone are nullable (FR-017/FR-018).
-    expect(['number', 'object']).toContain(typeof data.goalKg); // number or null(object)
+    // goalKg / zone are nullable (FR-017/FR-018) — permit number or null only.
+    expect(data.goalKg === null || typeof data.goalKg === 'number').toBe(true);
     if (data.points.length) {
       const p = data.points[0];
       expect(p).toHaveProperty('date');

@@ -11,7 +11,7 @@ Operator's guide to the four user-facing surfaces this phase adds. Assumes the a
 | Morning weigh-in form | `/body` | `POST /api/v1/body-measurements` (existing), `GET /api/v1/body-measurements` |
 | Weight curve (main chart) | `/body` | `GET /api/v1/body-tracking/weight-chart` |
 | Monthly measurements table | `/body/measurements` | `GET /api/v1/body-tracking/measurements-table` |
-| Progress photo gallery | `/body/photos` | `GET` / `POST` / `DELETE /api/v1/body-tracking/photos` |
+| Progress photo gallery | `/body/photos` | `GET` / `POST /api/v1/body-tracking/photos` · `DELETE /api/v1/body-tracking/photos/{photoId}` |
 
 Nav link: **"Corps"** added to the top nav alongside "Charges".
 
@@ -91,7 +91,7 @@ npm test -- tests/unit/weightTrajectory.test.js \
             tests/unit/weightChartView.test.js \
             tests/unit/measurementsTableView.test.js \
             tests/unit/photoGalleryView.test.js \
-            tests/unit/chartGeometry.band.test.js
+            tests/unit/lib.chartGeometry.test.js
 npm test -- tests/contract        # body-measurements + body-tracking paths (live-gated, skips offline)
 npm test -- tests/integration     # weigh-in upsert, photo upload/delete, RLS probes
 npm run test:frontend             # /body screens smoke (form, chart, table, gallery, empty states)

@@ -74,7 +74,7 @@ description: 'Task list — Phase 6: Body Weight & Measurements'
 - [x] T013 [US1] Add `r.get('/', c.list)` to `routes/bodyMeasurements.routes.js` (POST already mounted).
 - [x] T014 [US1] Implement `uploadPhoto` in `controllers/bodyTracking.controller.js`: validate mimetype ∈ `BODY_PHOTO_IMAGE_TYPES` (else 400), `photoStorage.put(req.athleteId, req.file.buffer, ext)`, insert via `daos.athletePhotos.insert({ athlete_id, taken_on, storage_key, weight_overlay_kg, note })`, return `{ data: <Photo> }` (201) with `url = photoStorage.url(storage_key)`; mount `r.post('/photos', uploadSingle(upload), c.uploadPhoto)` in `routes/bodyTracking.routes.js` (FR-009/FR-010, D-3).
 - [x] T015 [US1] Build `frontend/src/pages/body/BodyHome.jsx` weigh-in form (date default today, weight, the 7 circumferences, note; one-handed-friendly large inputs, optional fields) submitting via `saveWeighIn`; add a separate "Ajouter une photo" upload control posting to `uploadPhoto` after save (D-3). Use Frontend Design skill + Tailwind tokens.
-- [x] T016 [P] [US1] Frontend smoke test `frontend/tests/BodyHome.weighIn.test.jsx`: form submits weight; empty submit shows validation; photo control posts.
+- [x] T016 [P] [US1] Frontend smoke test `tests/frontend/BodyHome.weighIn.test.jsx`: form submits weight; empty submit shows validation; photo control posts.
 
 **Checkpoint**: US1 shippable — weigh-ins persist, photos attach, composition cascade verified. **This is the MVP.**
 
@@ -100,7 +100,7 @@ description: 'Task list — Phase 6: Body Weight & Measurements'
 - [x] T023 [US2] Extend `frontend/src/lib/chartGeometry.js` with a pure `bandPath`/`areaBetween` helper (keep existing exports intact).
 - [x] T024 [US2] Implement `weightChart` in `controllers/bodyTracking.controller.js` (read `bodyMeasurements.listForAthlete(req.athleteId, { limit: 1000 })` — explicit high limit so the 5-month series is not truncated by the DAO default of 50, I1; plus `athletes.findById`, `trainingPhases.listForAthlete`; hand to the presenter) and mount `r.get('/weight-chart', c.weightChart)`.
 - [x] T025 [US2] Render the curve in `frontend/src/pages/body/BodyHome.jsx` using the reused `LineChart` + `bandPath` (zone), goal line, and phase markers; design the "<2 entries — log more for a trend" state (FR-020/FR-027).
-- [x] T026 [P] [US2] Frontend smoke test `frontend/tests/BodyHome.chart.test.jsx`: chart renders from a stub series; low-data empty state shows.
+- [x] T026 [P] [US2] Frontend smoke test `tests/frontend/BodyHome.chart.test.jsx`: chart renders from a stub series; low-data empty state shows.
 
 **Checkpoint**: US2 shippable independently of US3/US4.
 
@@ -124,7 +124,7 @@ description: 'Task list — Phase 6: Body Weight & Measurements'
 - [x] T031 [US3] Implement `services/bodyTracking/measurementsTableView.js` composing `{ months: [{ month, fields }] }` from injected measurements.
 - [x] T032 [US3] Implement `measurementsTable` in `controllers/bodyTracking.controller.js` (read `listForAthlete(req.athleteId, { limit: 1000 })` — explicit high limit so the full multi-month history is not truncated by the DAO default of 50, I1; hand to presenter) and mount `r.get('/measurements-table', c.measurementsTable)`.
 - [x] T033 [US3] Build `frontend/src/pages/body/MeasurementsTable.jsx`: monthly table with up/down/flat color-coded deltas (FR-022) and graceful gaps (FR-023). Frontend Design skill + tokens.
-- [x] T034 [P] [US3] Frontend smoke test `frontend/tests/MeasurementsTable.test.jsx`: deltas render with direction; missing-prior gap shows no delta.
+- [x] T034 [P] [US3] Frontend smoke test `tests/frontend/MeasurementsTable.test.jsx`: deltas render with direction; missing-prior gap shows no delta.
 
 **Checkpoint**: US3 shippable independently.
 
@@ -147,7 +147,7 @@ description: 'Task list — Phase 6: Body Weight & Measurements'
 - [x] T038 [US4] Implement `services/bodyTracking/photoGalleryView.js` (inject `athletePhotos.listForAthlete` rows + `photoStorage.url`).
 - [x] T039 [US4] Implement `listPhotos` and `deletePhoto` in `controllers/bodyTracking.controller.js`: `listPhotos` → presenter; `deletePhoto` → `findById` (404 if missing) then `daos.athletePhotos.delete` + best-effort `photoStorage.delete(storage_key)` → 204. Mount `r.get('/photos', c.listPhotos)` and `r.delete('/photos/:id', c.deletePhoto)`.
 - [x] T040 [US4] Build `frontend/src/pages/body/PhotoGallery.jsx`: date-ordered grid with weight overlay (FR-024), full-screen lightbox (FR-025), before/after side-by-side selector (FR-026), delete with confirm (FR-012). Frontend Design skill + tokens.
-- [x] T041 [P] [US4] Frontend smoke test `frontend/tests/PhotoGallery.test.jsx`: grid renders with overlay; opens full-screen; selects two for compare.
+- [x] T041 [P] [US4] Frontend smoke test `tests/frontend/PhotoGallery.test.jsx`: grid renders with overlay; opens full-screen; selects two for compare.
 
 **Checkpoint**: US4 shippable independently.
 

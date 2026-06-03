@@ -4,7 +4,7 @@
 // side-by-side comparison selector (FR-026), and delete-with-confirm wired to
 // deletePhoto which removes the row + stored file (FR-012). Designed empty state
 // (FR-027). Weights are kg as the API returns them.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listPhotos, deletePhoto } from '../../lib/bodyTrackingApi.js';
 import { usePreferredUnit } from '../../lib/usePreferredUnit.js';
@@ -25,19 +25,22 @@ export default function PhotoGallery() {
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
+  // Monotonic request token: a slow earlier load() must never overwrite the
+  // state from a newer one (out-of-order responses, e.g. reload after delete).
+  const requestRef = useRef(0);
 
   function load() {
-    let active = true;
+    const requestId = (requestRef.current += 1);
+    const isLatest = () => requestRef.current === requestId;
     setState((s) => ({ status: s.data ? 'ready' : 'loading', data: s.data }));
     listPhotos()
-      .then((data) => active && setState({ status: 'ready', data }))
-      .catch(() => active && setState({ status: 'error', data: null }));
-    return () => {
-      active = false;
-    };
+      .then((data) => isLatest() && setState({ status: 'ready', data }))
+      .catch(() => isLatest() && setState({ status: 'error', data: null }));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const items = state.data?.items ?? [];
   const byId = (id) => items.find((p) => p.id === id) ?? null;

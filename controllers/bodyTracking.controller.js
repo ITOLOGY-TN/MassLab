@@ -96,13 +96,25 @@ export function bodyTrackingController({ daos, config, photoStorage, now = () =>
         if (!takenOn) throw new HttpError(400, 'VALIDATION_FAILED', 'taken_on is required.');
 
         const storageKey = await photoStorage.put(req.athleteId, req.file.buffer, extFor(req.file));
-        const row = await daos.athletePhotos.insert({
-          athlete_id: req.athleteId,
-          taken_on: takenOn,
-          storage_key: storageKey,
-          weight_overlay_kg: optionalNumber(req.body?.weight_overlay_kg),
-          note: req.body?.note ?? null,
-        });
+        let row;
+        try {
+          row = await daos.athletePhotos.insert({
+            athlete_id: req.athleteId,
+            taken_on: takenOn,
+            storage_key: storageKey,
+            weight_overlay_kg: optionalNumber(req.body?.weight_overlay_kg),
+            note: req.body?.note ?? null,
+          });
+        } catch (err) {
+          // The row write failed after the file was stored — remove the now-orphaned
+          // file (best-effort) so a failed insert never leaks storage, then rethrow.
+          try {
+            await photoStorage.delete(storageKey);
+          } catch {
+            // ignore — surface the original insert error below
+          }
+          throw err;
+        }
 
         res.status(201).json({
           data: {

@@ -14,6 +14,10 @@ function isoDay(date) {
   return date.toISOString().slice(0, 10);
 }
 
+// Cap a caller-supplied history page size so an oversized `?limit=` can't force
+// an unbounded read.
+const MAX_HISTORY_LIMIT = 1000;
+
 export function bodyMeasurementsController({ daos, now = () => new Date() }) {
   const programCtrl = programController({ daos });
 
@@ -21,9 +25,10 @@ export function bodyMeasurementsController({ daos, now = () => new Date() }) {
     // Phase 6 T012 [US1] — weigh-in history (date-descending) for the chart/table.
     async list(req, res, next) {
       try {
-        const limit = Number.parseInt(req.query?.limit, 10);
+        const parsed = Number.parseInt(req.query?.limit, 10);
+        const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : 365;
         const rows = await daos.bodyMeasurements.listForAthlete(req.athleteId, {
-          limit: Number.isFinite(limit) && limit > 0 ? limit : 365,
+          limit: Math.min(requested, MAX_HISTORY_LIMIT),
         });
         res.json({ data: rows });
       } catch (err) {

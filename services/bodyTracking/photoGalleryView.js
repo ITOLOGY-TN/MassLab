@@ -11,6 +11,9 @@
  * @returns {{ items: Array<{ id, takenOn, weightKg, url, note }> }}
  */
 export function build({ rows = [], url } = {}) {
+  if (rows.length > 0 && typeof url !== 'function') {
+    throw new Error('photoGalleryView.build requires a url(storageKey) function');
+  }
   const items = rows.map((row) => ({
     id: row.id,
     takenOn: row.taken_on,

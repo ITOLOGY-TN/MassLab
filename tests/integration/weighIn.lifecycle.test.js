@@ -23,6 +23,7 @@ let live = false;
 
 const SENTINEL_DATE = '2000-01-03';
 let uploadedPhotoId = null;
+let testAthleteId = null;
 
 // 1×1 transparent PNG.
 const PNG = Buffer.from(
@@ -57,7 +58,11 @@ afterAll(async () => {
   if (uploadedPhotoId) {
     await request(app).delete(`/api/v1/body-tracking/photos/${uploadedPhotoId}`);
   }
-  await supabase.from('body_measurements').delete().eq('measured_on', SENTINEL_DATE);
+  // Scope the cleanup to the test athlete when known, so a real row sharing the
+  // sentinel date for another athlete can never be collaterally deleted.
+  let del = supabase.from('body_measurements').delete().eq('measured_on', SENTINEL_DATE);
+  if (testAthleteId) del = del.eq('athlete_id', testAthleteId);
+  await del;
 });
 
 describe('weigh-in lifecycle (US1)', () => {
@@ -70,6 +75,7 @@ describe('weigh-in lifecycle (US1)', () => {
     expect(res.body.data.body_composition).toBeTruthy();
     expect(res.body.data.program_id).toBeTruthy();
     expect(res.body.data.measurement.arm_cm).toBe(38.5);
+    testAthleteId = res.body.data.measurement.athlete_id;
   });
 
   it('partial re-save merges — weight-only re-save keeps the stored arm_cm (M1/FR-006)', async () => {

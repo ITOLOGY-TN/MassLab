@@ -13,6 +13,7 @@ import { buildApp } from '../../app.js';
 let app;
 let supabase;
 let live = false;
+let createdId = null;
 
 // A sentinel past date unlikely to collide with real data.
 const SENTINEL_DATE = '2000-01-02';
@@ -41,7 +42,13 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!live) return;
-  await supabase.from('body_measurements').delete().eq('measured_on', SENTINEL_DATE);
+  // Delete only the exact row this suite created (not every row on the sentinel
+  // date), falling back to the date filter if the id was never captured.
+  if (createdId != null) {
+    await supabase.from('body_measurements').delete().eq('id', createdId);
+  } else {
+    await supabase.from('body_measurements').delete().eq('measured_on', SENTINEL_DATE);
+  }
 });
 
 describe('contract: /api/v1/body-measurements', () => {
@@ -55,6 +62,7 @@ describe('contract: /api/v1/body-measurements', () => {
     expect(res.body.data).toHaveProperty('body_composition');
     expect(res.body.data).toHaveProperty('program_id');
     expect(res.body.data.measurement.measured_on).toBe(SENTINEL_DATE);
+    createdId = res.body.data.measurement.id;
   });
 
   it('POST with neither weight nor a circumference is rejected (FR-003)', async () => {
@@ -62,8 +70,8 @@ describe('contract: /api/v1/body-measurements', () => {
     const res = await request(app)
       .post('/api/v1/body-measurements')
       .send({ measured_on: SENTINEL_DATE, note: 'no numbers' });
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
   });
 
   it('POST with a future date is rejected with 400 VALIDATION_FAILED (FR-005)', async () => {
