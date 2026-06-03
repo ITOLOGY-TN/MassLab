@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   linearScale,
   linePath,
+  bandPath,
   barRects,
   radarPolygon,
   niceTicks,
@@ -25,6 +26,27 @@ describe('linePath', () => {
       ]),
     ).toBe('M0,10 L5,20');
     expect(linePath([])).toBe('');
+  });
+});
+
+describe('bandPath', () => {
+  it('builds a closed path along upper then back along lower', () => {
+    expect(
+      bandPath({
+        upper: [
+          { x: 0, y: 5 },
+          { x: 10, y: 6 },
+        ],
+        lower: [
+          { x: 0, y: 15 },
+          { x: 10, y: 16 },
+        ],
+      }),
+    ).toBe('M0,5 L10,6 L10,16 L0,15 Z');
+  });
+  it('returns empty string when an edge is missing', () => {
+    expect(bandPath({ upper: [{ x: 0, y: 5 }], lower: [] })).toBe('');
+    expect(bandPath({})).toBe('');
   });
 });
 

@@ -62,6 +62,9 @@ describe('US2 — RLS policies enforce per-athlete isolation', () => {
     // Phase 4 (T055) — the session write tables must be isolated too (FR-027).
     'session_journal_entries',
     'session_sets',
+    // Phase 6 (T042) — body data must be athlete-isolated too (SC-009).
+    'body_measurements',
+    'athlete_photos',
   ])('publishable-key client sees zero rows in %s', async (table) => {
     if (!live) return;
     const anon = createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY, {
@@ -88,6 +91,48 @@ describe('US2 — RLS policies enforce per-athlete isolation', () => {
       .insert({ athlete_id: athlete.id, started_at: new Date().toISOString() })
       .select('id');
     // RLS denies the write: either an explicit error or zero affected rows.
+    if (error) {
+      expect(error.message).toMatch(/permission|policy|jwt|denied|violat/i);
+    } else {
+      expect(data ?? []).toEqual([]);
+    }
+  });
+
+  // Phase 6 (T042) — the body-data write tables must reject a cross-athlete
+  // INSERT from the publishable-key client (SC-009; `*_own` with-check policies).
+  it('publishable-key client cannot INSERT a body_measurement for another athlete', async () => {
+    if (!live) return;
+    const { data: athlete } = await serverClient.from('athletes').select('id').limit(1).single();
+    const anon = createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data, error } = await anon
+      .from('body_measurements')
+      .insert({ athlete_id: athlete.id, measured_on: '2026-01-01', weight_kg: 70 })
+      .select('id');
+    if (error) {
+      expect(error.message).toMatch(/permission|policy|jwt|denied|violat/i);
+    } else {
+      expect(data ?? []).toEqual([]);
+    }
+  });
+
+  it('publishable-key client cannot INSERT an athlete_photo for another athlete', async () => {
+    if (!live) return;
+    // athlete_photos ships in Phase 0 (research D-2); skip cleanly if absent.
+    const photoProbe = await serverClient.from('athlete_photos').select('id').limit(1);
+    if (photoProbe.error) {
+      console.warn('[rls] skipped athlete_photos — table not present');
+      return;
+    }
+    const { data: athlete } = await serverClient.from('athletes').select('id').limit(1).single();
+    const anon = createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data, error } = await anon
+      .from('athlete_photos')
+      .insert({ athlete_id: athlete.id, taken_on: '2026-01-01', storage_key: 'rogue/key.jpg' })
+      .select('id');
     if (error) {
       expect(error.message).toMatch(/permission|policy|jwt|denied|violat/i);
     } else {

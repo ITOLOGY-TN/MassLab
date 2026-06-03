@@ -20,6 +20,7 @@ import { oneRepMaxRecordsDao } from './services/dataAccess/oneRepMaxRecords.dao.
 import { progressionFlagsDao } from './services/dataAccess/progressionFlags.dao.js';
 import { bodyCompositionDao } from './services/dataAccess/bodyComposition.dao.js';
 import { bodyMeasurementsDao } from './services/dataAccess/bodyMeasurements.dao.js';
+import { athletePhotosDao } from './services/dataAccess/athletePhotos.dao.js';
 import { muscleGroupsDao } from './services/dataAccess/muscleGroups.dao.js';
 import { sessionsDao } from './services/dataAccess/sessions.dao.js';
 import { exerciseAlternativesDao } from './services/dataAccess/exerciseAlternatives.dao.js';
@@ -48,6 +49,7 @@ import { bodyMeasurementsRoutes } from './routes/bodyMeasurements.routes.js';
 import { trainingProgramRoutes } from './routes/trainingProgram.routes.js';
 import { sessionsRoutes } from './routes/sessions.routes.js';
 import { loadTrackingRoutes } from './routes/loadTracking.routes.js';
+import { bodyTrackingRoutes } from './routes/bodyTracking.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -67,6 +69,7 @@ export function buildApp({ config, supabase, daos } = {}) {
     progressionFlags: progressionFlagsDao(sb),
     bodyComposition: bodyCompositionDao(sb),
     bodyMeasurements: bodyMeasurementsDao(sb),
+    athletePhotos: athletePhotosDao(sb),
     muscleGroups: muscleGroupsDao(sb),
     sessions: sessionsDao(sb),
     exerciseAlternatives: exerciseAlternativesDao(sb),
@@ -124,6 +127,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/program', trainingProgramRoutes({ daos: resolved, config }));
   v1.use('/sessions', sessionsRoutes({ daos: resolved, config }));
   v1.use('/load-tracking', loadTrackingRoutes({ daos: resolved, config }));
+  v1.use('/body-tracking', bodyTrackingRoutes({ daos: resolved, config, photoStorage }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));

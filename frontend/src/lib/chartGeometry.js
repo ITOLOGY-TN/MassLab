@@ -19,6 +19,22 @@ export function linePath(points = []) {
 }
 
 /**
+ * A closed SVG path `d` string for a filled band between an `upper` and a `lower`
+ * array of screen-space points (same scale convention as `linePath`). The path runs
+ * along `upper` left→right, down to the last `lower` point, back along `lower`
+ * right→left, then closes. Returns '' when either edge is empty.
+ */
+export function bandPath({ upper = [], lower = [] } = {}) {
+  if (!upper.length || !lower.length) return '';
+  const top = upper.map((p, i) => `${i === 0 ? 'M' : 'L'}${round2(p.x)},${round2(p.y)}`).join(' ');
+  const bottom = [...lower]
+    .reverse()
+    .map((p) => `L${round2(p.x)},${round2(p.y)}`)
+    .join(' ');
+  return `${top} ${bottom} Z`;
+}
+
+/**
  * Bar rectangles for a series of values along a band, baseline at `y0`.
  * @returns {Array<{ x, y, width, height }>}
  */

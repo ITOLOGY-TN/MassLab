@@ -82,6 +82,10 @@ export const baseSchema = z.object({
   YOUTUBE_EMBED_HOST: z.string().url().default('https://www.youtube-nocookie.com'),
   // Filesystem root for the default photo/media storage adapter.
   PHOTO_STORAGE_ROOT: z.string().min(1).default('data/photos'),
+  // Phase 6 (body progress photos). Size cap mirrors the import limit (25 MiB).
+  BODY_PHOTO_MAX_BYTES: intFromString('BODY_PHOTO_MAX_BYTES').default(26214400),
+  // Comma-separated MIME allowlist for progress photos (no video).
+  BODY_PHOTO_IMAGE_TYPES: csvList.default('image/jpeg,image/png,image/webp'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */
