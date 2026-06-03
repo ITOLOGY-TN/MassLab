@@ -103,6 +103,41 @@ export const baseSchema = z.object({
   SUPPLEMENT_ASSESSMENT_TREND_WEEKS: intFromString('SUPPLEMENT_ASSESSMENT_TREND_WEEKS')
     .default(12)
     .refine((n) => n > 0, 'SUPPLEMENT_ASSESSMENT_TREND_WEEKS must be > 0'),
+  // Phase 9 (recovery & well-being). Rolling window (days) for the energy/stress/sleep
+  // overlay; must be > 0.
+  RECOVERY_TREND_DAYS: intFromString('RECOVERY_TREND_DAYS')
+    .default(30)
+    .refine((n) => n > 0, 'RECOVERY_TREND_DAYS must be > 0'),
+  // Stress ≥ this counts as "high" (0–10).
+  RECOVERY_STRESS_HIGH: intFromString('RECOVERY_STRESS_HIGH').default(7),
+  // Consecutive high-stress days that trigger the cortisol warning; must be > 0.
+  RECOVERY_STRESS_HIGH_DAYS: intFromString('RECOVERY_STRESS_HIGH_DAYS')
+    .default(3)
+    .refine((n) => n > 0, 'RECOVERY_STRESS_HIGH_DAYS must be > 0'),
+  // Average sleep ≤ this is "low"; must be > 0.
+  RECOVERY_SLEEP_LOW_HOURS: intFromString('RECOVERY_SLEEP_LOW_HOURS')
+    .default(6)
+    .refine((n) => n > 0, 'RECOVERY_SLEEP_LOW_HOURS must be > 0'),
+  // Average energy ≤ this is "low" (0–10).
+  RECOVERY_ENERGY_LOW: intFromString('RECOVERY_ENERGY_LOW').default(4),
+  // Window (days) for the reduce-volume averages; must be > 0.
+  RECOVERY_LOW_WINDOW_DAYS: intFromString('RECOVERY_LOW_WINDOW_DAYS')
+    .default(3)
+    .refine((n) => n > 0, 'RECOVERY_LOW_WINDOW_DAYS must be > 0'),
+  // Poor-signal count in a day that triggers full-rest; must be > 0.
+  RECOVERY_REST_SIGNALS: intFromString('RECOVERY_REST_SIGNALS')
+    .default(3)
+    .refine((n) => n > 0, 'RECOVERY_REST_SIGNALS must be > 0'),
+  // Sore-zone count in a day that triggers full-rest; must be > 0.
+  RECOVERY_SORE_ZONES_REST: intFromString('RECOVERY_SORE_ZONES_REST')
+    .default(4)
+    .refine((n) => n > 0, 'RECOVERY_SORE_ZONES_REST must be > 0'),
+  // Allowed mood keys (UI maps to emoji + localized label).
+  RECOVERY_MOOD_OPTIONS: csvList.default('great,good,ok,low,bad'),
+  // Allowed body-diagram zones for soreness.
+  RECOVERY_SORE_ZONES: csvList.default(
+    'neck,shoulders,chest,upper_back,lower_back,biceps,triceps,forearms,abs,glutes,quads,hamstrings,calves',
+  ),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */

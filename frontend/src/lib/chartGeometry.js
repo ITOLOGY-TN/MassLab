@@ -143,6 +143,62 @@ function polar(cx, cy, r, angle) {
   return { x: round2(cx + r * Math.cos(angle)), y: round2(cy + r * Math.sin(angle)) };
 }
 
+/**
+ * Lay a calendar month into a 7-column grid (Phase 9, data-model §8) for the
+ * recovery energy heatmap. `month` is 1-based (1 = January). `weekStartsOn`
+ * picks the leftmost weekday: 1 = Monday (default), 0 = Sunday. Returns one
+ * entry per grid cell, including leading/trailing pad cells (`inMonth: false`)
+ * so the grid is rectangular. `x`/`y` are derived from `col`/`row` with a unit
+ * cell + gap, so the caller can scale them.
+ * @returns {Array<{ date: string, row: number, col: number, x: number, y: number, inMonth: boolean }>}
+ */
+export function calendarMonth({ year, month, weekStartsOn = 1, cellSize = 1, gap = 0 } = {}) {
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  // Weekday (0 = Sun … 6 = Sat) of the first of the month, then shifted so the
+  // configured start day maps to column 0.
+  const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const lead = (firstWeekday - weekStartsOn + 7) % 7;
+
+  const totalCells = Math.ceil((lead + daysInMonth) / 7) * 7;
+  const step = cellSize + gap;
+  const cells = [];
+  for (let cell = 0; cell < totalCells; cell += 1) {
+    const row = Math.floor(cell / 7);
+    const col = cell % 7;
+    const dayNum = cell - lead + 1;
+    const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+    cells.push({
+      date: inMonth ? isoDate(year, month, dayNum) : null,
+      row,
+      col,
+      x: round2(col * step),
+      y: round2(row * step),
+      inMonth,
+    });
+  }
+  return cells;
+}
+
+// `YYYY-MM-DD` for a 1-based month/day (no timezone — pure string math).
+function isoDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * Pixel positions for a scatter plot (Phase 9, data-model §8). Each input
+ * datum carries `x`/`y` domain values; `xScale`/`yScale` (reuse `linearScale`)
+ * map them to screen space. The original datum is returned under `datum` so the
+ * component can wire tooltips/labels without re-joining.
+ * @returns {Array<{ cx: number, cy: number, datum: object }>}
+ */
+export function scatterPoints({ points = [], xScale, yScale }) {
+  return points.map((datum) => ({
+    cx: round2(xScale(datum.x)),
+    cy: round2(yScale(datum.y)),
+    datum,
+  }));
+}
+
 /** A short array of "nice" tick values spanning [min, max]. */
 export function niceTicks(min, max, count = 4) {
   if (max <= min) return [min];

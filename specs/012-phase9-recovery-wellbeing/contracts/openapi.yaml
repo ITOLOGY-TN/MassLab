@@ -1,0 +1,237 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Recovery & Wellbeing (Phase 9)
+  version: 1.0.0
+  description: >
+    Daily recovery check-in (sleep quality 1–5, hours slept, stress 0–10, energy 0–10,
+    mood, and a set of sore muscle zones), plus smart contextual alerts derived from
+    recent check-ins (high-stress/cortisol warning, reduce-session-volume recommendation,
+    full-rest suggestion) and three trend visuals (monthly energy heatmap, sleep-vs-
+    performance scatter, 30-day energy/stress/sleep overlay). Recovery logging is
+    subjective journaling — it runs NO calculator/progression/audit engine. New in Phase 9:
+    three columns on the existing recovery_log table (sleep_quality, mood, sore_zones); no
+    new table. The session journal is READ-ONLY here (per-day finished-session volume feeds
+    the scatter). All paths under /api/v1. Auth: bearer token in non-single-user mode; the
+    athlete id is taken from the auth context, never from the request body or query. The
+    editable window is the current ISO week (Monday–Sunday); prior weeks are read-only.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_FAILED }
+            message: { type: string }
+            requestId: { type: string }
+    Checkin:
+      type: object
+      description: A day's recovery check-in. Any field MAY be absent (partial save); an empty sore_zones is an explicit "no soreness reported".
+      properties:
+        sleep_quality: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        sleep_hours: { type: number, minimum: 0, maximum: 24, nullable: true }
+        energy: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        stress: { type: integer, minimum: 0, maximum: 10, nullable: true }
+        mood: { type: string, nullable: true, example: good }
+        sore_zones:
+          type: array
+          items: { type: string }
+          example: [quads, lower_back]
+        note: { type: string, nullable: true }
+    CheckinView:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        editable:
+          type: boolean
+          description: true only when date is within the current ISO week (Monday–Sunday).
+        checkin:
+          allOf: [{ $ref: '#/components/schemas/Checkin' }]
+          nullable: true
+          description: null when nothing is logged for date.
+        options:
+          type: object
+          description: Allowed values sourced from server config (RECOVERY_MOOD_OPTIONS / RECOVERY_SORE_ZONES) so the client hardcodes neither.
+          properties:
+            moods:
+              type: array
+              items: { type: string }
+              example: [great, good, ok, low, bad]
+            sore_zones:
+              type: array
+              items: { type: string }
+    CheckinUpsert:
+      type: object
+      required: [logged_on]
+      properties:
+        logged_on: { type: string, format: date, description: Target day. Must be a real calendar date, not in the future, and within the current ISO week. }
+        sleep_quality: { type: integer, minimum: 1, maximum: 5 }
+        sleep_hours: { type: number, minimum: 0, maximum: 24 }
+        energy: { type: integer, minimum: 0, maximum: 10 }
+        stress: { type: integer, minimum: 0, maximum: 10 }
+        mood: { type: string, description: Must be one of RECOVERY_MOOD_OPTIONS. }
+        sore_zones:
+          type: array
+          items: { type: string, description: Each must be one of RECOVERY_SORE_ZONES. }
+        note: { type: string }
+    Alert:
+      type: object
+      properties:
+        kind: { type: string, enum: [high_stress, reduce_volume, full_rest] }
+        severity: { type: string, enum: [warning, advice] }
+        message_key: { type: string, example: recovery.alert.high_stress }
+        context: { type: object, additionalProperties: true }
+    AlertsView:
+      type: object
+      properties:
+        all_clear: { type: boolean, description: true when no alert fires (renders an encouraging state). }
+        alerts:
+          type: array
+          items: { $ref: '#/components/schemas/Alert' }
+    TrendsView:
+      type: object
+      properties:
+        heatmap:
+          type: object
+          properties:
+            year: { type: integer }
+            month: { type: integer, minimum: 1, maximum: 12 }
+            cells:
+              type: array
+              items:
+                type: object
+                properties:
+                  date: { type: string, format: date }
+                  energy: { type: integer, minimum: 0, maximum: 10, nullable: true, description: null for days with no check-in (uncolored). }
+        scatter:
+          type: object
+          properties:
+            has_data: { type: boolean }
+            points:
+              type: array
+              description: One point per day having BOTH a check-in and a finished session.
+              items:
+                type: object
+                properties:
+                  date: { type: string, format: date }
+                  sleep_hours: { type: number }
+                  volume_kg: { type: number }
+        overlap:
+          type: object
+          description: Aligned series over the trend window; gaps are null, never 0.
+          properties:
+            days: { type: array, items: { type: string, format: date } }
+            energy: { type: array, items: { type: integer, nullable: true } }
+            stress: { type: array, items: { type: integer, nullable: true } }
+            sleep: { type: array, items: { type: number, nullable: true } }
+  responses:
+    BadRequest:
+      description: Validation failed (bad date, out-of-range rating, unknown mood/zone).
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unprocessable:
+      description: Future date (FUTURE_DATE) or outside the current ISO week (OUTSIDE_EDIT_WINDOW).
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /recovery/checkin:
+    get:
+      summary: Get the recovery check-in for a day (form state) + allowed options
+      description: >
+        Returns the day's saved check-in (or null), an `editable` flag (true only within
+        the current ISO week), and the config-driven mood/zone option lists. Any past day
+        is viewable; only current-ISO-week days are editable.
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Defaults to the server's today (UTC calendar day) when absent.
+      responses:
+        '200':
+          description: The day's check-in view.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CheckinView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    put:
+      summary: Create or update the current-ISO-week day's check-in (upsert)
+      description: >
+        Upserts the check-in for `logged_on` (one row per athlete per day). Accepts any
+        subset of the check-in fields (partial save); omitted fields are left absent, never
+        substituted. An empty `sore_zones` is an explicit "no soreness reported". Rejects a
+        future date (422 FUTURE_DATE), a day outside the current ISO week (422
+        OUTSIDE_EDIT_WINDOW), and out-of-range/unknown values (400). Runs no engine.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckinUpsert' }
+      responses:
+        '200':
+          description: The persisted check-in.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Checkin' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /recovery/alerts:
+    get:
+      summary: Smart contextual recovery alerts derived from recent check-ins
+      description: >
+        Recomputed on read from the recent check-in window using deterministic, configurable
+        rules (defaults: high-stress = stress ≥ 7 for ≥ 3 consecutive days; reduce-volume =
+        avg sleep ≤ 6h AND avg energy ≤ 4 over the last 3 days; full-rest = ≥ 3 poor signals
+        at once OR ≥ 4 sore zones in a day). A rule stays silent when its window lacks enough
+        check-ins. Alerts are advisory only and never alter any persisted plan; not persisted.
+      responses:
+        '200':
+          description: The current alert set (possibly empty / all-clear).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AlertsView' }
+  /recovery/trends:
+    get:
+      summary: Recovery trend visuals (energy heatmap, sleep-vs-performance scatter, 30-day overlay)
+      description: >
+        Returns the monthly energy heatmap, the sleep-vs-performance scatter (sleep paired
+        with the day's finished-session training volume, read-only from the session journal —
+        only days with both a check-in and a finished session emit a point), and the
+        energy/stress/sleep overlay over RECOVERY_TREND_DAYS. Each chart carries a low-data
+        flag so empty states render without error.
+      parameters:
+        - in: query
+          name: month
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+          description: Heatmap month (YYYY-MM). Defaults to the current month.
+      responses:
+        '200':
+          description: The three trend view models.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TrendsView' }
+        '400': { $ref: '#/components/responses/BadRequest' }

@@ -31,6 +31,7 @@ import { nutritionLogsDao } from './services/dataAccess/nutritionLogs.dao.js';
 import { hydrationDao } from './services/dataAccess/hydration.dao.js';
 import { supplementIntakeDao } from './services/dataAccess/supplementIntake.dao.js';
 import { supplementAssessmentsDao } from './services/dataAccess/supplementAssessments.dao.js';
+import { recoveryDao } from './services/dataAccess/recovery.dao.js';
 import { getSupabase } from './services/dataAccess/supabaseClient.js';
 import { athleteRoutes } from './routes/athlete.routes.js';
 import { exercisesRoutes } from './routes/exercises.routes.js';
@@ -54,6 +55,7 @@ import { trainingProgramRoutes } from './routes/trainingProgram.routes.js';
 import { sessionsRoutes } from './routes/sessions.routes.js';
 import { loadTrackingRoutes } from './routes/loadTracking.routes.js';
 import { bodyTrackingRoutes } from './routes/bodyTracking.routes.js';
+import { recoveryRoutes } from './routes/recovery.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -84,6 +86,7 @@ export function buildApp({ config, supabase, daos } = {}) {
     hydration: hydrationDao(sb),
     supplementIntake: supplementIntakeDao(sb),
     supplementAssessments: supplementAssessmentsDao(sb),
+    recovery: recoveryDao(sb),
   };
 
   const photoStorage = createPhotoStorage({ root: config.PHOTO_STORAGE_ROOT });
@@ -127,6 +130,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/training-phases', trainingPhasesRoutes(resolved.trainingPhases));
   v1.use('/nutrition', nutritionRoutes({ daos: resolved, config }));
   v1.use('/supplements', supplementsRoutes({ daos: resolved, config }));
+  v1.use('/recovery', recoveryRoutes({ daos: resolved, config }));
   v1.use('/foods', foodsRoutes({ daos: resolved, config }));
   v1.use('/quotes', quotesRoutes(resolved.quotes));
   v1.use('/calculators', calculatorsRoutes({ daos: resolved }));
