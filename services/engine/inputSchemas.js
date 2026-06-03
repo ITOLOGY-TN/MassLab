@@ -63,18 +63,40 @@ export const bodyCompositionSchema = z.object({
   hip_cm: measurement_optional(r.hip_cm),
 });
 
-export const bodyMeasurementSchema = z.object({
-  measured_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'measured_on must be ISO date YYYY-MM-DD'),
-  weight_kg: z.number().min(r.weight_kg.min).max(r.weight_kg.max).optional(),
-  arm_cm: measurement_optional({ min: 15, max: 80 }),
-  chest_cm: measurement_optional({ min: 60, max: 200 }),
-  thigh_cm: measurement_optional({ min: 30, max: 120 }),
-  shoulder_cm: measurement_optional({ min: 60, max: 200 }),
-  waist_cm: measurement_optional(r.waist_cm),
-  neck_cm: measurement_optional(r.neck_cm),
-  hip_cm: measurement_optional(r.hip_cm),
-  note: z.string().max(500).nullable().optional(),
-});
+// Phase 6 (009-body-weight-measurements) T011 [US1] — the seven circumference
+// fields a weigh-in may carry. Used by the at-least-one-value refine (FR-003).
+const BODY_CIRCUMFERENCE_FIELDS = Object.freeze([
+  'arm_cm',
+  'chest_cm',
+  'thigh_cm',
+  'shoulder_cm',
+  'waist_cm',
+  'neck_cm',
+  'hip_cm',
+]);
+
+export const bodyMeasurementSchema = z
+  .object({
+    measured_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'measured_on must be ISO date YYYY-MM-DD'),
+    weight_kg: z.number().min(r.weight_kg.min).max(r.weight_kg.max).optional(),
+    arm_cm: measurement_optional({ min: 15, max: 80 }),
+    chest_cm: measurement_optional({ min: 60, max: 200 }),
+    thigh_cm: measurement_optional({ min: 30, max: 120 }),
+    shoulder_cm: measurement_optional({ min: 60, max: 200 }),
+    waist_cm: measurement_optional(r.waist_cm),
+    neck_cm: measurement_optional(r.neck_cm),
+    hip_cm: measurement_optional(r.hip_cm),
+    note: z.string().max(500).nullable().optional(),
+  })
+  // FR-003: a weigh-in must carry a weight or at least one circumference. A note
+  // alone (or an empty body) is rejected so we never persist a value-less row.
+  .refine(
+    (val) => val.weight_kg != null || BODY_CIRCUMFERENCE_FIELDS.some((field) => val[field] != null),
+    {
+      message: 'a weigh-in requires a weight or at least one circumference measurement',
+      path: ['weight_kg'],
+    },
+  );
 
 // Phase 2 (T015) broadens the patch surface to accept the contract-aliased
 // keys used by the Phase 2 OpenAPI (current_weight_kg / sessions_per_week /

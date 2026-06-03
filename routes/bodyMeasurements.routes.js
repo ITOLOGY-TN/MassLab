@@ -4,6 +4,7 @@ import { bodyMeasurementsController } from '../controllers/bodyMeasurements.cont
 export function bodyMeasurementsRoutes({ daos }) {
   const r = Router();
   const c = bodyMeasurementsController({ daos });
+  r.get('/', c.list);
   r.post('/', c.create);
   return r;
 }

@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Body Weight & Measurements (Phase 6)
+  version: 1.0.0
+  description: >
+    Read-and-write surface for body weight, circumference measurements, and progress photos.
+    Weigh-in capture reuses the existing POST /body-measurements (which also cascades to the
+    body-composition estimate + program regeneration). New in Phase 6: a weigh-in history GET,
+    three composed read screens, and the progress-photo lifecycle. All paths under /api/v1.
+    Auth: bearer token in non-single-user mode; the athlete id is taken from the auth context,
+    never from the request body or query.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_FAILED }
+            message: { type: string }
+            requestId: { type: string }
+    Measurement:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        measured_on: { type: string, format: date }
+        weight_kg: { type: number, nullable: true }
+        arm_cm: { type: number, nullable: true }
+        chest_cm: { type: number, nullable: true }
+        thigh_cm: { type: number, nullable: true }
+        shoulder_cm: { type: number, nullable: true }
+        waist_cm: { type: number, nullable: true }
+        neck_cm: { type: number, nullable: true }
+        hip_cm: { type: number, nullable: true }
+        note: { type: string, nullable: true }
+    WeighInInput:
+      type: object
+      required: [measured_on]
+      description: >
+        At least one of weight_kg or a circumference MUST be present (FR-003).
+        measured_on MUST NOT be in the future (FR-005).
+      properties:
+        measured_on: { type: string, format: date }
+        weight_kg: { type: number }
+        arm_cm: { type: number }
+        chest_cm: { type: number }
+        thigh_cm: { type: number }
+        shoulder_cm: { type: number }
+        waist_cm: { type: number }
+        neck_cm: { type: number }
+        hip_cm: { type: number }
+        note: { type: string, nullable: true }
+    WeightChartPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        kg: { type: number }
+    WeightChart:
+      type: object
+      properties:
+        points:
+          type: array
+          items: { $ref: '#/components/schemas/WeightChartPoint' }
+        goalKg:
+          type: number
+          nullable: true
+          description: Target weight goal line; null when target weight is unset (FR-017).
+        zone:
+          nullable: true
+          description: Ideal-progression band; null when inputs are missing (FR-018).
+          type: object
+          properties:
+            lower:
+              type: array
+              items: { $ref: '#/components/schemas/WeightChartPoint' }
+            upper:
+              type: array
+              items: { $ref: '#/components/schemas/WeightChartPoint' }
+        phaseMarkers:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              date: { type: string, format: date }
+        hasTrend:
+          type: boolean
+          description: false when fewer than two logged entries (FR-020).
+    MeasurementsTable:
+      type: object
+      properties:
+        months:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string, example: "2026-05" }
+              fields:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    value: { type: number, nullable: true }
+                    delta: { type: number, nullable: true }
+                    direction: { type: string, enum: [up, down, flat] }
+    Photo:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        takenOn: { type: string, format: date }
+        weightKg: { type: number, nullable: true }
+        url: { type: string, example: /static/photos/<athlete>/<uuid>.jpg }
+        note: { type: string, nullable: true }
+    PhotoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Photo' }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /body-measurements:
+    post:
+      summary: Record (or update) a weigh-in for a date
+      description: >
+        Merges the weigh-in into the row for (athlete, measured_on) — one entry per day (FR-002);
+        omitted fields keep their stored values (FR-006), so a partial re-save never erases data.
+        Triggers the existing automatic body-composition estimate + program regeneration (FR-007).
+        Leaves any existing progress photo for that date untouched (D-4). Photo is NOT part of this
+        request (D-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WeighInInput' }
+      responses:
+        '201':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      measurement: { $ref: '#/components/schemas/Measurement' }
+                      body_composition: { type: object }
+                      program_id: { type: string }
+        '400':
+          description: No value provided (FR-003), future/invalid date (FR-005), or out-of-range value (FR-004)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      summary: Weigh-in history (date-descending)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 365 }
+      responses:
+        '200':
+          description: History
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Measurement' }
+
+  /body-tracking/weight-chart:
+    get:
+      summary: Composed weight-chart view (curve + goal line + ideal zone + phase markers)
+      responses:
+        '200':
+          description: Weight chart view model
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/WeightChart' }
+
+  /body-tracking/measurements-table:
+    get:
+      summary: Monthly measurements table with month-over-month deltas
+      responses:
+        '200':
+          description: Measurements table view model
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MeasurementsTable' }
+
+  /body-tracking/photos:
+    get:
+      summary: Progress-photo gallery (date-descending)
+      responses:
+        '200':
+          description: Photo list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PhotoList' }
+    post:
+      summary: Upload a progress photo (dedicated multipart action, D-3)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, taken_on]
+              properties:
+                file: { type: string, format: binary }
+                taken_on: { type: string, format: date }
+                weight_overlay_kg: { type: number }
+                note: { type: string }
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Photo' }
+        '400':
+          description: Unsupported image type or invalid fields (FR-010)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: File exceeds BODY_PHOTO_MAX_BYTES (FR-010)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /body-tracking/photos/{id}:
+    delete:
+      summary: Delete a progress photo (row + stored file)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found / not owned by athlete
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
