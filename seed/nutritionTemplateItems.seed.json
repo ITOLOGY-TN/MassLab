@@ -1,0 +1,38 @@
+{
+  "locale": "fr-FR",
+  "items": {
+    "breakfast": [
+      { "slug": "avoine", "quantity_g": 80, "display_order": 1 },
+      { "slug": "lait-demi-écrémé", "quantity_g": 250, "display_order": 2 },
+      { "slug": "banane", "quantity_g": 120, "display_order": 3 },
+      { "slug": "beurre-cacahuète", "quantity_g": 20, "display_order": 4 },
+      { "slug": "myrtilles", "quantity_g": 60, "display_order": 5 }
+    ],
+    "lunch": [
+      { "slug": "blanc-de-poulet", "quantity_g": 200, "display_order": 1 },
+      { "slug": "riz-blanc-cuit", "quantity_g": 250, "display_order": 2 },
+      { "slug": "brocoli", "quantity_g": 150, "display_order": 3 },
+      { "slug": "huile-olive", "quantity_g": 10, "display_order": 4 },
+      { "slug": "amandes", "quantity_g": 20, "display_order": 5 }
+    ],
+    "pre_workout": [
+      { "slug": "pain-complet", "quantity_g": 60, "display_order": 1 },
+      { "slug": "miel", "quantity_g": 20, "display_order": 2 },
+      { "slug": "whey-isolate", "quantity_g": 30, "display_order": 3 },
+      { "slug": "dattes", "quantity_g": 40, "display_order": 4 }
+    ],
+    "dinner": [
+      { "slug": "saumon", "quantity_g": 180, "display_order": 1 },
+      { "slug": "patate-douce-cuite", "quantity_g": 250, "display_order": 2 },
+      { "slug": "épinards", "quantity_g": 100, "display_order": 3 },
+      { "slug": "avocat", "quantity_g": 80, "display_order": 4 },
+      { "slug": "huile-olive", "quantity_g": 5, "display_order": 5 }
+    ],
+    "evening_snack": [
+      { "slug": "fromage-blanc-0", "quantity_g": 250, "display_order": 1 },
+      { "slug": "noix", "quantity_g": 25, "display_order": 2 },
+      { "slug": "pomme", "quantity_g": 150, "display_order": 3 },
+      { "slug": "miel", "quantity_g": 15, "display_order": 4 }
+    ]
+  }
+}

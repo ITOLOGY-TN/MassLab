@@ -72,6 +72,77 @@ export function radarAxes({ count, cx, cy, radius }) {
   });
 }
 
+/**
+ * Geometry for a circular SVG progress ring (Phase 7, D-8). The ring is drawn as
+ * a single `<circle>` whose `stroke-dasharray`/`stroke-dashoffset` reveal a slice
+ * of the circumference. `fraction` is clamped to [0, 1] for the *visual* fill so
+ * an over-goal value still paints a full ring; `over` reports whether the raw
+ * value exceeded `max` so the caller can switch to a danger tone.
+ * @returns {{ circumference, dashArray, dashOffset, fraction, over }}
+ */
+export function gaugeArc({ value, max, radius, strokeWidth = 0 }) {
+  const r = Math.max(0, radius - strokeWidth / 2);
+  const circumference = 2 * Math.PI * r;
+  const safeMax = max > 0 ? max : 0;
+  const ratio = safeMax > 0 ? Number(value) / safeMax : 0;
+  const fraction = Math.min(1, Math.max(0, ratio));
+  const dashOffset = round2(circumference * (1 - fraction));
+  return {
+    circumference: round2(circumference),
+    dashArray: round2(circumference),
+    dashOffset,
+    fraction: round2(fraction),
+    over: Number(value) > safeMax,
+  };
+}
+
+/**
+ * Donut segments (Phase 7, D-8): one slice per value, proportional to its share
+ * of the total, starting at 12 o'clock and running clockwise. Each segment is a
+ * closed SVG path (outer arc → inner arc → close) drawable with a single `fill`.
+ * Zero-total (or empty) input is safe — returns zeroed segments (no NaN).
+ * @returns {Array<{ path, fraction, startAngle, endAngle, index }>}
+ */
+export function donutSegments({ values = [], radius, innerRadius, cx, cy }) {
+  const total = values.reduce((sum, v) => sum + Math.max(0, Number(v) || 0), 0);
+  let cursor = -Math.PI / 2;
+  return values.map((v, index) => {
+    const fraction = total > 0 ? Math.max(0, Number(v) || 0) / total : 0;
+    const startAngle = cursor;
+    const endAngle = startAngle + fraction * 2 * Math.PI;
+    cursor = endAngle;
+    return {
+      path: fraction > 0 ? donutArcPath({ startAngle, endAngle, radius, innerRadius, cx, cy }) : '',
+      fraction: round2(fraction),
+      startAngle: round2(startAngle),
+      endAngle: round2(endAngle),
+      index,
+    };
+  });
+}
+
+// A single donut wedge as a closed path: outer arc (start→end, clockwise), line
+// in to the inner radius, inner arc back (end→start), close. The `large-arc-flag`
+// flips past a half turn.
+function donutArcPath({ startAngle, endAngle, radius, innerRadius, cx, cy }) {
+  const large = endAngle - startAngle > Math.PI ? 1 : 0;
+  const o0 = polar(cx, cy, radius, startAngle);
+  const o1 = polar(cx, cy, radius, endAngle);
+  const i1 = polar(cx, cy, innerRadius, endAngle);
+  const i0 = polar(cx, cy, innerRadius, startAngle);
+  return [
+    `M${o0.x},${o0.y}`,
+    `A${round2(radius)},${round2(radius)} 0 ${large} 1 ${o1.x},${o1.y}`,
+    `L${i1.x},${i1.y}`,
+    `A${round2(innerRadius)},${round2(innerRadius)} 0 ${large} 0 ${i0.x},${i0.y}`,
+    'Z',
+  ].join(' ');
+}
+
+function polar(cx, cy, r, angle) {
+  return { x: round2(cx + r * Math.cos(angle)), y: round2(cy + r * Math.sin(angle)) };
+}
+
 /** A short array of "nice" tick values spanning [min, max]. */
 export function niceTicks(min, max, count = 4) {
   if (max <= min) return [min];

@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/009-body-weight-measurements/plan.md
+- specs/010-phase7-nutrition-calories/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
@@ -100,3 +100,13 @@ tests/{unit,integration,contract,frontend}/
 - **Status map** (`statusMap.js`, D-5): the 5 persisted `progression_flags` types → 4 per-exercise badges (`add_load`→ready, `regression`→regressing, muscle-group `stagnation`→stagnation when the exercise has no own actionable flag, else `maintain`) + a separate muscle-group **deload notice**.
 - **Phase attribution** (D-7): `phaseForDate` extracted from `currentTrainingPhase` (which now delegates to it) buckets sessions by date; the radar (`phaseRadarView.js`, D-8) = avg per-day top working load per muscle group per phase.
 - **Charts are hand-rolled SVG** (D-9): pure geometry in `frontend/src/lib/chartGeometry.js` (`linearScale`/`linePath`/`barRects`/`radarPolygon`/`niceTicks`, unit-tested) drives `components/charts/{LineChart,BarChart,RadarChart}.jsx`. No charting library. Frontend route tree `/load-tracking`, `/load-tracking/exercises/:id`, `/load-tracking/phases` + "Charges" nav.
+
+## Phase 7 — Nutrition & Calories (added 2026-06-03)
+
+- **Write-heavy phase — 3 new tables, RLS in-migration**: `nutrition_logs` (one row per food per meal-slot per day; `food_id`→`foods` **ON DELETE RESTRICT**; persists a **macro snapshot** `kcal/protein_g/carbs_g/fat_g` so past totals never shift when a catalogue food is edited — FR-003/SC-008), `hydration_log` (per-athlete-per-day counter, PK `(athlete_id, logged_on)`), `nutrition_template_meal_items` (concrete foods+grams per slot for "Load daily plan", seeded by `runSeed.js`). All ship `*_own` policies in-file (Constitution I). `nutrition_logs` finally backs the name the Phase 2 reset DAO already reserved — `reset.dao` `FULL_WIPE_ORDER` deletes the food-referencing children **before** `foods` (RESTRICT ordering).
+- **Targets are read, never recomputed** (D-3/FR-008): daily kcal/macros come from the **shared** `services/nutrition/targets.js#resolveTargets({ daos, athleteId })` (extracted from `nutritionTargets.controller`, the single source consumed by the day view + trends + the targets endpoint). Food/water logging does **not** write the `calculation_results` audit log (it is summation, not an engine calculation — FR-029).
+- **Custom food persists to the catalogue** (FR-002a): the `foods` table is athlete-writable here via `foods.dao.createForAthlete` (upsert on `(athlete_id, slug, locale)` using `services/nutrition/foodSlug.slugify`, so a duplicate name reconciles — no dup). `POST /nutrition/log` accepts `food_id` **or** an inline `custom_food` (create-then-log).
+- **Load daily plan is non-destructive** (FR-011, clarification): `POST /nutrition/load-plan` requires `mode` (`replace`|`append`) on a non-empty day, else `409 LOAD_PLAN_CONFLICT` — never a silent overwrite. Hydration goal resolves `app_config.engine_overrides.hydration.goal_ml ?? HYDRATION_GOAL_ML` (per-athlete setter is a Phase 2 concern).
+- **Pure boundary**: `services/engine/{nutritionMath,nutritionTrends}.js` (entryMacros/dayTotals/progress; caloriesByDay/macroBreakdown/**weeklyAvgProtein = mean daily protein/week**, D-7) + `services/nutrition/{foodSlug,targets,dayView,trendsView}.js` — all pure, test-first (Constitution V), no `@supabase` import. Controllers read DAOs and hand plain data to these presenters; the future-date guard reads the clock at the controller boundary (`isoDay(now())`), never inside a pure fn.
+- **Endpoints** extend the existing `/api/v1/nutrition` router: `GET /day`, `POST/PATCH/DELETE /log`, `POST /load-plan`, `POST /hydration`, `GET /trends` (+ `POST /foods` custom-food create on the foods router). Config keys: `HYDRATION_GOAL_ML` (3000), `NUTRITION_TREND_DAYS` (30), `NUTRITION_LOCALE` (`fr-FR`).
+- **Charts reuse Phase 5 SVG** + two new pure `chartGeometry` helpers `gaugeArc`/`donutSegments` (unit-tested) driving `components/charts/{HydrationGauge,DonutChart}.jsx`. Frontend `/nutrition` (day log: 4 bars, 5 meal slots, search, custom food, load-plan, hydration gauge) + `/nutrition/trends` (calories-30d + goal line, macro donut, weekly protein). Live contract/integration tests probe for `nutrition_logs` and **skip until migrations are applied**.

@@ -86,7 +86,7 @@ export async function runSeed({ config = loadConfig() } = {}) {
   const upsertedEx = await daos.exercises.upsertMany(exerciseRows);
 
   const foods = await loadJson('foods.seed.json');
-  await daos.foods.upsertMany(
+  const upsertedFoods = await daos.foods.upsertMany(
     foods.foods.map((f) => ({
       athlete_id: athleteId,
       slug: f.slug,
@@ -210,6 +210,39 @@ export async function runSeed({ config = loadConfig() } = {}) {
       target_fat_g: meal.target_fat_g,
     });
   }
+
+  // 5b. Nutrition template items (concrete foods + grams per slot, Phase 7 D-6).
+  // Resolve each slug → foods.id for this athlete+locale, then delete-then-insert
+  // for the athlete so re-runs stay idempotent.
+  const templateItems = await loadJson('nutritionTemplateItems.seed.json');
+  const foodIdBySlug = new Map(
+    (upsertedFoods ?? [])
+      .filter((f) => f.locale === templateItems.locale)
+      .map((f) => [f.slug, f.id]),
+  );
+  const templateItemRows = [];
+  for (const [slot, items] of Object.entries(templateItems.items)) {
+    for (const item of items) {
+      const foodId = foodIdBySlug.get(item.slug);
+      if (!foodId) {
+        logger.warn({ slug: item.slug, slot }, 'seed_missing_food_for_template_item');
+        continue;
+      }
+      templateItemRows.push({
+        athlete_id: athleteId,
+        slot,
+        food_id: foodId,
+        quantity_g: item.quantity_g,
+        display_order: item.display_order,
+      });
+    }
+  }
+  await daos.nutrition.deleteTemplateItemsForAthlete(athleteId);
+  await daos.nutrition.insertTemplateItems(templateItemRows);
+  logger.info(
+    { athlete_id: athleteId, count: templateItemRows.length },
+    'seed_nutrition_template_items_written',
+  );
 
   // 6. Persist the active program (soft-archive any prior row) + audit log entry.
   const activeProgram = await daos.generatedPrograms.archiveAndInsert(athleteId, {

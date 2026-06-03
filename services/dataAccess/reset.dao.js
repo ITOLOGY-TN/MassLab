@@ -6,7 +6,7 @@ import { HttpError } from '../../middleware/errorHandler.js';
 const MODULE_TABLES = Object.freeze({
   sessions: ['session_journal', 'session_sets'],
   body_measurements: ['body_measurements'],
-  nutrition_logs: ['nutrition_logs'],
+  nutrition_logs: ['nutrition_logs', 'hydration_log'],
   supplements: ['supplements'],
   recovery: ['recovery_log'],
   calculator_results: ['calculation_results'],
@@ -34,6 +34,11 @@ const FULL_WIPE_ORDER = Object.freeze([
   'exercises',
   'training_phases',
   'nutrition_template_meals',
+  // Phase 7: food-referencing children MUST precede `foods` (food_id FK is
+  // ON DELETE RESTRICT). hydration_log has no foods FK but groups here.
+  'nutrition_logs',
+  'nutrition_template_meal_items',
+  'hydration_log',
   'supplements',
   'foods',
   'quotes',
@@ -44,7 +49,6 @@ const FULL_WIPE_ORDER = Object.freeze([
   'progression_flags',
   'one_rep_max_records',
   'recovery_log',
-  'nutrition_logs',
 ]);
 
 export function resetDao(supabase) {
