@@ -47,6 +47,7 @@ import { bodyCompositionRoutes } from './routes/bodyComposition.routes.js';
 import { bodyMeasurementsRoutes } from './routes/bodyMeasurements.routes.js';
 import { trainingProgramRoutes } from './routes/trainingProgram.routes.js';
 import { sessionsRoutes } from './routes/sessions.routes.js';
+import { loadTrackingRoutes } from './routes/loadTracking.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -122,6 +123,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   // Phase 3 read-only views share the /program base; disjoint paths fall through.
   v1.use('/program', trainingProgramRoutes({ daos: resolved, config }));
   v1.use('/sessions', sessionsRoutes({ daos: resolved, config }));
+  v1.use('/load-tracking', loadTrackingRoutes({ daos: resolved, config }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));
   v1.use('/body-composition', bodyCompositionRoutes({ daos: resolved }));

@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/007-session-journal/plan.md
+- specs/008-load-tracking/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)
@@ -91,3 +91,12 @@ tests/{unit,integration,contract,frontend}/
 - **Finish is the sole engine trigger** (D-6): `POST /sessions/:id/finish` discards incomplete sets (D-7), finalizes `ended_at`/`total_volume_kg`, then runs the Phase 1 engine exactly once — `evaluateForAthlete` → `progressionFlags.supersedeAndInsert`, `oneRepMax` → `oneRepMaxRecords.insert`, and `writeAudit` (one `one_rep_max` row per record + one `progression_eval`, both `reason:'session_finish'`). A **finish-once guard** (409 `SESSION_ALREADY_FINISHED`) + idempotent supersede make this safe without DB transactions. Auto-save (`PUT /sessions/:id/sets`) **never** runs the engine (D-5).
 - **Schema**: two forward-only migrations on existing tables, **no new table** — `20260602000002` adds `session_journal_entries.day_of_week` (nullable 1–7) + a partial active-session index; `20260602000003` changes `session_sets` uniqueness to `(session_id, exercise_id, set_number)` for per-exercise numbering + extra/ad-hoc sets (D-3/D-4). RLS unchanged (existing `*_own` policies key on `athlete_id`). **Live contract/integration tests probe for the `day_of_week` column and skip until the migration is applied.**
 - **Frontend**: `/journal` route + "Séance" nav in `App.jsx`. State machine in `lib/useSessionJournal.js` (idle/prompt/active/summary). One-handed `QuickStepper` (±2.5 kg / ±1 rep), `SessionTimer` (anchored to server `started_at`, D-12), `RestTimer` (Web Audio beeps via `lib/restTimerAudio.js`, silent fallback). Auto-save cadence is a **frontend Vite var** `VITE_SESSION_AUTOSAVE_INTERVAL_MS` (default 30000 in `frontend/src/lib/sessionConfig.js`) — no backend config key.
+
+## Phase 5 — Load Tracking & Progression Algorithm (added 2026-06-02)
+
+- **Read-only analytics layer** over Phase 4 data — **0 migrations, 0 new tables, no new dependency**. Three composed read endpoints at `/api/v1/load-tracking/*` (`overview`, `exercises/:id`, `phase-comparison`), mounted after `/sessions` in `app.js`. Pure presenter boundary `services/loadTracking/` (`statusMap.js`, `overviewView.js`, `exerciseProgressView.js`, `phaseRadarView.js`); controllers read DAOs and hand plain data to presenters. Never writes, never re-runs the engine (FR-022).
+- **`one_rep_max_records` is the time series** (research D-1): one row per exercise per finished session — `source_weight_kg` (= heaviest completed set = current load + all-time record via max), `primary_estimate_kg` (= e1RM, drives trend + projection). New read `oneRepMaxRecords.seriesForAthlete`. Volume/last-10 come from `sessions.dao.recentSessionVolumesForExercise` (D-11).
+- **Trend + projection** (pure `services/engine/trendProjection.js`, D-2/D-3): trend = signed e1RM change over the last **30 days**, `flat` when |Δ| ≤ **1%** (fixed dead-band, NOT `on_pace_pct_per_month`); 8-week projection = **least-squares linear fit** over the e1RM series, `null` below **3** points. The detail chart's primary line is the e1RM series (the projection extends it); working load is the secondary line; all-time record is the heaviest completed set, annotated (I1).
+- **Status map** (`statusMap.js`, D-5): the 5 persisted `progression_flags` types → 4 per-exercise badges (`add_load`→ready, `regression`→regressing, muscle-group `stagnation`→stagnation when the exercise has no own actionable flag, else `maintain`) + a separate muscle-group **deload notice**.
+- **Phase attribution** (D-7): `phaseForDate` extracted from `currentTrainingPhase` (which now delegates to it) buckets sessions by date; the radar (`phaseRadarView.js`, D-8) = avg per-day top working load per muscle group per phase.
+- **Charts are hand-rolled SVG** (D-9): pure geometry in `frontend/src/lib/chartGeometry.js` (`linearScale`/`linePath`/`barRects`/`radarPolygon`/`niceTicks`, unit-tested) drives `components/charts/{LineChart,BarChart,RadarChart}.jsx`. No charting library. Frontend route tree `/load-tracking`, `/load-tracking/exercises/:id`, `/load-tracking/phases` + "Charges" nav.

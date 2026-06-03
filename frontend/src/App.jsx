@@ -14,6 +14,9 @@ import ProgramWeek from './pages/program/ProgramWeek.jsx';
 import ProgramDay from './pages/program/ProgramDay.jsx';
 import ExerciseDetail from './pages/program/ExerciseDetail.jsx';
 import SessionJournal from './pages/journal/SessionJournal.jsx';
+import LoadOverview from './pages/loadTracking/LoadOverview.jsx';
+import ExerciseProgress from './pages/loadTracking/ExerciseProgress.jsx';
+import PhaseComparison from './pages/loadTracking/PhaseComparison.jsx';
 import SettingsLayout from './pages/settings/SettingsLayout.jsx';
 import ProfileSettings from './pages/settings/ProfileSettings.jsx';
 import ScheduleSettings from './pages/settings/ScheduleSettings.jsx';
@@ -39,6 +42,9 @@ function Shell() {
         </Link>
         <Link to="/journal" className="hover:text-accent">
           Séance
+        </Link>
+        <Link to="/load-tracking" className="hover:text-accent">
+          Charges
         </Link>
         <Link to="/settings" className="hover:text-accent">
           Paramètres
@@ -76,6 +82,9 @@ export default function App() {
           <Route path="/program/day/:dayOfWeek" element={<ProgramDay />} />
           <Route path="/program/exercises/:id" element={<ExerciseDetail />} />
           <Route path="/journal" element={<SessionJournal />} />
+          <Route path="/load-tracking" element={<LoadOverview />} />
+          <Route path="/load-tracking/exercises/:id" element={<ExerciseProgress />} />
+          <Route path="/load-tracking/phases" element={<PhaseComparison />} />
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />
