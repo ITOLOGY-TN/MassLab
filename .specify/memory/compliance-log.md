@@ -140,3 +140,20 @@ in the phases that touch those modules.
 **Findings / follow-ups**:
 - T004 (apply migrations `20260602000002`/`20260602000003` to the cloud project) is OUTSTANDING — applying DDL to the production Supabase project requires explicit user authorization (the auto-mode classifier correctly blocked `supabase db push`). Session contract/integration tests probe-skip on the `day_of_week` column until applied; T053 (quickstart validation) is blocked on the same.
 - **Localization seam**: new frontend copy is hardcoded French, consistent with Phases 1–3 — project-wide deviation, tracked, not introduced here.
+
+---
+
+## Phase 5 — Load Tracking & Progression Algorithm (2026-06-02)
+
+**Audit method**: `/speckit-implement` (US1–US3), tests-first for every number-producing function; full backend suite (310) + Phase 5 frontend smoke (6) green; load-tracking contract + consistency verified live against the cloud project.
+
+- **I. Tenant-ready data model** — PASS. No new table, no migration. Every read is parameterised by `req.athleteId` over already-RLS-protected tables; no endpoint trusts a body-supplied tenant id. The consistency integration test asserts a load-tracking GET returns only the athlete's data.
+- **II. Layered architecture** — PASS. Two read-only methods added to existing DAOs are the only Supabase touch; `services/loadTracking/*`, `services/engine/trendProjection.js`, and `frontend/src/lib/chartGeometry.js` are pure (no I/O, caller-supplied `now`). `phaseForDate` extracted from `currentTrainingPhase` (one source of truth).
+- **III. Config over hardcoding** — PASS. No new config. Algorithm constants (8-week horizon, ≥3-point floor, 30-day window, 1% flat band) are documented constants in the pure helpers; the 1% dead-band is explicitly decoupled from the engine's `on_pace_pct_per_month`.
+- **IV. Versioned API** — PASS. Three additive read endpoints under `/api/v1/load-tracking`; `{ data }` envelope; 200/404. No existing contract changed.
+- **V. Test-first for domain logic** — PASS. `statusMap`, `trendDirection`, `projectOneRm`, the three presenters, `phaseForDate`, and the `chartGeometry` functions (incl. `radarPolygon`) are unit-tested. 1RM/progression reuse already-tested Phase 1/4 output. UI ships smoke tests.
+- **VI. Athlete-first UX** — PASS. Overview/detail/radar each answer a real post-session question; hand-rolled SVG charts over Tailwind tokens keep the premium look (no generic chart library); empty/low-data states are designed.
+
+**Findings / follow-ups**:
+- READ-ONLY confirmed: a load-tracking GET appends no `progression_flags` / `one_rep_max_records` / `calculation_results` rows (asserted in `tests/integration/loadTracking.consistency.test.js`).
+- **Localization seam**: new frontend copy is hardcoded French, consistent with Phases 1–4 — project-wide deviation, tracked, not introduced here.

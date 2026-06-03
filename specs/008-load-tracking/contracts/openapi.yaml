@@ -1,0 +1,314 @@
+openapi: 3.1.0
+info:
+  title: MassLab API — Phase 5 surface (Load Tracking & Progression Algorithm)
+  version: 1.5.0-phase5
+  description: |
+    Phase 5 adds a READ-ONLY Load Tracking surface (/load-tracking/*) that
+    composes the persisted progression flags, 1RM records, and session history
+    into three view models — a per-exercise overview, a per-exercise progression
+    detail, and a phase-comparison radar. It writes nothing and re-runs no
+    engine rule.
+
+    All routes live under /api/v1/ and use the canonical `{ data: ... }` success
+    envelope and the canonical Error envelope from Phase 0. Phase 5 is ADDITIVE
+    to the v1 contract; no existing endpoint changes semantics (Principle IV).
+    History-derived fields are null/empty until sessions accumulate.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local dev (Express); proxied by the Vite dev server.
+
+tags:
+  - name: load-tracking
+    description: Read-only composed load-tracking + progression views.
+
+components:
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+    ExerciseId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, examples: [NOT_FOUND] }
+            message: { type: string }
+            request_id: { type: string }
+            details: { type: object, additionalProperties: true }
+
+    MuscleGroupRef:
+      type: object
+      required: [name, color]
+      properties:
+        name: { type: string }
+        color: { type: string, description: 'Hex color, e.g. #E54D2E' }
+
+    ProgressionStatus:
+      type: string
+      enum: [ready_to_increase, maintain, stagnation, regressing]
+      description: >
+        Per-exercise badge derived from the active progression flags (D-5):
+        exercise add_load → ready_to_increase, exercise regression → regressing,
+        muscle-group stagnation (when no actionable own flag) → stagnation,
+        else maintain. Deload is surfaced separately (see deload_notices).
+
+    Trend:
+      type: object
+      required: [direction, change_pct]
+      properties:
+        direction: { type: string, enum: [up, flat, down] }
+        change_pct:
+          { type: number, description: 'Signed % change in estimated 1RM over ~30 days (D-3).' }
+
+    OverviewExercise:
+      type: object
+      required:
+        [
+          exercise_id,
+          slug,
+          name,
+          is_active,
+          current_load_kg,
+          all_time_record_kg,
+          last_session_volume_kg,
+          status,
+        ]
+      properties:
+        exercise_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        muscle_group:
+          oneOf:
+            - $ref: '#/components/schemas/MuscleGroupRef'
+            - type: 'null'
+        is_active: { type: boolean }
+        current_load_kg:
+          type: [number, 'null']
+          description: Heaviest completed set in the most recent session (D-6); null when no history.
+        all_time_record_kg:
+          type: [number, 'null']
+          description: Heaviest completed set ever (D-4); null when none.
+        last_session_volume_kg:
+          type: [number, 'null']
+          description: Σ weight×reps of completed sets in the most recent session (FR-007); null when none.
+        trend:
+          oneOf:
+            - $ref: '#/components/schemas/Trend'
+            - type: 'null'
+          description: Estimated-1RM trend (D-3); null when too little history.
+        status: { $ref: '#/components/schemas/ProgressionStatus' }
+        status_increment_kg:
+          type: [number, 'null']
+          description: Recommended increment; present only for ready_to_increase.
+
+    DeloadNotice:
+      type: object
+      required: [muscle_group]
+      properties:
+        muscle_group: { $ref: '#/components/schemas/MuscleGroupRef' }
+
+    OverviewView:
+      type: object
+      required: [exercises, deload_notices, empty]
+      properties:
+        exercises:
+          type: array
+          items: { $ref: '#/components/schemas/OverviewExercise' }
+        deload_notices:
+          type: array
+          items: { $ref: '#/components/schemas/DeloadNotice' }
+        empty:
+          type: boolean
+          description: true when the athlete has no logged history at all.
+
+    LoadPoint:
+      type: object
+      required: [date, working_load_kg, estimate_1rm_kg]
+      properties:
+        date: { type: string, format: date }
+        working_load_kg: { type: number }
+        estimate_1rm_kg: { type: number }
+
+    VolumePoint:
+      type: object
+      required: [date, session_id, total_volume_kg]
+      properties:
+        date: { type: string, format: date }
+        session_id: { type: integer }
+        total_volume_kg: { type: number }
+
+    RecentSessionRow:
+      type: object
+      required: [session_id, date, top_weight_kg, top_reps, total_volume_kg]
+      properties:
+        session_id: { type: integer }
+        date: { type: string, format: date }
+        top_weight_kg: { type: number }
+        top_reps: { type: integer }
+        total_volume_kg: { type: number }
+
+    Projection:
+      type: object
+      required: [method, weeks_ahead, points]
+      properties:
+        method: { type: string, enum: [least_squares_linear] }
+        weeks_ahead: { type: integer }
+        points:
+          type: array
+          items:
+            type: object
+            required: [date, estimate_1rm_kg]
+            properties:
+              date: { type: string, format: date }
+              estimate_1rm_kg: { type: number }
+
+    ExerciseProgressView:
+      type: object
+      required:
+        [
+          exercise_id,
+          slug,
+          name,
+          is_active,
+          current_estimate_1rm_kg,
+          all_time_record_kg,
+          load_series,
+          volume_series,
+          recent_sessions,
+          projection,
+        ]
+      properties:
+        exercise_id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        is_active: { type: boolean }
+        current_estimate_1rm_kg: { type: [number, 'null'] }
+        all_time_record_kg: { type: [number, 'null'] }
+        load_series:
+          type: array
+          items: { $ref: '#/components/schemas/LoadPoint' }
+        volume_series:
+          type: array
+          items: { $ref: '#/components/schemas/VolumePoint' }
+        recent_sessions:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/RecentSessionRow' }
+        projection:
+          oneOf:
+            - $ref: '#/components/schemas/Projection'
+            - type: 'null'
+          description: Least-squares 8-week projection (D-2); null when < 3 qualifying points.
+
+    PhaseMuscleValue:
+      type: object
+      required: [muscle_group, avg_working_load_kg]
+      properties:
+        muscle_group: { type: string }
+        avg_working_load_kg: { type: number }
+
+    PhaseSeries:
+      type: object
+      required: [slug, name, values]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        values:
+          type: array
+          items: { $ref: '#/components/schemas/PhaseMuscleValue' }
+
+    PhaseRadarView:
+      type: object
+      required: [muscle_groups, phases, empty]
+      properties:
+        muscle_groups:
+          type: array
+          items: { $ref: '#/components/schemas/MuscleGroupRef' }
+        phases:
+          type: array
+          items: { $ref: '#/components/schemas/PhaseSeries' }
+        empty:
+          type: boolean
+          description: true when fewer than 2 phases have logged data (FR-020).
+
+  responses:
+    NotFound:
+      description: Resource not found or not owned by the athlete.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+security:
+  - SupabaseBearer: []
+
+paths:
+  /load-tracking/overview:
+    get:
+      tags: [load-tracking]
+      summary: Per-exercise progression overview (status, load, record, volume, trend).
+      operationId: getLoadTrackingOverview
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      responses:
+        '200':
+          description: One row per exercise + muscle-group deload notices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/OverviewView' }
+
+  /load-tracking/exercises/{id}:
+    get:
+      tags: [load-tracking]
+      summary: Per-exercise progression detail (series, last-10, 1RM, record, projection).
+      operationId: getLoadTrackingExercise
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/ExerciseId'
+      responses:
+        '200':
+          description: Composed progression detail; history fields empty/null when sparse.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/ExerciseProgressView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /load-tracking/phase-comparison:
+    get:
+      tags: [load-tracking]
+      summary: Radar of average working load per muscle group per training phase.
+      operationId: getLoadTrackingPhaseComparison
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      responses:
+        '200':
+          description: Radar axes (muscle groups) + one series per phase with data.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PhaseRadarView' }

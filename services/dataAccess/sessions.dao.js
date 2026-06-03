@@ -282,6 +282,93 @@ export function sessionsDao(supabase) {
     },
 
     /**
+     * Phase 5 (008-load-tracking, D-11) — per-session rollup for one exercise:
+     * `[{ session_id, date, top_weight_kg, top_reps, total_volume_kg }]` over
+     * COMPLETED sets, newest first. Powers the volume bars + last-10 table.
+     */
+    async recentSessionVolumesForExercise(athleteId, exerciseId, { limit = 10 } = {}) {
+      const { data: setRows, error: setErr } = await supabase
+        .from('session_sets')
+        .select('session_id, weight_kg, reps, completed')
+        .eq('athlete_id', athleteId)
+        .eq('exercise_id', exerciseId)
+        .eq('completed', true);
+      if (setErr) throw new HttpError(500, 'DB_ERROR', setErr.message);
+      if (!setRows?.length) return [];
+
+      const sessionIds = [...new Set(setRows.map((r) => r.session_id))];
+      const { data: sessions, error } = await supabase
+        .from('session_journal_entries')
+        .select('id, started_at')
+        .eq('athlete_id', athleteId)
+        .in('id', sessionIds)
+        .not('ended_at', 'is', null) // finished sessions only — exclude an in-progress one
+        .order('started_at', { ascending: false })
+        .limit(limit);
+      if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+
+      return (sessions ?? []).map((s) => {
+        const sets = setRows.filter((r) => r.session_id === s.id);
+        let top = null;
+        for (const x of sets) {
+          if (!top || Number(x.weight_kg) > Number(top.weight_kg)) top = x;
+        }
+        const total = sets.reduce((acc, x) => acc + Number(x.weight_kg) * Number(x.reps), 0);
+        return {
+          session_id: s.id,
+          date: String(s.started_at).slice(0, 10),
+          top_weight_kg: top ? Number(top.weight_kg) : null,
+          top_reps: top ? top.reps : null,
+          total_volume_kg: Math.round(total * 100) / 100,
+        };
+      });
+    },
+
+    /**
+     * Phase 5 (008-load-tracking) — the most-recent FINISHED session's completed
+     * volume for EVERY exercise, in two queries (not N). Returns a plain object
+     * `{ [exercise_id]: total_volume_kg }`; absent exercises are simply omitted.
+     */
+    async latestSessionVolumeByExercise(athleteId) {
+      const { data: sets, error: setErr } = await supabase
+        .from('session_sets')
+        .select('session_id, exercise_id, weight_kg, reps')
+        .eq('athlete_id', athleteId)
+        .eq('completed', true);
+      if (setErr) throw new HttpError(500, 'DB_ERROR', setErr.message);
+      if (!sets?.length) return {};
+
+      const sessionIds = [...new Set(sets.map((s) => s.session_id))];
+      const { data: sessions, error } = await supabase
+        .from('session_journal_entries')
+        .select('id, started_at')
+        .eq('athlete_id', athleteId)
+        .in('id', sessionIds)
+        .not('ended_at', 'is', null);
+      if (error) throw new HttpError(500, 'DB_ERROR', error.message);
+
+      const startedAt = new Map(
+        (sessions ?? []).map((s) => [s.id, new Date(s.started_at).getTime()]),
+      );
+      const latestByEx = new Map(); // exercise_id → { sid, t }
+      for (const st of sets) {
+        const t = startedAt.get(st.session_id);
+        if (t == null) continue; // not a finished session
+        const cur = latestByEx.get(st.exercise_id);
+        if (!cur || t > cur.t) latestByEx.set(st.exercise_id, { sid: st.session_id, t });
+      }
+
+      const out = {};
+      for (const [exId, { sid }] of latestByEx) {
+        const total = sets
+          .filter((s) => s.exercise_id === exId && s.session_id === sid)
+          .reduce((acc, s) => acc + Number(s.weight_kg) * Number(s.reps), 0);
+        out[exId] = Math.round(total * 100) / 100;
+      }
+      return out;
+    },
+
+    /**
      * Full athlete history for the finish-time progression engine (D-6):
      * sessions (id, started_at) + a flat sets array. Called after finishSession
      * so the just-completed session's sets are included.
