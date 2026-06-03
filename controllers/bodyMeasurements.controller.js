@@ -3,7 +3,11 @@ import { bodyComposition } from '../services/engine/bodyComposition.js';
 import { resolveConstants } from '../services/engine/resolveConstants.js';
 import { writeAudit } from '../services/engine/auditWriter.js';
 import { ENGINE_VERSION } from '../services/engine/constants.js';
-import { bodyMeasurementSchema, validate } from '../services/engine/inputSchemas.js';
+import {
+  bodyMeasurementSchema,
+  validate,
+  BODY_CIRCUMFERENCE_FIELDS,
+} from '../services/engine/inputSchemas.js';
 import { programController } from './program.controller.js';
 
 // Format a Date as a YYYY-MM-DD calendar day in UTC, matching the ISO
@@ -38,6 +42,21 @@ export function bodyMeasurementsController({ daos, now = () => new Date() }) {
 
     async create(req, res, next) {
       try {
+        // FR-003: a weigh-in must carry a weight or at least one circumference.
+        // Surface the value-less body as 400 VALIDATION_FAILED (consistent with
+        // the future-date guard below) ahead of the schema's range checks, which
+        // otherwise report it as a generic 422.
+        if (
+          req.body?.weight_kg == null &&
+          !BODY_CIRCUMFERENCE_FIELDS.some((field) => req.body?.[field] != null)
+        ) {
+          throw new HttpError(
+            400,
+            'VALIDATION_FAILED',
+            'a weigh-in requires a weight or at least one circumference measurement',
+          );
+        }
+
         const body = validate(bodyMeasurementSchema, req.body);
 
         // FR-005: reject a weigh-in dated in the future (compared to server today).

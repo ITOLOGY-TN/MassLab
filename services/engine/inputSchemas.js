@@ -65,7 +65,7 @@ export const bodyCompositionSchema = z.object({
 
 // Phase 6 (009-body-weight-measurements) T011 [US1] — the seven circumference
 // fields a weigh-in may carry. Used by the at-least-one-value refine (FR-003).
-const BODY_CIRCUMFERENCE_FIELDS = Object.freeze([
+export const BODY_CIRCUMFERENCE_FIELDS = Object.freeze([
   'arm_cm',
   'chest_cm',
   'thigh_cm',
