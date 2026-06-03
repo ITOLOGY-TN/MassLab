@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+
 // Phase 9 (012-phase9-recovery-wellbeing) T013 — hand-rolled clickable SVG human
 // body for tagging sore muscle zones. Tap a region to toggle it in/out of the
 // selected set. The renderable zone list comes from the API's
@@ -25,8 +27,12 @@ const ZONE_LABELS = {
 
 // Anatomical hit regions per silhouette. Each entry is a list of rounded-rect
 // shapes (front and back share a coordinate system, 120 wide × 260 tall) so a
-// muscle that spans left+right limbs registers a single zone toggle. Generous
-// sizing keeps every tap target comfortably above the 44px guidance once scaled.
+// muscle that spans left+right limbs registers a single zone toggle. A transparent
+// padded hit-rect (HIT_PAD units) sits behind each visible shape to enlarge the
+// tap/focus target toward the 44px guidance without distorting the silhouette
+// (Constitution VI — one-handed selection).
+const HIT_PAD = 7;
+
 const FRONT_REGIONS = {
   neck: [{ x: 52, y: 24, w: 16, h: 12, rx: 6 }],
   shoulders: [
@@ -131,28 +137,39 @@ function BodySide({ label, regions, allowed, selected, onToggle, disabled }) {
               >
                 <title>{ZONE_LABELS[zone] ?? zone}</title>
                 {shapes.map((s, i) => (
-                  <rect
-                    key={i}
-                    x={s.x}
-                    y={s.y}
-                    width={s.w}
-                    height={s.h}
-                    rx={s.rx}
-                    className="transition-all"
-                    fill={
-                      active
-                        ? 'rgb(var(--color-accent))'
-                        : 'rgb(var(--color-surface))'
-                    }
-                    fillOpacity={active ? 0.9 : disabled ? 0.4 : 0.75}
-                    stroke={
-                      active
-                        ? 'rgb(var(--color-accent))'
-                        : 'rgb(var(--color-muted))'
-                    }
-                    strokeOpacity={active ? 1 : 0.5}
-                    strokeWidth={active ? 2 : 1}
-                  />
+                  <Fragment key={i}>
+                    {/* Transparent padded hit area — enlarges the tap/focus target
+                        without changing the visible silhouette (Constitution VI). */}
+                    <rect
+                      x={s.x - HIT_PAD}
+                      y={s.y - HIT_PAD}
+                      width={s.w + HIT_PAD * 2}
+                      height={s.h + HIT_PAD * 2}
+                      rx={s.rx + HIT_PAD}
+                      fill="transparent"
+                    />
+                    <rect
+                      x={s.x}
+                      y={s.y}
+                      width={s.w}
+                      height={s.h}
+                      rx={s.rx}
+                      className="transition-all"
+                      fill={
+                        active
+                          ? 'rgb(var(--color-accent))'
+                          : 'rgb(var(--color-surface))'
+                      }
+                      fillOpacity={active ? 0.9 : disabled ? 0.4 : 0.75}
+                      stroke={
+                        active
+                          ? 'rgb(var(--color-accent))'
+                          : 'rgb(var(--color-muted))'
+                      }
+                      strokeOpacity={active ? 1 : 0.5}
+                      strokeWidth={active ? 2 : 1}
+                    />
+                  </Fragment>
                 ))}
               </g>
             );

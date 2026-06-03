@@ -376,13 +376,21 @@ export function sessionsDao(supabase) {
      * (FR-018). The pure `sleepPerformanceScatter` buckets these by calendar day.
      */
     async dailyTrainingVolumes(athleteId, { from, to } = {}) {
+      // `ended_at` is a timestamptz; `from`/`to` are day-grain (YYYY-MM-DD). Compare
+      // against UTC day boundaries so a session finished later on `to` is not dropped
+      // (exclusive next-day-start as the upper bound). Day grain = server UTC.
+      const startIso = from != null ? `${from}T00:00:00.000Z` : null;
+      const endExclusiveIso =
+        to != null
+          ? new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000).toISOString()
+          : null;
       let q = supabase
         .from('session_journal_entries')
         .select('ended_at, total_volume_kg')
         .eq('athlete_id', athleteId)
         .not('ended_at', 'is', null);
-      if (from != null) q = q.gte('ended_at', from);
-      if (to != null) q = q.lte('ended_at', to);
+      if (startIso != null) q = q.gte('ended_at', startIso);
+      if (endExclusiveIso != null) q = q.lt('ended_at', endExclusiveIso);
       const { data, error } = await q.order('ended_at', { ascending: true });
       if (error) throw new HttpError(500, 'DB_ERROR', error.message);
       return (data ?? []).map((r) => ({

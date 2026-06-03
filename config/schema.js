@@ -109,7 +109,9 @@ export const baseSchema = z.object({
     .default(30)
     .refine((n) => n > 0, 'RECOVERY_TREND_DAYS must be > 0'),
   // Stress ≥ this counts as "high" (0–10).
-  RECOVERY_STRESS_HIGH: intFromString('RECOVERY_STRESS_HIGH').default(7),
+  RECOVERY_STRESS_HIGH: intFromString('RECOVERY_STRESS_HIGH')
+    .default(7)
+    .refine((n) => n >= 0 && n <= 10, 'RECOVERY_STRESS_HIGH must be between 0 and 10'),
   // Consecutive high-stress days that trigger the cortisol warning; must be > 0.
   RECOVERY_STRESS_HIGH_DAYS: intFromString('RECOVERY_STRESS_HIGH_DAYS')
     .default(3)
@@ -119,7 +121,9 @@ export const baseSchema = z.object({
     .default(6)
     .refine((n) => n > 0, 'RECOVERY_SLEEP_LOW_HOURS must be > 0'),
   // Average energy ≤ this is "low" (0–10).
-  RECOVERY_ENERGY_LOW: intFromString('RECOVERY_ENERGY_LOW').default(4),
+  RECOVERY_ENERGY_LOW: intFromString('RECOVERY_ENERGY_LOW')
+    .default(4)
+    .refine((n) => n >= 0 && n <= 10, 'RECOVERY_ENERGY_LOW must be between 0 and 10'),
   // Window (days) for the reduce-volume averages; must be > 0.
   RECOVERY_LOW_WINDOW_DAYS: intFromString('RECOVERY_LOW_WINDOW_DAYS')
     .default(3)

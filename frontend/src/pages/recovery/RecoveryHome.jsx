@@ -50,7 +50,9 @@ function payloadFromForm(form, loggedOn) {
   if (form.mood != null) body.mood = form.mood;
   // sore_zones is always sent: [] is an explicit "no soreness reported" (FR-003).
   body.sore_zones = form.sore_zones;
-  if (form.note != null && form.note.trim() !== '') body.note = form.note;
+  // note is always sent (trimmed): emptying it must CLEAR the saved value, but an
+  // omitted field is a no-op under the partial-save upsert — so '' is sent explicitly.
+  body.note = typeof form.note === 'string' ? form.note.trim() : '';
   return body;
 }
 
