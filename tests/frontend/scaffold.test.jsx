@@ -26,7 +26,7 @@ beforeEach(() => {
 describe('ScaffoldHome (frontend smoke)', () => {
   it('fetches /api/v1/athlete/me and renders the seeded display_name', async () => {
     render(<ScaffoldHome />);
-    expect(globalThis.fetch).toHaveBeenCalled();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Ahmed/i),
     );

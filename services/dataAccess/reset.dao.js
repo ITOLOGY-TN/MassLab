@@ -10,6 +10,8 @@ const MODULE_TABLES = Object.freeze({
   // Phase 8: children precede `supplements` (supplement_id FK cascades, but explicit
   // deletion yields accurate counts and is robust if the FK rule ever changes).
   supplements: ['supplement_intake_log', 'supplement_weekly_assessment', 'supplements'],
+  // Phase 9 adds columns to the existing `recovery_log` table (no new table);
+  // deleting the row removes those columns with it — no change needed here.
   recovery: ['recovery_log'],
   calculator_results: ['calculation_results'],
   preferences: [], // handled specially by resetPreferencesAndOverrides
@@ -54,6 +56,7 @@ const FULL_WIPE_ORDER = Object.freeze([
   'generated_programs',
   'progression_flags',
   'one_rep_max_records',
+  // Phase 9 columns live on this same row, so they are wiped with it (no new table).
   'recovery_log',
 ]);
 

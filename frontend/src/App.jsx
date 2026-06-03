@@ -7,6 +7,8 @@ import NutritionDay from './pages/nutrition/NutritionDay.jsx';
 import NutritionTrends from './pages/nutrition/NutritionTrends.jsx';
 import SupplementsHome from './pages/supplements/SupplementsHome.jsx';
 import SupplementsTrends from './pages/supplements/SupplementsTrends.jsx';
+import RecoveryHome from './pages/recovery/RecoveryHome.jsx';
+import RecoveryTrends from './pages/recovery/RecoveryTrends.jsx';
 import CalculatorsHome from './pages/calculators/CalculatorsHome.jsx';
 import BmrCalculator from './pages/calculators/BmrCalculator.jsx';
 import TdeeCalculator from './pages/calculators/TdeeCalculator.jsx';
@@ -42,6 +44,9 @@ function Shell() {
         </Link>
         <Link to="/supplements" className="hover:text-accent">
           Suppléments
+        </Link>
+        <Link to="/recovery" className="hover:text-accent">
+          Récupération
         </Link>
         <Link to="/calculators" className="hover:text-accent">
           Calculateurs
@@ -87,6 +92,8 @@ export default function App() {
           <Route path="/nutrition/trends" element={<NutritionTrends />} />
           <Route path="/supplements" element={<SupplementsHome />} />
           <Route path="/supplements/trends" element={<SupplementsTrends />} />
+          <Route path="/recovery" element={<RecoveryHome />} />
+          <Route path="/recovery/trends" element={<RecoveryTrends />} />
           <Route path="/calculators" element={<CalculatorsHome />} />
           <Route path="/calculators/bmr" element={<BmrCalculator />} />
           <Route path="/calculators/tdee" element={<TdeeCalculator />} />

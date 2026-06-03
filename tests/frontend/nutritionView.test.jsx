@@ -4,6 +4,25 @@ import NutritionHome from '../../frontend/src/pages/NutritionHome.jsx';
 
 beforeEach(() => {
   globalThis.fetch = vi.fn(async (url) => {
+    if (String(url).endsWith('/api/v1/me/nutrition-targets')) {
+      return new Response(
+        JSON.stringify({
+          data: {
+            daily_kcal: 2758,
+            daily_protein_g: 109,
+            daily_carbs_g: 407,
+            daily_fat_g: 77,
+            source: {
+              daily_kcal: 'engine',
+              daily_protein_g: 'engine',
+              daily_carbs_g: 'engine',
+              daily_fat_g: 'engine',
+            },
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
     if (String(url).endsWith('/api/v1/nutrition/targets')) {
       return new Response(
         JSON.stringify({
@@ -23,7 +42,7 @@ beforeEach(() => {
 describe('NutritionHome (frontend smoke)', () => {
   it('fetches /api/v1/nutrition/targets and renders the four numbers', async () => {
     render(<NutritionHome />);
-    expect(globalThis.fetch).toHaveBeenCalled();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/2758 kcal/)).toBeInTheDocument());
     expect(screen.getByText('109 g')).toBeInTheDocument();
     expect(screen.getByText('407 g')).toBeInTheDocument();
