@@ -36,6 +36,12 @@ describe('trendDirection (D-3: 30-day window, 1% flat band)', () => {
     const series = oneRmSeries([rec('2026-05-05', 85, 96), rec('2026-05-28', 80, 90)]);
     expect(trendDirection({ series, now }).direction).toBe('down');
   });
+  it('up when just outside the band (~1.04%) — not rounded into flat', () => {
+    const series = oneRmSeries([rec('2026-05-05', 80, 96), rec('2026-05-28', 80, 97)]); // (97-96)/96 = 1.04%
+    const t = trendDirection({ series, now });
+    expect(t.direction).toBe('up');
+    expect(t.change_pct).toBe(1); // exposed value rounds to 1, but classification used the raw 1.04%
+  });
   it('neutral (null) with < 2 points in the window', () => {
     const series = oneRmSeries([rec('2026-03-01', 80, 90), rec('2026-05-28', 85, 96)]); // only one in last 30d
     expect(trendDirection({ series, now })).toBeNull();

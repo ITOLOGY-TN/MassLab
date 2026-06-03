@@ -73,19 +73,10 @@ export function loadTrackingController({ daos }) {
           }
         }
 
+        // One batched read for every exercise's last finished-session volume.
+        const volumeByEx = await daos.sessions.latestSessionVolumeByExercise(athleteId);
         const lastSessionVolumeByExerciseId = new Map(
-          await Promise.all(
-            exercises.map(async (ex) => {
-              const [latest] = await daos.sessions.recentSessionVolumesForExercise(
-                athleteId,
-                ex.id,
-                {
-                  limit: 1,
-                },
-              );
-              return [ex.id, latest ? latest.total_volume_kg : null];
-            }),
-          ),
+          exercises.map((ex) => [ex.id, volumeByEx[ex.id] ?? null]),
         );
 
         const groupByName = new Map(mg.groups.map((g) => [g.name, g]));

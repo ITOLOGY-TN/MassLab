@@ -52,14 +52,12 @@ describe('contract: /api/v1/load-tracking', () => {
 
   it('exercise detail returns the ExerciseProgressView shape (404 on bad id)', async () => {
     if (!live) return;
-    const { data: ex } = await supabase
-      .from('exercises')
-      .select('id')
-      .order('id', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (ex) {
-      const res = await request(app).get(`/api/v1/load-tracking/exercises/${ex.id}`);
+    // Use an exercise id from the overview so it is guaranteed to belong to the
+    // request athlete (a global first-row id may belong to another athlete → 404).
+    const ov = await request(app).get('/api/v1/load-tracking/overview');
+    const exerciseId = ov.body.data.exercises[0]?.exercise_id;
+    if (exerciseId) {
+      const res = await request(app).get(`/api/v1/load-tracking/exercises/${exerciseId}`);
       expect(res.status).toBe(200);
       for (const k of [
         'exercise_id',

@@ -46,6 +46,23 @@ describe('buildPhaseRadar', () => {
     expect(view.empty).toBe(false);
   });
 
+  it('collapses same-day records to the day max before averaging', () => {
+    const records = [
+      rec(101, '2026-01-03', 70),
+      rec(101, '2026-01-03', 95), // same day, same group → only the 95 counts that day
+      rec(201, '2026-02-10', 120), // a second phase so the view is not empty
+    ];
+    const view = buildPhaseRadar({
+      records,
+      exerciseMuscleGroup,
+      muscleGroups,
+      phases,
+      programStartDate,
+    });
+    const foundation = view.phases.find((p) => p.slug === 'foundation');
+    expect(foundation.values.find((v) => v.muscle_group === 'Chest').avg_working_load_kg).toBe(95);
+  });
+
   it('empty:true when fewer than two phases have data', () => {
     const records = [rec(101, '2026-01-03', 80)];
     const view = buildPhaseRadar({

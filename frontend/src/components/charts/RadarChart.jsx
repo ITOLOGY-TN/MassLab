@@ -33,8 +33,10 @@ export default function RadarChart({ axes = [], phases = [] }) {
         />
       ))}
       {phases.map((ph, pi) => {
+        // Align values to the axes by muscle_group (don't assume array order).
+        const byGroup = new Map(ph.values.map((v) => [v.muscle_group, v.avg_working_load_kg]));
         const pts = radarPolygon({
-          values: ph.values.map((v) => v.avg_working_load_kg),
+          values: axes.map((a) => byGroup.get(a.name) ?? 0),
           cx: C,
           cy: C,
           radius: R,

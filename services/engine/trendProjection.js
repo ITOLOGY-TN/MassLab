@@ -41,9 +41,10 @@ export function trendDirection({ series = [], windowDays = 30, flatBandPct = 1, 
   const first = win[0].estimate_1rm_kg;
   const last = win[win.length - 1].estimate_1rm_kg;
   if (!(first > 0)) return null;
-  const change_pct = round1(((last - first) / first) * 100);
-  const direction = Math.abs(change_pct) <= flatBandPct ? 'flat' : change_pct > 0 ? 'up' : 'down';
-  return { direction, change_pct };
+  // Classify on the UNROUNDED change so e.g. 1.04% isn't rounded into the flat band.
+  const rawPct = ((last - first) / first) * 100;
+  const direction = Math.abs(rawPct) <= flatBandPct ? 'flat' : rawPct > 0 ? 'up' : 'down';
+  return { direction, change_pct: round1(rawPct) };
 }
 
 /**
