@@ -28,20 +28,23 @@ function Panel({ title, children }) {
 
 // Map a dimension's weekly ratings onto the LineChart's series shape. The working-
 // load (secondary) line tracks the same value so it stays quietly behind the primary.
-function DimensionPanel({ label, trend, dimKey }) {
+function DimensionPanel({ label, trend, dimKey, current }) {
   const series = trend.map((w) => ({
     estimate_1rm_kg: w[dimKey],
     working_load_kg: w[dimKey],
   }));
+  // "Actuel" reflects the current week's saved assessment (may be null if not yet
+  // rated this week), not whatever the last trend point happens to be.
+  const currentValue = current ? `${current[dimKey]}/5` : '—';
   return (
     <Panel title={label}>
       <LineChart loadSeries={series} />
       <div className="mt-sm flex items-center justify-between text-xs text-muted">
         <span>sem. du {trend[0]?.week_start}</span>
         <span>
-          Actuel <span className="font-medium text-accent">{trend[trend.length - 1]?.[dimKey]}/5</span>
+          Actuel <span className="font-medium text-accent">{currentValue}</span>
         </span>
-        <span>{trend[trend.length - 1]?.week_start}</span>
+        <span>{current?.week_start ?? trend[trend.length - 1]?.week_start}</span>
       </div>
     </Panel>
   );
@@ -84,7 +87,13 @@ export default function SupplementsTrends() {
         (hasData ? (
           <div className="flex flex-col gap-lg">
             {DIMENSIONS.map((d) => (
-              <DimensionPanel key={d.key} label={d.label} dimKey={d.key} trend={trend} />
+              <DimensionPanel
+                key={d.key}
+                label={d.label}
+                dimKey={d.key}
+                trend={trend}
+                current={state.data?.current}
+              />
             ))}
           </div>
         ) : (

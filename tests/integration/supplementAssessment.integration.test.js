@@ -22,6 +22,10 @@ let live = false;
 
 let athleteId = null;
 let weekStart = null;
+// The week actually written by the server (from the PUT response). Captured so
+// cleanup removes the real mutated row even if an ISO-week boundary is crossed
+// between beforeAll's isoWeekStart(today) and the PUT.
+let writtenWeekStart = null;
 let preRow = null;
 let today = null;
 
@@ -72,11 +76,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!live) return;
+  // Remove both the snapshotted week and the week the server actually wrote
+  // (they differ only if an ISO-week boundary was crossed mid-run).
+  const weeks = [...new Set([weekStart, writtenWeekStart].filter(Boolean))];
   await supabase
     .from('supplement_weekly_assessment')
     .delete()
     .eq('athlete_id', athleteId)
-    .eq('week_start', weekStart);
+    .in('week_start', weeks);
   if (preRow) {
     await supabase.from('supplement_weekly_assessment').insert({
       athlete_id: athleteId,
@@ -97,6 +104,7 @@ describe('supplement weekly self-assessment (Phase 8)', () => {
       .put('/api/v1/supplements/assessment')
       .send({ energy: 4, recovery: 3, sleep_quality: 4, strength: 4 });
     expect(first.status).toBe(200);
+    writtenWeekStart = first.body.data.week_start; // server-derived week actually upserted
     expect(first.body.data.week_start).toBe(weekStart);
     expect(await weekCount()).toBe(1);
 

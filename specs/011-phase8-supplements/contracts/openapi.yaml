@@ -98,9 +98,9 @@ components:
       type: object
       properties:
         current:
-          oneOf:
+          allOf:
             - $ref: '#/components/schemas/Assessment'
-            - type: 'null'
+          nullable: true
         editable: { type: boolean }
         trend:
           type: array
@@ -157,7 +157,7 @@ paths:
         - in: query
           name: date
           schema: { type: string, format: date }
-          description: Defaults to today (server local day) when omitted.
+          description: Defaults to today (server calendar day, UTC) when omitted.
       responses:
         '200':
           description: The day's checklist

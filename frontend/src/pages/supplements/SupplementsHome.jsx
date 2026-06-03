@@ -223,7 +223,9 @@ export default function SupplementsHome() {
         await toggleIntake({ supplement_id: supp.id, logged_on: date, taken: !supp.taken });
         await Promise.all([loadChecklist(), loadGrid(grid?.week_start)]);
       } catch {
-        /* surface nothing destructive; a reload reflects server truth */
+        // On a rejected toggle (e.g. 422), resync to server truth rather than
+        // leave the UI showing a state the server didn't accept.
+        await Promise.all([loadChecklist(), loadGrid(grid?.week_start)]);
       } finally {
         setBusyId(null);
       }

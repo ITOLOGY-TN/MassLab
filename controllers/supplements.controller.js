@@ -180,7 +180,9 @@ export function supplementsController({ daos, config, now = () => new Date() }) 
     // T029 — weekly grid: supplements × 7 days, each cell taken/missed/upcoming.
     async getGrid(req, res, next) {
       try {
-        const anchor = resolveDateParam(req.query.week, now);
+        // Read the clock once so the default anchor and the grid asOf share a day.
+        const today = isoDay(now());
+        const anchor = resolveDateParam(req.query.week, () => new Date(`${today}T00:00:00.000Z`));
         const weekStart = isoWeekStart(anchor);
         const days = weekDays(weekStart);
         const locale = req.query.locale ?? config.NUTRITION_LOCALE ?? 'fr-FR';
@@ -195,7 +197,7 @@ export function supplementsController({ daos, config, now = () => new Date() }) 
           catalogue,
           takenRows,
           weekStart,
-          asOf: isoDay(now()),
+          asOf: today,
         });
         res.json({ data });
       } catch (err) {

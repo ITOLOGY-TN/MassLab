@@ -18,7 +18,7 @@ description: 'Task list for Phase 8 — Supplements'
 
 ## Path Conventions
 
-Web app, repo root = `/Users/ahmedbengarali/Projects/MassLab`. Backend at root (`routes/`, `controllers/`, `services/`, `config/`, `supabase/migrations/`, `app.js`); frontend under `frontend/src/`; tests under `tests/{unit,contract,integration,frontend}/`. All Supabase access stays in `services/dataAccess/*` (Constitution II).
+Web app, repo root = `.` (repository root). Backend at root (`routes/`, `controllers/`, `services/`, `config/`, `supabase/migrations/`, `app.js`); frontend under `frontend/src/`; tests under `tests/{unit,contract,integration,frontend}/`. All Supabase access stays in `services/dataAccess/*` (Constitution II).
 
 ---
 
@@ -58,7 +58,7 @@ Web app, repo root = `/Users/ahmedbengarali/Projects/MassLab`. Backend at root (
 
 - [X] T009 [P] [US1] Unit test `tests/unit/supplementChecklistView.test.js` — `checklistView` assembles one item per catalogue supplement in `display_order` with `taken` reflecting the day's records, `is_primary` true for `SUPPLEMENT_PRIMARY_SLUG`, and renders the empty (nothing-taken) shape without error (FR-001/FR-004).
 - [X] T010 [P] [US1] Contract test `tests/contract/supplementsChecklist.contract.test.js` — drives `GET /api/v1/supplements/checklist` and `POST /api/v1/supplements/intake` against the `contracts/openapi.yaml` shapes; **live-gated: probe for `supplement_intake_log` and skip until the migration is applied** (Phase 4/7 pattern).
-- [X] T011 [P] [US1] Integration test `tests/integration/supplementIntake.test.js` — toggle taken=true → row exists; taken=false → removed; double taken=true → one row (SC-002); `logged_on` in a prior ISO week → 422 `OUTSIDE_EDIT_WINDOW`; future `logged_on` → 422 `FUTURE_DATE`; unknown `supplement_id` → 404; wrap mutations in `try/finally` cleanup.
+- [X] T011 [P] [US1] Integration test `tests/integration/supplementIntake.integration.test.js` — toggle taken=true → row exists; taken=false → removed; double taken=true → one row (SC-002); `logged_on` in a prior ISO week → 422 `OUTSIDE_EDIT_WINDOW`; future `logged_on` → 422 `FUTURE_DATE`; unknown `supplement_id` → 404; snapshot the (athlete, supplement, current-day) cell and restore it in `afterAll` so real adherence data is never destroyed.
 
 ### Implementation for User Story 1
 
@@ -129,7 +129,7 @@ Web app, repo root = `/Users/ahmedbengarali/Projects/MassLab`. Backend at root (
 
 - [X] T032 [P] [US4] Unit test `tests/unit/supplementAssessmentView.test.js` — `assessmentView` returns `{ current|null, editable, trend:[…] }` in chronological order and handles the no-data shape (FR-016).
 - [X] T033 [P] [US4] Contract test `tests/contract/supplementsAssessment.contract.test.js` — drives `GET /api/v1/supplements/assessments` + `PUT /api/v1/supplements/assessment` against the `AssessmentBundle`/`Assessment` shapes; live-gated skip until migration applied.
-- [X] T034 [P] [US4] Integration test `tests/integration/supplementAssessment.test.js` — `PUT` then re-`PUT` → one row per ISO week with updated values (FR-013); a rating outside 1–5 → 400; the week is server-derived (client cannot target another week); `try/finally` cleanup.
+- [X] T034 [P] [US4] Integration test `tests/integration/supplementAssessment.integration.test.js` — `PUT` then re-`PUT` → one row per ISO week with updated values (FR-013); a rating outside 1–5 → 400; the week is server-derived (client cannot target another week); snapshot the current-week row and restore it in `afterAll`.
 
 ### Implementation for User Story 4
 
