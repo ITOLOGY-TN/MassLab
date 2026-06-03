@@ -41,6 +41,7 @@ components:
         muscle_group: { type: string, nullable: true }
         exercises:
           type: array
+          maxItems: 3
           description: The first three exercises of today's session, in planned order.
           items:
             type: object

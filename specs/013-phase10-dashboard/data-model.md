@@ -30,7 +30,7 @@ then passes plain values into the pure functions below.
 
 ### 2a. `sessionStreak.js`
 
-```
+```text
 consecutiveSessionStreak({ finishedDays, scheduleDays, asOf, programStart }) → number
 missedScheduledDays({ finishedDays, scheduleDays, asOf }) → number
 ```
@@ -45,7 +45,7 @@ missedScheduledDays({ finishedDays, scheduleDays, asOf }) → number
 
 ### 2b. `dashboardAlerts.js`
 
-```
+```text
 aggregateAlerts(signals, { thresholds }) → Alert[]   // length ≤ 3
 ```
 - `signals`: `{ lowSleepHighStress: {active, context}, noSession: {active, context},
@@ -62,7 +62,7 @@ aggregateAlerts(signals, { thresholds }) → Alert[]   // length ≤ 3
 ## 3. Pure presenters (`services/dashboard/`) — view assembly, no I/O
 
 ### 3a. `todayCard.js`
-```
+```text
 build({ slot, isRestDay, sessionState, exercises }) → {
   is_rest, muscle_group, exercises: [{id,name}],   // first 3
   state: 'not_started'|'in_progress'|'finished'|'rest',
@@ -71,7 +71,7 @@ build({ slot, isRestDay, sessionState, exercises }) → {
 ```
 
 ### 3b. `weekOverview.js`
-```
+```text
 build({ weekDays, scheduleDays, finishedDays, asOf }) → {
   days: [{ date, day_of_week, status: 'done'|'todo'|'rest' }]   // 7 entries
 }
@@ -80,7 +80,7 @@ build({ weekDays, scheduleDays, finishedDays, asOf }) → {
   `todo` = a scheduled day not yet completed (incl. future days — never "missed").
 
 ### 3c. `metricsView.js`
-```
+```text
 build({ weight, calories, streak, phase }) → {
   weight:   { current_kg, start_kg, delta_kg } | null,
   calories: { yesterday_kcal, target_kcal, delta_kcal, over: boolean } | null,
@@ -91,7 +91,7 @@ build({ weight, calories, streak, phase }) → {
 - Each sub-object is `null`/empty-flagged when its source data is missing (FR-018).
 
 ### 3d. `dashboardView.js`
-```
+```text
 build({ today, week, metrics, sparkline, alerts, quote }) → DashboardView
 ```
 - Bundles the tiles + a `has_data` flag per tile so the frontend renders cold-start
