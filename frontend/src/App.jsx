@@ -5,6 +5,8 @@ import { applyTheme } from './lib/theme.js';
 import ScaffoldHome from './pages/ScaffoldHome.jsx';
 import NutritionDay from './pages/nutrition/NutritionDay.jsx';
 import NutritionTrends from './pages/nutrition/NutritionTrends.jsx';
+import SupplementsHome from './pages/supplements/SupplementsHome.jsx';
+import SupplementsTrends from './pages/supplements/SupplementsTrends.jsx';
 import CalculatorsHome from './pages/calculators/CalculatorsHome.jsx';
 import BmrCalculator from './pages/calculators/BmrCalculator.jsx';
 import TdeeCalculator from './pages/calculators/TdeeCalculator.jsx';
@@ -37,6 +39,9 @@ function Shell() {
         </Link>
         <Link to="/nutrition" className="hover:text-accent">
           Nutrition
+        </Link>
+        <Link to="/supplements" className="hover:text-accent">
+          Suppléments
         </Link>
         <Link to="/calculators" className="hover:text-accent">
           Calculateurs
@@ -80,6 +85,8 @@ export default function App() {
           <Route path="/" element={<ScaffoldHome />} />
           <Route path="/nutrition" element={<NutritionDay />} />
           <Route path="/nutrition/trends" element={<NutritionTrends />} />
+          <Route path="/supplements" element={<SupplementsHome />} />
+          <Route path="/supplements/trends" element={<SupplementsTrends />} />
           <Route path="/calculators" element={<CalculatorsHome />} />
           <Route path="/calculators/bmr" element={<BmrCalculator />} />
           <Route path="/calculators/tdee" element={<TdeeCalculator />} />

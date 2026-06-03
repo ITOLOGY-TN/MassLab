@@ -29,6 +29,8 @@ import { importersDao } from './services/dataAccess/importers.dao.js';
 import { resetDao } from './services/dataAccess/reset.dao.js';
 import { nutritionLogsDao } from './services/dataAccess/nutritionLogs.dao.js';
 import { hydrationDao } from './services/dataAccess/hydration.dao.js';
+import { supplementIntakeDao } from './services/dataAccess/supplementIntake.dao.js';
+import { supplementAssessmentsDao } from './services/dataAccess/supplementAssessments.dao.js';
 import { getSupabase } from './services/dataAccess/supabaseClient.js';
 import { athleteRoutes } from './routes/athlete.routes.js';
 import { exercisesRoutes } from './routes/exercises.routes.js';
@@ -80,6 +82,8 @@ export function buildApp({ config, supabase, daos } = {}) {
     reset: resetDao(sb),
     nutritionLogs: nutritionLogsDao(sb),
     hydration: hydrationDao(sb),
+    supplementIntake: supplementIntakeDao(sb),
+    supplementAssessments: supplementAssessmentsDao(sb),
   };
 
   const photoStorage = createPhotoStorage({ root: config.PHOTO_STORAGE_ROOT });
@@ -122,7 +126,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/weekly-plan', weeklyPlanRoutes(resolved.weeklyPlan));
   v1.use('/training-phases', trainingPhasesRoutes(resolved.trainingPhases));
   v1.use('/nutrition', nutritionRoutes({ daos: resolved, config }));
-  v1.use('/supplements', supplementsRoutes(resolved.supplements));
+  v1.use('/supplements', supplementsRoutes({ daos: resolved, config }));
   v1.use('/foods', foodsRoutes({ daos: resolved, config }));
   v1.use('/quotes', quotesRoutes(resolved.quotes));
   v1.use('/calculators', calculatorsRoutes({ daos: resolved }));

@@ -139,4 +139,27 @@ describe('US2 — RLS policies enforce per-athlete isolation', () => {
       expect(data ?? []).toEqual([]);
     }
   });
+
+  // Phase 8 (T040) — the supplement adherence tables must be athlete-isolated too.
+  // Probe each first and skip cleanly if the Phase 8 migration is not applied.
+  it.each(['supplement_intake_log', 'supplement_weekly_assessment'])(
+    'publishable-key client sees zero rows in %s (Phase 8)',
+    async (table) => {
+      if (!live) return;
+      const mig = await serverClient.from(table).select('*').limit(1);
+      if (mig.error) {
+        console.warn(`[rls] skipped ${table} — Phase 8 migration not applied`);
+        return;
+      }
+      const anon = createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: false },
+      });
+      const { data, error } = await anon.from(table).select('*');
+      if (!error) {
+        expect(data).toEqual([]);
+      } else {
+        expect(error.message).toMatch(/permission|policy|jwt|denied/i);
+      }
+    },
+  );
 });
