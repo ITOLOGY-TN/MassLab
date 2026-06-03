@@ -29,6 +29,14 @@ const intFromString = (label) =>
     .union([z.number().int(), z.string().regex(/^\d+$/, `${label} must be an integer`)])
     .transform((v) => (typeof v === 'number' ? v : Number.parseInt(v, 10)));
 
+const floatFromString = (label) =>
+  z
+    .union([
+      z.number(),
+      z.string().regex(/^-?\d+(\.\d+)?$/, `${label} must be a number`),
+    ])
+    .transform((v) => (typeof v === 'number' ? v : Number.parseFloat(v)));
+
 const booleanFromString = z
   .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
   .transform((v) => v === true || v === 'true' || v === '1');
@@ -142,6 +150,22 @@ export const baseSchema = z.object({
   RECOVERY_SORE_ZONES: csvList.default(
     'neck,shoulders,chest,upper_back,lower_back,biceps,triceps,forearms,abs,glutes,quads,hamstrings,calves',
   ),
+  // Phase 10 (dashboard). Days without a finished session before the "no recent
+  // session" nudge shows; must be > 0.
+  DASHBOARD_NO_SESSION_DAYS: intFromString('DASHBOARD_NO_SESSION_DAYS')
+    .default(2)
+    .refine((n) => n > 0, 'DASHBOARD_NO_SESSION_DAYS must be > 0'),
+  // Fraction of the kcal target below which the day reads as a deficit; (0, 1].
+  DASHBOARD_CALORIE_DEFICIT_PCT: floatFromString('DASHBOARD_CALORIE_DEFICIT_PCT')
+    .default(0.9)
+    .refine(
+      (n) => n > 0 && n <= 1,
+      'DASHBOARD_CALORIE_DEFICIT_PCT must be > 0 and <= 1',
+    ),
+  // Window (days) for the weight sparkline; must be > 0.
+  DASHBOARD_WEIGHT_SPARKLINE_DAYS: intFromString('DASHBOARD_WEIGHT_SPARKLINE_DAYS')
+    .default(30)
+    .refine((n) => n > 0, 'DASHBOARD_WEIGHT_SPARKLINE_DAYS must be > 0'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from 'react-router-dom';
 import { apiGet } from './lib/api.js';
 import { applyTheme } from './lib/theme.js';
-import ScaffoldHome from './pages/ScaffoldHome.jsx';
+import DashboardHome from './pages/dashboard/DashboardHome.jsx';
 import NutritionDay from './pages/nutrition/NutritionDay.jsx';
 import NutritionTrends from './pages/nutrition/NutritionTrends.jsx';
 import SupplementsHome from './pages/supplements/SupplementsHome.jsx';
@@ -87,7 +87,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Shell />}>
-          <Route path="/" element={<ScaffoldHome />} />
+          <Route path="/" element={<DashboardHome />} />
           <Route path="/nutrition" element={<NutritionDay />} />
           <Route path="/nutrition/trends" element={<NutritionTrends />} />
           <Route path="/supplements" element={<SupplementsHome />} />
