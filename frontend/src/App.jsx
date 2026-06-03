@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from 'react-rout
 import { apiGet } from './lib/api.js';
 import { applyTheme } from './lib/theme.js';
 import ScaffoldHome from './pages/ScaffoldHome.jsx';
-import NutritionHome from './pages/NutritionHome.jsx';
+import NutritionDay from './pages/nutrition/NutritionDay.jsx';
+import NutritionTrends from './pages/nutrition/NutritionTrends.jsx';
 import CalculatorsHome from './pages/calculators/CalculatorsHome.jsx';
 import BmrCalculator from './pages/calculators/BmrCalculator.jsx';
 import TdeeCalculator from './pages/calculators/TdeeCalculator.jsx';
@@ -77,7 +78,8 @@ export default function App() {
       <Routes>
         <Route element={<Shell />}>
           <Route path="/" element={<ScaffoldHome />} />
-          <Route path="/nutrition" element={<NutritionHome />} />
+          <Route path="/nutrition" element={<NutritionDay />} />
+          <Route path="/nutrition/trends" element={<NutritionTrends />} />
           <Route path="/calculators" element={<CalculatorsHome />} />
           <Route path="/calculators/bmr" element={<BmrCalculator />} />
           <Route path="/calculators/tdee" element={<TdeeCalculator />} />

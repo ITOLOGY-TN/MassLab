@@ -3,7 +3,7 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- specs/009-body-weight-measurements/plan.md
+- specs/010-phase7-nutrition-calories/plan.md
 <!-- SPECKIT END -->
 
 ## Folder Layout (Phase 0)

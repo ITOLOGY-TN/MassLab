@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Nutrition & Calories (Phase 7)
+  version: 1.0.0
+  description: >
+    Daily food-and-hydration logging with live macro totals, a template-plan loader,
+    hydration tracking, and nutrition trends. Calorie/macro targets are READ from the
+    existing target-resolution path (GET /me/nutrition-targets) and never recomputed here.
+    Each log entry snapshots its computed macros so historical totals stay stable. New in
+    Phase 7: the nutrition_logs, hydration_log, and nutrition_template_meal_items tables and
+    a custom-food write path on /foods. All paths under /api/v1. Auth: bearer token in
+    non-single-user mode; the athlete id is taken from the auth context, never from the
+    request body or query.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_FAILED }
+            message: { type: string }
+            requestId: { type: string }
+    Macros:
+      type: object
+      properties:
+        kcal: { type: number }
+        protein_g: { type: number }
+        carbs_g: { type: number }
+        fat_g: { type: number }
+    LogEntry:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        logged_on: { type: string, format: date }
+        slot: { type: string, enum: [breakfast, lunch, pre_workout, dinner, evening_snack] }
+        food_id: { type: integer, format: int64 }
+        food_name: { type: string }
+        quantity_g: { type: number }
+        kcal: { type: number }
+        protein_g: { type: number }
+        carbs_g: { type: number }
+        fat_g: { type: number }
+    CustomFoodInput:
+      type: object
+      required: [name, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g]
+      properties:
+        name: { type: string }
+        kcal_per_100g: { type: number }
+        protein_per_100g: { type: number }
+        carbs_per_100g: { type: number }
+        fat_per_100g: { type: number }
+    Food:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        slug: { type: string }
+        locale: { type: string, example: fr-FR }
+        name: { type: string }
+        kcal_per_100g: { type: number }
+        protein_per_100g: { type: number }
+        carbs_per_100g: { type: number }
+        fat_per_100g: { type: number }
+        category: { type: string, example: custom }
+    LogInput:
+      type: object
+      required: [logged_on, slot, quantity_g]
+      description: >
+        Exactly one of food_id or custom_food MUST be present. quantity_g MUST be > 0 (FR-004).
+        logged_on MUST NOT be in the future (FR-024). When custom_food is given, the food is
+        created/reconciled in the athlete's catalogue first (FR-002a), then logged.
+      properties:
+        logged_on: { type: string, format: date }
+        slot: { type: string, enum: [breakfast, lunch, pre_workout, dinner, evening_snack] }
+        quantity_g: { type: number }
+        food_id: { type: integer, format: int64 }
+        custom_food: { $ref: '#/components/schemas/CustomFoodInput' }
+    Bar:
+      type: object
+      properties:
+        value: { type: number }
+        target: { type: number, nullable: true }
+        pct: { type: number, nullable: true }
+        state: { type: string, enum: [under, at, over] }
+    DayView:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        slots:
+          type: array
+          items:
+            type: object
+            properties:
+              slot: { type: string }
+              entries:
+                type: array
+                items: { $ref: '#/components/schemas/LogEntry' }
+              subtotal: { $ref: '#/components/schemas/Macros' }
+        totals: { $ref: '#/components/schemas/Macros' }
+        bars:
+          type: object
+          properties:
+            kcal: { $ref: '#/components/schemas/Bar' }
+            protein_g: { $ref: '#/components/schemas/Bar' }
+            carbs_g: { $ref: '#/components/schemas/Bar' }
+            fat_g: { $ref: '#/components/schemas/Bar' }
+        hydration:
+          type: object
+          properties:
+            total_ml: { type: integer }
+            goal_ml: { type: integer }
+    Trends:
+      type: object
+      properties:
+        calories:
+          type: object
+          properties:
+            points:
+              type: array
+              items:
+                type: object
+                properties:
+                  date: { type: string, format: date }
+                  kcal: { type: number }
+            goalKcal: { type: number, nullable: true }
+        macroBreakdown:
+          type: object
+          properties:
+            protein_g: { type: number }
+            carbs_g: { type: number }
+            fat_g: { type: number }
+            fractions:
+              type: object
+              properties:
+                protein: { type: number }
+                carbs: { type: number }
+                fat: { type: number }
+        weeklyProtein:
+          type: array
+          items:
+            type: object
+            properties:
+              weekStart: { type: string, format: date }
+              avgProteinG: { type: number }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /nutrition/day:
+    get:
+      summary: Composed day view (meal slots + subtotals + progress bars + hydration)
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Defaults to server "today" when omitted.
+      responses:
+        '200':
+          description: Day view model (renders empty state with no entries, FR-009/FR-027)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/DayView' }
+
+  /nutrition/log:
+    post:
+      summary: Log a food into a meal slot (snapshots computed macros, FR-001/FR-003)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogInput' }
+      responses:
+        '201':
+          description: Logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/LogEntry' }
+        '400':
+          description: quantity ≤ 0 / out of range, future date, or neither food_id nor custom_food (FR-004/FR-024)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /nutrition/log/{id}:
+    patch:
+      summary: Edit a log entry's quantity (recomputes the macro snapshot, FR-005)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity_g]
+              properties:
+                quantity_g: { type: number }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/LogEntry' }
+        '400': { description: Invalid quantity, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: Not found / not owned, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      summary: Remove a log entry (FR-005)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not found / not owned, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /nutrition/load-plan:
+    post:
+      summary: Pre-fill the day from the program's template meal plan (FR-010/FR-011)
+      description: >
+        Empty day → inserts the template items regardless of mode. Non-empty day → mode is
+        REQUIRED: 'replace' clears the day then inserts; 'append' adds on top. A non-empty day
+        with no mode returns 409 so the UI must prompt — never a silent overwrite (clarification).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date]
+              properties:
+                date: { type: string, format: date }
+                mode: { type: string, enum: [replace, append] }
+      responses:
+        '200':
+          description: Day after loading the plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/DayView' }
+        '400': { description: Invalid date or mode, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409':
+          description: Day already has entries and no mode was supplied (LOAD_PLAN_CONFLICT)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /nutrition/hydration:
+    post:
+      summary: Add (or undo) water for a day; clamps total ≥ 0 (FR-013/FR-015)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, delta_ml]
+              properties:
+                date: { type: string, format: date }
+                delta_ml: { type: integer, description: "e.g. 250, 500, 1000, or negative to undo" }
+      responses:
+        '200':
+          description: Updated hydration for the day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_ml: { type: integer }
+                      goal_ml: { type: integer }
+        '400': { description: Invalid date or delta, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /nutrition/trends:
+    get:
+      summary: Nutrition trends (calories over the window + macro breakdown + weekly avg protein)
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Anchor day for the window and the macro breakdown; defaults to today.
+      responses:
+        '200':
+          description: Trends view model (renders low/no-data state without error, FR-020)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Trends' }
+
+  /foods:
+    get:
+      summary: Search/list foods (existing; adds optional q name filter, FR-002)
+      parameters:
+        - in: query
+          name: locale
+          schema: { type: string, default: fr-FR }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Optional case-insensitive name filter for search.
+      responses:
+        '200':
+          description: Food list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Food' }
+    post:
+      summary: Create a custom food in the athlete's catalogue (FR-002a)
+      description: >
+        Slug is derived from the name; upsert on (athlete_id, slug, locale) so a duplicate
+        name reconciles to the existing row rather than creating a confusing duplicate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomFoodInput' }
+      responses:
+        '201':
+          description: Created (or reconciled)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Food' }
+        '400':
+          description: Missing name or out-of-range macros (FR-002a)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

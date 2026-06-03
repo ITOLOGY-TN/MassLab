@@ -86,6 +86,12 @@ export const baseSchema = z.object({
   BODY_PHOTO_MAX_BYTES: intFromString('BODY_PHOTO_MAX_BYTES').default(26214400),
   // Comma-separated MIME allowlist for progress photos (no video).
   BODY_PHOTO_IMAGE_TYPES: csvList.default('image/jpeg,image/png,image/webp'),
+  // Phase 7 (nutrition & calories). Daily hydration goal (mL).
+  HYDRATION_GOAL_ML: intFromString('HYDRATION_GOAL_ML').default(3000),
+  // Rolling window (days) for nutrition trends.
+  NUTRITION_TREND_DAYS: intFromString('NUTRITION_TREND_DAYS').default(30),
+  // Locale for nutrition number/date formatting.
+  NUTRITION_LOCALE: z.string().min(1).default('fr-FR'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */
