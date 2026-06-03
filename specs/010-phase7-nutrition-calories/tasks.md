@@ -108,19 +108,19 @@ This list is authored for **ultracode** execution (multi-agent `Workflow` orches
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T026 [P] [US2] Contract test `tests/contract/nutritionLoadPlan.contract.test.js` for `POST /nutrition/load-plan` (200 empty-day, 200 replace/append, 409 conflict, 400 bad mode) per the contract (live-gated).
-- [ ] T027 [P] [US2] Integration test `tests/integration/nutritionLoadPlan.integration.test.js`: empty day fills from seeded template items; non-empty + no mode → 409; `replace` clears then inserts; `append` adds on top; pre-filled entries editable/deletable; RLS probe on `nutrition_template_meal_items`; cleans up.
+- [X] T026 [P] [US2] Contract test `tests/contract/nutritionLoadPlan.contract.test.js` for `POST /nutrition/load-plan` (200 empty-day, 200 replace/append, 409 conflict, 400 bad mode) per the contract (live-gated).
+- [X] T027 [P] [US2] Integration test `tests/integration/nutritionLoadPlan.integration.test.js`: empty day fills from seeded template items; non-empty + no mode → 409; `replace` clears then inserts; `append` adds on top; pre-filled entries editable/deletable; RLS probe on `nutrition_template_meal_items`; cleans up.
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Author migration `supabase/migrations/20260603000003_init_nutrition_template_meal_items.sql`: `public.nutrition_template_meal_items` (id, athlete_id FK cascade, slot text, food_id bigint FK→foods, quantity_g numeric(7,2), display_order int) + `*_own` RLS in-file.
-- [ ] T029 [P] [US2] Create `seed/nutritionTemplateItems.seed.json`: concrete catalogue foods (by slug) + grams + display_order per slot for the current athlete, chosen to roughly approximate each slot's macro targets.
-- [ ] T030 [US2] Extend `seed/runSeed.js`: idempotently insert `nutrition_template_meal_items` for the seeded athlete (resolve food slugs → ids; upsert/skip-on-exists). (Shared file.)
-- [ ] T031 [P] [US2] Extend `services/dataAccess/nutrition.dao.js`: `listTemplateItems(athleteId)` (join/lookup foods, ordered by slot + display_order).
-- [ ] T032 [US2] Extend `controllers/nutrition.controller.js`: `loadPlan` — read `nutrition.listTemplateItems`; if day has entries and no `mode` → `HttpError(409,'LOAD_PLAN_CONFLICT')`; `replace` → `nutritionLogs.deleteForDay` then insert; `append` → insert; snapshot each via `entryMacros`; return the composed `dayView`. Validate date (D-10). (Shared file — sequential after US1 T020.)
-- [ ] T033 [US2] Extend `routes/nutrition.routes.js`: `POST /load-plan`. (Shared file — sequential after US1 T022.)
-- [ ] T034 [US2] Extend `frontend/src/pages/nutrition/NutritionDay.jsx`: "Load daily plan" button; on 409, show a replace-or-append confirmation (calls `loadPlan(date,'replace'|'append')`); refresh the day view. (Shared file — sequential after US1 T024.)
-- [ ] T035 [P] [US2] Frontend smoke test `tests/frontend/nutritionLoadPlan.test.jsx`: empty-day load fills slots; non-empty triggers the replace/append prompt and dispatches the chosen mode (stubbed API).
+- [X] T028 [US2] Author migration `supabase/migrations/20260603000003_init_nutrition_template_meal_items.sql`: `public.nutrition_template_meal_items` (id, athlete_id FK cascade, slot text, food_id bigint FK→foods, quantity_g numeric(7,2), display_order int) + `*_own` RLS in-file.
+- [X] T029 [P] [US2] Create `seed/nutritionTemplateItems.seed.json`: concrete catalogue foods (by slug) + grams + display_order per slot for the current athlete, chosen to roughly approximate each slot's macro targets.
+- [X] T030 [US2] Extend `seed/runSeed.js`: idempotently insert `nutrition_template_meal_items` for the seeded athlete (resolve food slugs → ids; upsert/skip-on-exists). (Shared file.)
+- [X] T031 [P] [US2] Extend `services/dataAccess/nutrition.dao.js`: `listTemplateItems(athleteId)` (join/lookup foods, ordered by slot + display_order).
+- [X] T032 [US2] Extend `controllers/nutrition.controller.js`: `loadPlan` — read `nutrition.listTemplateItems`; if day has entries and no `mode` → `HttpError(409,'LOAD_PLAN_CONFLICT')`; `replace` → `nutritionLogs.deleteForDay` then insert; `append` → insert; snapshot each via `entryMacros`; return the composed `dayView`. Validate date (D-10). (Shared file — sequential after US1 T020.)
+- [X] T033 [US2] Extend `routes/nutrition.routes.js`: `POST /load-plan`. (Shared file — sequential after US1 T022.)
+- [X] T034 [US2] Extend `frontend/src/pages/nutrition/NutritionDay.jsx`: "Load daily plan" button; on 409, show a replace-or-append confirmation (calls `loadPlan(date,'replace'|'append')`); refresh the day view. (Shared file — sequential after US1 T024.)
+- [X] T035 [P] [US2] Frontend smoke test `tests/frontend/nutritionLoadPlan.test.jsx`: empty-day load fills slots; non-empty triggers the replace/append prompt and dispatches the chosen mode (stubbed API).
 
 **Checkpoint**: US1 + US2 both work independently; load-plan never silently overwrites (FR-011).
 
@@ -134,18 +134,18 @@ This list is authored for **ultracode** execution (multi-agent `Workflow` orches
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T036 [P] [US3] FAILING unit test `tests/unit/lib.chartGeometry.gauge.test.js` for the new `gaugeArc({value,max,...})` helper (arc endpoints, full/over-goal clamp) added to `frontend/src/lib/chartGeometry.js`.
-- [ ] T037 [P] [US3] Contract test `tests/contract/nutritionHydration.contract.test.js` for `POST /nutrition/hydration` (200 with `{total_ml,goal_ml}`, 400 bad date/delta) per contract (live-gated).
-- [ ] T038 [P] [US3] Integration test `tests/integration/nutritionHydration.integration.test.js`: add 250+500 → 750; undo −1000 clamps to 0; distinct day independent; goal = override ?? config default; RLS probe on `hydration_log`; cleans up.
+- [X] T036 [P] [US3] FAILING unit test `tests/unit/lib.chartGeometry.gauge.test.js` for the new `gaugeArc({value,max,...})` helper (arc endpoints, full/over-goal clamp) added to `frontend/src/lib/chartGeometry.js`.
+- [X] T037 [P] [US3] Contract test `tests/contract/nutritionHydration.contract.test.js` for `POST /nutrition/hydration` (200 with `{total_ml,goal_ml}`, 400 bad date/delta) per contract (live-gated).
+- [X] T038 [P] [US3] Integration test `tests/integration/nutritionHydration.integration.test.js`: add 250+500 → 750; undo −1000 clamps to 0; distinct day independent; goal = override ?? config default; RLS probe on `hydration_log`; cleans up.
 
 ### Implementation for User Story 3
 
 - [X] T039 [US3] Author migration `supabase/migrations/20260603000002_init_hydration_log.sql`: `public.hydration_log` (athlete_id FK cascade, logged_on date, total_ml int default 0, updated_at, PRIMARY KEY (athlete_id, logged_on)) + `*_own` RLS in-file. **Pulled forward into the MVP + applied to cloud** — the US1 day view reads hydration at runtime, so the table is a US1 dependency. Remaining US3 work (hydration endpoint, gauge, smoke tests) is still open.
-- [ ] T040 [US3] Extend `controllers/nutrition.controller.js`: `addHydration` (validate date + bounded `delta_ml`; `hydration.upsertDelta` clamp ≥ 0; resolve `goal_ml` = `appConfig` `engine_overrides.hydration.goal_ml ?? config.HYDRATION_GOAL_ML`; return `{total_ml,goal_ml}`). Ensure `getDay` injects the same resolved `goal_ml` into `dayView` hydration. (Shared file — sequential.)
-- [ ] T041 [US3] Extend `routes/nutrition.routes.js`: `POST /hydration`. (Shared file — sequential.)
-- [ ] T042 [P] [US3] Implement `gaugeArc` in `frontend/src/lib/chartGeometry.js` to pass T036 (pure geometry).
-- [ ] T043 [P] [US3] Create `frontend/src/components/charts/HydrationGauge.jsx` (SVG circular gauge from `gaugeArc`; props `total_ml`, `goal_ml`; over-goal state).
-- [ ] T044 [US3] Extend `frontend/src/pages/nutrition/NutritionDay.jsx`: hydration card with `HydrationGauge` + quick-add (+250/+500/+1 L) and undo, calling `addHydration`. (Shared file — sequential after US2 T034.)
+- [X] T040 [US3] Extend `controllers/nutrition.controller.js`: `addHydration` (validate date + bounded `delta_ml`; `hydration.upsertDelta` clamp ≥ 0; resolve `goal_ml` = `appConfig` `engine_overrides.hydration.goal_ml ?? config.HYDRATION_GOAL_ML`; return `{total_ml,goal_ml}`). Ensure `getDay` injects the same resolved `goal_ml` into `dayView` hydration. (Shared file — sequential.)
+- [X] T041 [US3] Extend `routes/nutrition.routes.js`: `POST /hydration`. (Shared file — sequential.)
+- [X] T042 [P] [US3] Implement `gaugeArc` in `frontend/src/lib/chartGeometry.js` to pass T036 (pure geometry).
+- [X] T043 [P] [US3] Create `frontend/src/components/charts/HydrationGauge.jsx` (SVG circular gauge from `gaugeArc`; props `total_ml`, `goal_ml`; over-goal state).
+- [X] T044 [US3] Extend `frontend/src/pages/nutrition/NutritionDay.jsx`: hydration card with `HydrationGauge` + quick-add (+250/+500/+1 L) and undo, calling `addHydration`. (Shared file — sequential after US2 T034.)
 
 **Checkpoint**: US1 + US2 + US3 independent; hydration clamps ≥ 0 and resets daily (FR-015/FR-016).
 
@@ -159,21 +159,21 @@ This list is authored for **ultracode** execution (multi-agent `Workflow` orches
 
 ### Tests for User Story 4 (write first)
 
-- [ ] T045 [P] [US4] FAILING unit test `tests/unit/nutritionTrends.test.js` for `caloriesByDay(entries,{days,asOf})` (date-asc, window, gaps as 0/absent per design), `macroBreakdown(dayEntries)` (proportions sum to 1, empty → safe), `weeklyAvgProtein(entries,{asOf})` (mean daily protein per week, partial weeks).
-- [ ] T046 [P] [US4] FAILING unit test `tests/unit/trendsView.test.js` for `services/nutrition/trendsView.js` assembly + low/no-data shape.
-- [ ] T047 [P] [US4] FAILING unit test `tests/unit/lib.chartGeometry.donut.test.js` for `donutSegments({values,...})` (segment angles, zero-total safe).
-- [ ] T048 [P] [US4] Contract test `tests/contract/nutritionTrends.contract.test.js` for `GET /nutrition/trends` per contract (live-gated).
+- [X] T045 [P] [US4] FAILING unit test `tests/unit/nutritionTrends.test.js` for `caloriesByDay(entries,{days,asOf})` (date-asc, window, gaps as 0/absent per design), `macroBreakdown(dayEntries)` (proportions sum to 1, empty → safe), `weeklyAvgProtein(entries,{asOf})` (mean daily protein per week, partial weeks).
+- [X] T046 [P] [US4] FAILING unit test `tests/unit/trendsView.test.js` for `services/nutrition/trendsView.js` assembly + low/no-data shape.
+- [X] T047 [P] [US4] FAILING unit test `tests/unit/lib.chartGeometry.donut.test.js` for `donutSegments({values,...})` (segment angles, zero-total safe).
+- [X] T048 [P] [US4] Contract test `tests/contract/nutritionTrends.contract.test.js` for `GET /nutrition/trends` per contract (live-gated).
 
 ### Implementation for User Story 4
 
-- [ ] T049 [P] [US4] Implement `services/engine/nutritionTrends.js` (`caloriesByDay`, `macroBreakdown`, `weeklyAvgProtein`) to pass T045 (pure; caller supplies `asOf`).
-- [ ] T050 [P] [US4] Implement `services/nutrition/trendsView.js` to pass T046 (`build({ rangeEntries, dayEntries, goalKcal, days, asOf })`).
-- [ ] T051 [US4] Extend `controllers/nutrition.controller.js`: `getTrends` (read `nutritionLogs.listRange` over `NUTRITION_TREND_DAYS`, resolve target kcal, compose with `trendsView`). (Shared file — sequential.)
-- [ ] T052 [US4] Extend `routes/nutrition.routes.js`: `GET /trends`. (Shared file — sequential.)
-- [ ] T053 [P] [US4] Implement `donutSegments` in `frontend/src/lib/chartGeometry.js` to pass T047.
-- [ ] T054 [P] [US4] Create `frontend/src/components/charts/DonutChart.jsx` (macro breakdown from `donutSegments`).
-- [ ] T055 [US4] Build `frontend/src/pages/nutrition/NutritionTrends.jsx`: calories-30d via reused `LineChart` + goal line, macro `DonutChart`, weekly-protein via reused `BarChart`; low/no-data states. Link/tab from `/nutrition`.
-- [ ] T056 [P] [US4] Frontend smoke test `tests/frontend/nutritionTrends.test.jsx`: renders all three charts from a stub; empty state without error.
+- [X] T049 [P] [US4] Implement `services/engine/nutritionTrends.js` (`caloriesByDay`, `macroBreakdown`, `weeklyAvgProtein`) to pass T045 (pure; caller supplies `asOf`).
+- [X] T050 [P] [US4] Implement `services/nutrition/trendsView.js` to pass T046 (`build({ rangeEntries, dayEntries, goalKcal, days, asOf })`).
+- [X] T051 [US4] Extend `controllers/nutrition.controller.js`: `getTrends` (read `nutritionLogs.listRange` over `NUTRITION_TREND_DAYS`, resolve target kcal, compose with `trendsView`). (Shared file — sequential.)
+- [X] T052 [US4] Extend `routes/nutrition.routes.js`: `GET /trends`. (Shared file — sequential.)
+- [X] T053 [P] [US4] Implement `donutSegments` in `frontend/src/lib/chartGeometry.js` to pass T047.
+- [X] T054 [P] [US4] Create `frontend/src/components/charts/DonutChart.jsx` (macro breakdown from `donutSegments`).
+- [X] T055 [US4] Build `frontend/src/pages/nutrition/NutritionTrends.jsx`: calories-30d via reused `LineChart` + goal line, macro `DonutChart`, weekly-protein via reused `BarChart`; low/no-data states. Link/tab from `/nutrition`.
+- [X] T056 [P] [US4] Frontend smoke test `tests/frontend/nutritionTrends.test.jsx`: renders all three charts from a stub; empty state without error.
 
 **Checkpoint**: All four stories independently functional.
 

@@ -9,8 +9,17 @@
 //
 // Nutrition values stay metric (kcal / g) — no kg/lbs conversion here (D-4).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getDay, logEntry, editEntry, deleteEntry, searchFoods } from '../../lib/nutritionApi.js';
+import {
+  getDay,
+  logEntry,
+  editEntry,
+  deleteEntry,
+  searchFoods,
+  loadPlan,
+  addHydration,
+} from '../../lib/nutritionApi.js';
 import StateBlock from '../../components/StateBlock.jsx';
+import HydrationGauge from '../../components/charts/HydrationGauge.jsx';
 
 // The five meal slots in eating order, with their French labels (FR-006).
 const SLOTS = [
@@ -434,6 +443,158 @@ function MealCard({ slotMeta, slotData, date, onChange, onError }) {
   );
 }
 
+// ---- Load daily plan (US2, FR-010/FR-011) -----------------------------------
+// Pre-fills the day from the program's template meal plan. An empty day loads
+// silently; a non-empty day returns 409 LOAD_PLAN_CONFLICT, after which we surface
+// a Remplacer / Ajouter choice and re-call with the chosen mode (never a silent
+// overwrite). Any success refetches the whole day.
+function LoadPlan({ date, onLoaded, onError }) {
+  const [busy, setBusy] = useState(false);
+  const [conflict, setConflict] = useState(false);
+
+  async function run(mode) {
+    setBusy(true);
+    try {
+      await loadPlan(date, mode);
+      setConflict(false);
+      await onLoaded();
+    } catch (err) {
+      if (err?.code === 'LOAD_PLAN_CONFLICT') {
+        setConflict(true);
+      } else {
+        onError(err?.message ?? 'Échec du chargement du plan.');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (conflict) {
+    return (
+      <div
+        data-testid="load-plan-conflict"
+        role="dialog"
+        aria-label="Le journal contient déjà des aliments"
+        className="rounded-lg border border-warn/40 bg-warn/10 p-lg shadow-sm"
+      >
+        <p className="text-sm font-medium text-text">Ce journal contient déjà des aliments.</p>
+        <p className="mt-xs text-xs text-muted">
+          Remplacer efface les aliments du jour avant de charger le plan. Ajouter conserve les
+          aliments existants et ajoute le plan par-dessus.
+        </p>
+        <div className="mt-md flex flex-col gap-sm sm:flex-row">
+          <button
+            type="button"
+            onClick={() => run('replace')}
+            disabled={busy}
+            data-testid="load-plan-replace"
+            className="flex-1 rounded-md bg-accent px-md py-md text-sm font-semibold text-bg disabled:opacity-50"
+          >
+            Remplacer
+          </button>
+          <button
+            type="button"
+            onClick={() => run('append')}
+            disabled={busy}
+            data-testid="load-plan-append"
+            className="flex-1 rounded-md border border-accent px-md py-md text-sm font-semibold text-accent disabled:opacity-50"
+          >
+            Ajouter
+          </button>
+          <button
+            type="button"
+            onClick={() => setConflict(false)}
+            disabled={busy}
+            className="rounded-md px-md py-md text-sm font-medium text-muted hover:text-text disabled:opacity-50"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => run()}
+      disabled={busy}
+      data-testid="load-plan-toggle"
+      className="w-full rounded-lg border border-dashed border-accent/40 px-md py-md text-sm font-semibold text-accent hover:border-accent disabled:opacity-50"
+    >
+      {busy ? 'Chargement…' : 'Charger le plan du jour'}
+    </button>
+  );
+}
+
+// ---- Hydration card (US3, FR-013) -------------------------------------------
+// A circular gauge of total_ml vs goal_ml from the day view's hydration block,
+// with one-tap quick-add buttons (+250 ml / +500 ml / +1 L) and an undo (−250 ml).
+// Each control posts a signed delta then refetches the day; the backend clamps
+// the running total at ≥ 0 so an over-eager undo can't go negative.
+const HYDRATION_QUICK_ADDS = [
+  { delta: 250, label: '+250 ml' },
+  { delta: 500, label: '+500 ml' },
+  { delta: 1000, label: '+1 L' },
+];
+
+function HydrationCard({ date, hydration, onChange, onError }) {
+  const [busy, setBusy] = useState(false);
+  const total = hydration?.total_ml ?? 0;
+  const goal = hydration?.goal_ml ?? 0;
+
+  async function adjust(deltaMl) {
+    setBusy(true);
+    try {
+      await addHydration(date, deltaMl);
+      await onChange();
+    } catch (err) {
+      onError(err?.message ?? 'Échec de la mise à jour de l’hydratation.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      data-testid="hydration-card"
+      className="rounded-lg border border-surface bg-surface/40 p-lg shadow-sm"
+    >
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-base font-semibold text-text">Hydratation</h2>
+      </div>
+      <div className="mt-md flex flex-col items-center gap-md sm:flex-row sm:items-center sm:gap-lg">
+        <HydrationGauge total_ml={total} goal_ml={goal} />
+        <div className="flex flex-1 flex-col gap-sm">
+          <div className="grid grid-cols-3 gap-sm">
+            {HYDRATION_QUICK_ADDS.map(({ delta, label }) => (
+              <button
+                key={delta}
+                type="button"
+                onClick={() => adjust(delta)}
+                disabled={busy}
+                data-testid={`hydration-add-${delta}`}
+                className="rounded-md bg-accent px-md py-md text-sm font-semibold text-bg disabled:opacity-50"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => adjust(-250)}
+            disabled={busy || total <= 0}
+            data-testid="hydration-undo"
+            className="rounded-md border border-muted/40 px-md py-md text-sm font-medium text-muted hover:text-text disabled:opacity-50"
+          >
+            Annuler −250 ml
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function NutritionDay() {
   const [state, setState] = useState({ status: 'loading', data: null });
   const [error, setError] = useState(null);
@@ -488,6 +649,19 @@ export default function NutritionDay() {
               {error}
             </p>
           ) : null}
+
+          <div className="mb-lg">
+            <LoadPlan date={day?.date} onLoaded={refetch} onError={setError} />
+          </div>
+
+          <div className="mb-lg">
+            <HydrationCard
+              date={day?.date}
+              hydration={day?.hydration}
+              onChange={refetch}
+              onError={setError}
+            />
+          </div>
 
           <div className="flex flex-col gap-lg">
             {SLOTS.map((slotMeta) => (

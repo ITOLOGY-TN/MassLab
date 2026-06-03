@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HttpError } from '../middleware/errorHandler.js';
 import { resolveTargets } from '../services/nutrition/targets.js';
 import { build } from '../services/nutrition/dayView.js';
+import { build as buildTrends } from '../services/nutrition/trendsView.js';
 import { entryMacros } from '../services/engine/nutritionMath.js';
 
 const SLOTS = ['breakfast', 'lunch', 'pre_workout', 'dinner', 'evening_snack'];
@@ -38,6 +39,27 @@ const editSchema = z
   })
   .strict();
 
+// T040 — add (or undo) water for a day. Negative deltas undo; the DAO clamps the
+// running total at >= 0 (FR-013/FR-015). Bound the per-request delta to a sane range.
+const hydrationSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+    delta_ml: z
+      .number()
+      .int('delta_ml must be an integer')
+      .min(-5000, 'delta_ml must be >= -5000')
+      .max(5000, 'delta_ml must be <= 5000'),
+  })
+  .strict();
+
+// T032 — pre-fill the day from the program's template meal plan (FR-010/FR-011).
+const loadPlanSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+    mode: z.enum(['replace', 'append']).optional(),
+  })
+  .strict();
+
 function parse(schema, body) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -58,7 +80,39 @@ function isoDay(date) {
   return date.toISOString().slice(0, 10);
 }
 
+// Subtract `n` whole days from a YYYY-MM-DD string, returning YYYY-MM-DD.
+// Anchored at UTC midnight so the result is deterministic (no DST/locale drift),
+// matching the calendar-day convention the schema and DAOs use.
+function isoDayMinus(isoDate, n) {
+  const d = new Date(`${isoDate}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
 export function nutritionController({ daos, config, now = () => new Date() }) {
+  // Compose the canonical day view (shared by getDay + loadPlan): resolved
+  // targets + the day's entries + the hydration counter (with override goal).
+  async function buildDay(athleteId, date) {
+    const [{ targets }, entries, hyd, overrides] = await Promise.all([
+      resolveTargets({ daos, athleteId }),
+      daos.nutritionLogs.listForDay(athleteId, date),
+      daos.hydration.getForDay(athleteId, date),
+      daos.appConfig.getOverridesFor(athleteId),
+    ]);
+    const goal_ml = overrides?.hydration?.goal_ml ?? config.HYDRATION_GOAL_ML;
+    return build({
+      entries,
+      targets: {
+        kcal: targets.daily_kcal,
+        protein_g: targets.daily_protein_g,
+        carbs_g: targets.daily_carbs_g,
+        fat_g: targets.daily_fat_g,
+      },
+      hydration: { total_ml: hyd.total_ml, goal_ml },
+      date,
+    });
+  }
+
   return {
     async getTemplate(req, res, next) {
       try {
@@ -97,24 +151,7 @@ export function nutritionController({ daos, config, now = () => new Date() }) {
     async getDay(req, res, next) {
       try {
         const date = req.query.date || isoDay(now());
-        const [{ targets }, entries, hyd, overrides] = await Promise.all([
-          resolveTargets({ daos, athleteId: req.athleteId }),
-          daos.nutritionLogs.listForDay(req.athleteId, date),
-          daos.hydration.getForDay(req.athleteId, date),
-          daos.appConfig.getOverridesFor(req.athleteId),
-        ]);
-        const goal_ml = overrides?.hydration?.goal_ml ?? config.HYDRATION_GOAL_ML;
-        const data = build({
-          entries,
-          targets: {
-            kcal: targets.daily_kcal,
-            protein_g: targets.daily_protein_g,
-            carbs_g: targets.daily_carbs_g,
-            fat_g: targets.daily_fat_g,
-          },
-          hydration: { total_ml: hyd.total_ml, goal_ml },
-          date,
-        });
+        const data = await buildDay(req.athleteId, date);
         res.json({ data });
       } catch (err) {
         next(err);
@@ -194,6 +231,98 @@ export function nutritionController({ daos, config, now = () => new Date() }) {
         if (!existing) throw new HttpError(404, 'NOT_FOUND', 'Nutrition log entry not found');
         await daos.nutritionLogs.delete(req.athleteId, req.params.id);
         res.status(204).end();
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    // T040 — add (or undo) water for a day (FR-013/FR-015). The DAO clamps the
+    // running total at >= 0. Resolves goal_ml the same way getDay does so the two
+    // stay consistent.
+    async addHydration(req, res, next) {
+      try {
+        const body = parse(hydrationSchema, req.body);
+
+        // FR-024 — reject a future-dated change (compared to server today).
+        if (body.date > isoDay(now())) {
+          throw new HttpError(400, 'VALIDATION_FAILED', 'date must not be in the future');
+        }
+
+        const row = await daos.hydration.upsertDelta(req.athleteId, body.date, body.delta_ml);
+        const overrides = await daos.appConfig.getOverridesFor(req.athleteId);
+        const goal_ml = overrides?.hydration?.goal_ml ?? config.HYDRATION_GOAL_ML;
+        res.json({ data: { total_ml: row.total_ml, goal_ml } });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    // T051 — nutrition trends (FR-017..FR-020): the calories window + macro
+    // breakdown for the anchor day + weekly avg protein. `date` (anchor) defaults
+    // to the server's current day; the window spans NUTRITION_TREND_DAYS ending on
+    // `date`. Renders a low/no-data state without error — never recomputes targets
+    // beyond reading the resolved daily_kcal goal.
+    async getTrends(req, res, next) {
+      try {
+        const date = req.query.date || isoDay(now());
+        const days = config.NUTRITION_TREND_DAYS;
+        const from = isoDayMinus(date, days - 1);
+        const [rangeEntries, { targets }] = await Promise.all([
+          daos.nutritionLogs.listRange(req.athleteId, { from, to: date }),
+          resolveTargets({ daos, athleteId: req.athleteId }),
+        ]);
+        const dayEntries = rangeEntries.filter((e) => e.logged_on === date);
+        const goalKcal = targets.daily_kcal;
+        res.json({ data: buildTrends({ rangeEntries, dayEntries, goalKcal, days, asOf: date }) });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    // T032 — pre-fill the day from the program's template meal plan
+    // (FR-010/FR-011). Empty day loads regardless of mode; a non-empty day
+    // requires an explicit mode, else 409 so the UI prompts (never silent
+    // overwrite). 'replace' clears the day first; 'append' adds on top.
+    async loadPlan(req, res, next) {
+      try {
+        const body = parse(loadPlanSchema, req.body);
+
+        // FR-024 — reject a future-dated load (compared to server today).
+        if (body.date > isoDay(now())) {
+          throw new HttpError(400, 'VALIDATION_FAILED', 'date must not be in the future');
+        }
+
+        const existing = await daos.nutritionLogs.listForDay(req.athleteId, body.date);
+        if (existing.length > 0 && body.mode == null) {
+          throw new HttpError(
+            409,
+            'LOAD_PLAN_CONFLICT',
+            'Day has entries; choose replace or append',
+          );
+        }
+
+        const items = await daos.nutrition.listTemplateItems(req.athleteId);
+
+        if (body.mode === 'replace') {
+          await daos.nutritionLogs.deleteForDay(req.athleteId, body.date);
+        }
+
+        for (const item of items) {
+          const food = item.food ?? {};
+          const snapshot = entryMacros({ food, quantityG: item.quantity_g });
+          await daos.nutritionLogs.insert({
+            athlete_id: req.athleteId,
+            logged_on: body.date,
+            slot: item.slot,
+            food_id: item.food_id,
+            food_name: item.food_name ?? food.name ?? null,
+            quantity_g: item.quantity_g,
+            ...snapshot,
+          });
+        }
+
+        const data = await buildDay(req.athleteId, body.date);
+        res.json({ data });
       } catch (err) {
         next(err);
       }
