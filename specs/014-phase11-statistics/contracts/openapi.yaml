@@ -1,0 +1,404 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Statistics & Global Progress (Phase 11)
+  version: 1.0.0
+  description: >
+    Read-only analytics + reporting for the transformation overview. Two additive
+    GET endpoints under /api/v1/statistics. No mutation, no new persistence, no
+    engine, no AI. Every figure is scoped to the authenticated athlete
+    (req.athleteId injected by the auth middleware); no athlete id is accepted
+    from the body or query. Errors use the canonical { error: { code, message } }
+    envelope; success uses the { data } envelope.
+servers:
+  - url: /api/v1
+
+paths:
+  /statistics:
+    get:
+      operationId: getStatistics
+      summary: Composed transformation overview — headline metrics + five analytics tabs.
+      description: >
+        Fans out bounded, athlete-scoped reads across existing DAOs and returns
+        the composed view models for the four headline metric cards and the Body,
+        Strength, Attendance, Nutrition, and Recovery tabs. Read-only: row counts
+        are identical before and after. All windows anchor on program_start_date.
+      responses:
+        '200':
+          description: The composed statistics payload (renders fully even cold-start).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Statistics'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+
+  /statistics/report:
+    get:
+      operationId: getStatisticsReport
+      summary: Month-scoped report payload for the client-side PDF export.
+      description: >
+        Returns summary + lifetime stats, the top-three load progressions, the
+        weight series for the embedded chart, and deterministic rule-based
+        recommendations for the selected month. The PDF itself is assembled
+        client-side (jsPDF); this endpoint persists nothing and writes no
+        calculation record.
+      parameters:
+        - name: month
+          in: query
+          required: false
+          description: >
+            Target month as YYYY-MM. Defaults to the most recently COMPLETED
+            calendar month (relative to the server UTC day) when omitted.
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+            example: '2026-05'
+      responses:
+        '200':
+          description: The month-scoped report payload (valid even for an empty month).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Report'
+        '400':
+          description: Malformed month parameter.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                additionalProperties: false
+                properties:
+                  error:
+                    type: object
+                    required: [code, message]
+                    additionalProperties: false
+                    properties:
+                      code: { type: string, example: VALIDATION_ERROR }
+                      message: { type: string }
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+
+components:
+  responses:
+    Error:
+      description: Canonical error envelope.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            additionalProperties: false
+            properties:
+              error:
+                type: object
+                required: [code, message]
+                additionalProperties: false
+                properties:
+                  code: { type: string, example: VALIDATION_ERROR }
+                  message: { type: string }
+
+  schemas:
+    DatePoint:
+      type: object
+      additionalProperties: false
+      required: [date]
+      properties:
+        date: { type: string, format: date }
+
+    Statistics:
+      type: object
+      additionalProperties: false
+      required: [metrics, body, strength, attendance, nutrition, recovery]
+      properties:
+        metrics: { $ref: '#/components/schemas/Metrics' }
+        body: { $ref: '#/components/schemas/BodyTab' }
+        strength: { $ref: '#/components/schemas/StrengthTab' }
+        attendance: { $ref: '#/components/schemas/AttendanceTab' }
+        nutrition: { $ref: '#/components/schemas/NutritionTab' }
+        recovery: { $ref: '#/components/schemas/RecoveryTab' }
+
+    Metrics:
+      type: object
+      additionalProperties: false
+      required: [total_weight_gained_kg, total_volume_kg, session_completion_rate, avg_weekly_calories]
+      properties:
+        total_weight_gained_kg:
+          type: number
+          nullable: true
+          description: Latest minus starting body weight (signed); null when no weight data.
+        total_volume_kg:
+          type: number
+          description: Sum of finished-session volume since program start (0 cold-start).
+        session_completion_rate:
+          type: object
+          additionalProperties: false
+          required: [completed, scheduled, pct]
+          properties:
+            completed: { type: integer, minimum: 0 }
+            scheduled: { type: integer, minimum: 0 }
+            pct:
+              type: number
+              nullable: true
+              description: completed / scheduled as a percentage; null when scheduled = 0.
+        avg_weekly_calories:
+          type: number
+          nullable: true
+          description: Mean of per-ISO-week kcal totals; null when none logged.
+
+    BodyTab:
+      type: object
+      additionalProperties: false
+      required: [weight, measurements]
+      properties:
+        weight:
+          type: object
+          additionalProperties: false
+          required: [points, goal_kg, has_data]
+          properties:
+            points:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/DatePoint'
+                  - type: object
+                    required: [weight_kg]
+                    properties:
+                      weight_kg: { type: number }
+            goal_kg: { type: number, nullable: true }
+            has_data: { type: boolean }
+        measurements:
+          type: array
+          description: One series per measurement that has data; others omitted.
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, label, unit, points]
+            properties:
+              key: { type: string, example: chest }
+              label: { type: string }
+              unit: { type: string, example: cm }
+              points:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/DatePoint'
+                    - type: object
+                      required: [value]
+                      properties:
+                        value: { type: number }
+
+    StrengthTab:
+      type: object
+      additionalProperties: false
+      required: [top_progressions, weekly_volume, muscle_radar]
+      properties:
+        top_progressions:
+          type: array
+          description: Top-N exercises by absolute working-weight gain (kg) since start.
+          items:
+            type: object
+            additionalProperties: false
+            required: [exercise_id, name, gain_kg, series]
+            properties:
+              exercise_id: { type: integer }
+              name: { type: string }
+              gain_kg: { type: number, description: latest minus earliest working weight (kg). }
+              series:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/DatePoint'
+                    - type: object
+                      required: [working_weight_kg]
+                      properties:
+                        working_weight_kg: { type: number }
+        weekly_volume:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [week_start, volume_kg]
+            properties:
+              week_start: { type: string, format: date }
+              volume_kg: { type: number }
+        muscle_radar:
+          type: object
+          additionalProperties: false
+          required: [axes, values]
+          properties:
+            axes:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [muscle_group]
+                properties:
+                  muscle_group: { type: string }
+                  color: { type: string, nullable: true }
+            values:
+              type: array
+              description: Progress % per group (now vs start), aligned to axes; ≥ 0, origin when insufficient.
+              items: { type: number }
+
+    AttendanceTab:
+      type: object
+      additionalProperties: false
+      required: [from, to, levels, days]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        levels: { type: integer, description: Number of nonzero intensity buckets. }
+        days:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, volume_kg, level]
+            properties:
+              date: { type: string, format: date }
+              volume_kg: { type: number }
+              level:
+                type: integer
+                minimum: 0
+                description: 0 = no completed session (empty shade); 1..levels graded by volume.
+
+    NutritionTab:
+      type: object
+      additionalProperties: false
+      required: [weekly, weekly_target_kcal]
+      properties:
+        weekly:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [week_start, kcal]
+            properties:
+              week_start: { type: string, format: date }
+              kcal: { type: number }
+        weekly_target_kcal:
+          type: number
+          nullable: true
+          description: Resolved daily target × 7; null when unresolved.
+
+    RecoveryTab:
+      type: object
+      additionalProperties: false
+      required: [sleep, stress_weight]
+      properties:
+        sleep:
+          type: object
+          additionalProperties: false
+          required: [points, average_hours]
+          properties:
+            points:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/DatePoint'
+                  - type: object
+                    required: [hours]
+                    properties:
+                      hours: { type: number }
+            average_hours: { type: number, nullable: true }
+        stress_weight:
+          type: object
+          additionalProperties: false
+          required: [points, sufficient]
+          properties:
+            points:
+              type: array
+              description: A point only for days with BOTH a stress check-in and a weight entry.
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/DatePoint'
+                  - type: object
+                    required: [stress, weight_kg]
+                    properties:
+                      stress: { type: number }
+                      weight_kg: { type: number }
+            sufficient:
+              type: boolean
+              description: false below STATISTICS_MIN_CORRELATION_POINTS paired points.
+
+    Report:
+      type: object
+      additionalProperties: false
+      required: [period, summary, lifetime, topProgressions, weightSeries, recommendations]
+      properties:
+        period:
+          type: object
+          additionalProperties: false
+          required: [month, from, to, label]
+          properties:
+            month: { type: string, example: '2026-05' }
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+            label: { type: string, example: 'mai 2026' }
+        summary:
+          type: object
+          additionalProperties: false
+          required: [volume_kg, sessions_completed, weight_change_kg, avg_daily_calories, avg_sleep_hours]
+          properties:
+            volume_kg: { type: number }
+            sessions_completed: { type: integer, minimum: 0 }
+            weight_change_kg: { type: number, nullable: true }
+            avg_daily_calories: { type: number, nullable: true }
+            avg_sleep_hours: { type: number, nullable: true }
+        lifetime:
+          type: object
+          additionalProperties: false
+          required: [total_weight_gained_kg, total_volume_kg, session_completion_pct, avg_weekly_calories]
+          properties:
+            total_weight_gained_kg: { type: number, nullable: true }
+            total_volume_kg: { type: number }
+            session_completion_pct: { type: number, nullable: true }
+            avg_weekly_calories: { type: number, nullable: true }
+        topProgressions:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required: [exercise_id, name, gain_kg]
+            properties:
+              exercise_id: { type: integer }
+              name: { type: string }
+              gain_kg: { type: number }
+        weightSeries:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/DatePoint'
+              - type: object
+                required: [weight_kg]
+                properties:
+                  weight_kg: { type: number }
+        recommendations:
+          type: array
+          description: Deterministic, rule-based advisory lines for next month. No AI-generated content.
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, message]
+            properties:
+              key: { type: string, example: ready_to_add_load }
+              message: { type: string }
+              context:
+                type: object
+                additionalProperties: true

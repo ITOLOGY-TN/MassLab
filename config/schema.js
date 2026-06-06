@@ -31,10 +31,7 @@ const intFromString = (label) =>
 
 const floatFromString = (label) =>
   z
-    .union([
-      z.number(),
-      z.string().regex(/^-?\d+(\.\d+)?$/, `${label} must be a number`),
-    ])
+    .union([z.number(), z.string().regex(/^-?\d+(\.\d+)?$/, `${label} must be a number`)])
     .transform((v) => (typeof v === 'number' ? v : Number.parseFloat(v)));
 
 const booleanFromString = z
@@ -158,14 +155,28 @@ export const baseSchema = z.object({
   // Fraction of the kcal target below which the day reads as a deficit; (0, 1].
   DASHBOARD_CALORIE_DEFICIT_PCT: floatFromString('DASHBOARD_CALORIE_DEFICIT_PCT')
     .default(0.9)
-    .refine(
-      (n) => n > 0 && n <= 1,
-      'DASHBOARD_CALORIE_DEFICIT_PCT must be > 0 and <= 1',
-    ),
+    .refine((n) => n > 0 && n <= 1, 'DASHBOARD_CALORIE_DEFICIT_PCT must be > 0 and <= 1'),
   // Window (days) for the weight sparkline; must be > 0.
   DASHBOARD_WEIGHT_SPARKLINE_DAYS: intFromString('DASHBOARD_WEIGHT_SPARKLINE_DAYS')
     .default(30)
     .refine((n) => n > 0, 'DASHBOARD_WEIGHT_SPARKLINE_DAYS must be > 0'),
+  // Phase 11 (statistics & global progress). Number of top exercises surfaced in the
+  // strength leaderboards; must be > 0.
+  STATISTICS_TOP_EXERCISES: intFromString('STATISTICS_TOP_EXERCISES')
+    .default(5)
+    .refine((n) => n > 0, 'STATISTICS_TOP_EXERCISES must be > 0'),
+  // Number of top progressions included in the PDF report; must be > 0.
+  STATISTICS_REPORT_TOP_PROGRESSIONS: intFromString('STATISTICS_REPORT_TOP_PROGRESSIONS')
+    .default(3)
+    .refine((n) => n > 0, 'STATISTICS_REPORT_TOP_PROGRESSIONS must be > 0'),
+  // Number of intensity buckets in the attendance heatmap; must be > 0.
+  STATISTICS_HEATMAP_LEVELS: intFromString('STATISTICS_HEATMAP_LEVELS')
+    .default(4)
+    .refine((n) => n > 0, 'STATISTICS_HEATMAP_LEVELS must be > 0'),
+  // Minimum paired data points required before a correlation is computed; must be > 0.
+  STATISTICS_MIN_CORRELATION_POINTS: intFromString('STATISTICS_MIN_CORRELATION_POINTS')
+    .default(3)
+    .refine((n) => n > 0, 'STATISTICS_MIN_CORRELATION_POINTS must be > 0'),
 });
 
 /** Keys whose values must be redacted from logs (FR-014, Constitution §III). */
