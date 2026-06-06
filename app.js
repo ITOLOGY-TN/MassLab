@@ -57,6 +57,7 @@ import { loadTrackingRoutes } from './routes/loadTracking.routes.js';
 import { bodyTrackingRoutes } from './routes/bodyTracking.routes.js';
 import { recoveryRoutes } from './routes/recovery.routes.js';
 import { dashboardRoutes } from './routes/dashboard.routes.js';
+import { statisticsRoutes } from './routes/statistics.routes.js';
 
 export function buildApp({ config, supabase, daos } = {}) {
   const sb = supabase ?? getSupabase(config);
@@ -141,6 +142,7 @@ export function buildApp({ config, supabase, daos } = {}) {
   v1.use('/sessions', sessionsRoutes({ daos: resolved, config }));
   v1.use('/load-tracking', loadTrackingRoutes({ daos: resolved, config }));
   v1.use('/dashboard', dashboardRoutes({ daos: resolved, config }));
+  v1.use('/statistics', statisticsRoutes({ daos: resolved, config }));
   v1.use('/body-tracking', bodyTrackingRoutes({ daos: resolved, config, photoStorage }));
   v1.use('/one-rep-max-records', oneRepMaxRecordsRoutes({ daos: resolved }));
   v1.use('/progression-flags', progressionFlagsRoutes({ daos: resolved }));

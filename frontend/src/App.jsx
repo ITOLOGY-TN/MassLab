@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from 'react-rout
 import { apiGet } from './lib/api.js';
 import { applyTheme } from './lib/theme.js';
 import DashboardHome from './pages/dashboard/DashboardHome.jsx';
+import StatisticsHome from './pages/statistics/StatisticsHome.jsx';
 import NutritionDay from './pages/nutrition/NutritionDay.jsx';
 import NutritionTrends from './pages/nutrition/NutritionTrends.jsx';
 import SupplementsHome from './pages/supplements/SupplementsHome.jsx';
@@ -63,6 +64,9 @@ function Shell() {
         <Link to="/body" className="hover:text-accent">
           Corps
         </Link>
+        <Link to="/statistics" className="hover:text-accent">
+          Statistiques
+        </Link>
         <Link to="/settings" className="hover:text-accent">
           Paramètres
         </Link>
@@ -110,6 +114,7 @@ export default function App() {
           <Route path="/body" element={<BodyHome />} />
           <Route path="/body/measurements" element={<MeasurementsTable />} />
           <Route path="/body/photos" element={<PhotoGallery />} />
+          <Route path="/statistics" element={<StatisticsHome />} />
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />
