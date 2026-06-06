@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: MassLab — Dashboard (Phase 10)
+  version: 1.0.0
+  description: >
+    The home-screen dashboard: a single read-only composition of data the athlete already
+    owns (Phases 0–9). Returns today's session card, a 7-day week overview, four quick
+    metric cards, a 30-day weight sparkline, up to three prioritized smart alerts, and the
+    quote of the day. This endpoint is PURELY READ-ONLY — it never writes, never re-runs
+    the calculators/progression engine, and writes no calculation/audit record. New in
+    Phase 10: 0 tables, 0 migrations. All paths under /api/v1. Auth: bearer token in
+    non-single-user mode; the athlete id is taken from the auth context, never from the
+    request. Alerts are exactly five condition types shown in a fixed priority order
+    (low sleep + high stress → no session → calorie deficit → ready to add load →
+    creatine streak broken), capped at three.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: INTERNAL }
+            message: { type: string }
+            requestId: { type: string }
+    TodayCard:
+      type: object
+      properties:
+        is_rest: { type: boolean }
+        muscle_group: { type: string, nullable: true }
+        exercises:
+          type: array
+          maxItems: 3
+          description: The first three exercises of today's session, in planned order.
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+        state:
+          type: string
+          enum: [not_started, in_progress, finished, rest]
+        cta:
+          type: string
+          nullable: true
+          enum: [start, resume, review, null]
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+    WeekOverview:
+      type: object
+      properties:
+        days:
+          type: array
+          description: The 7 days of the current ISO week.
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              day_of_week: { type: integer, minimum: 1, maximum: 7 }
+              status: { type: string, enum: [done, todo, rest], description: future training days are 'todo', never 'missed' }
+    Metrics:
+      type: object
+      properties:
+        weight:
+          nullable: true
+          type: object
+          properties:
+            current_kg: { type: number }
+            start_kg: { type: number }
+            delta_kg: { type: number, description: signed change vs. start }
+        calories:
+          nullable: true
+          type: object
+          properties:
+            yesterday_kcal: { type: number }
+            target_kcal: { type: number, description: the athlete's resolved daily target }
+            delta_kcal: { type: number }
+            over: { type: boolean }
+        streak:
+          type: object
+          properties:
+            count: { type: integer, description: consecutive completed scheduled training days }
+        phase:
+          nullable: true
+          type: object
+          properties:
+            name: { type: string }
+            days_remaining: { type: integer }
+    Sparkline:
+      type: object
+      properties:
+        has_data: { type: boolean }
+        days: { type: integer, example: 30 }
+        goal_kg: { type: number, nullable: true }
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              weight_kg: { type: number }
+    Alert:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [low_sleep_high_stress, no_session, calorie_deficit, ready_to_add_load, creatine_streak_broken]
+        message_key: { type: string, example: dashboard.alert.no_session }
+        context: { type: object, additionalProperties: true }
+        link: { type: string, description: in-app target for acting on the alert, example: /journal }
+    Quote:
+      type: object
+      nullable: true
+      properties:
+        text: { type: string }
+        author: { type: string, nullable: true }
+    DashboardView:
+      type: object
+      properties:
+        today: { $ref: '#/components/schemas/TodayCard' }
+        week: { $ref: '#/components/schemas/WeekOverview' }
+        metrics: { $ref: '#/components/schemas/Metrics' }
+        sparkline: { $ref: '#/components/schemas/Sparkline' }
+        alerts:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/Alert' }
+        quote: { $ref: '#/components/schemas/Quote' }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /dashboard:
+    get:
+      summary: The composed home-screen dashboard (read-only)
+      description: >
+        Returns the full dashboard view model in one response: today's session card +
+        state-aware CTA, the 7-day week overview, four metric cards, the 30-day weight
+        sparkline with goal line, up to three prioritized alerts, and the quote of the
+        day. Every tile carries an empty/cold-start shape so a brand-new athlete with no
+        logged data still gets a fully-rendered payload without error. Viewing this
+        endpoint changes no stored data and produces no calculation/audit record.
+      responses:
+        '200':
+          description: The composed dashboard for the authenticated athlete.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/DashboardView' }
+        '500':
+          description: Unexpected error.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
